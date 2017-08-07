@@ -11,7 +11,7 @@
 # Compiled Dynamic libraries
 *.so
 *.dylib
-*.dll
+#*.dll
 
 # Fortran module files
 *.mod
@@ -23,7 +23,7 @@
 *.lib
 
 # Executables
-*.exe
+#*.exe
 *.out
 *.app
 
@@ -77,3 +77,27 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# C++ builder related
+test/
+misc/
+__history
+/package*.*
+_backup/
+*.pcm
+*.*proj
+*.zip
+*.z
+*.local
+*.$$$
+*.res
+*.i??
+*.map
+*.tds
+*.xml
+*-idx*
+*.save*
+*.xml
+*.pcm
+*.#*
+*.bin

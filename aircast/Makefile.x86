@@ -1,0 +1,9 @@
+CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
+LDFLAGS ?= -s -lpthread -lssl -lcrypto -ldl -lm -lrt -lz -L. 
+# for LD debug -s
+
+OBJ					= bin/x86
+EXECUTABLE 			= ../bin/aircast-x86
+
+include Makefile
+

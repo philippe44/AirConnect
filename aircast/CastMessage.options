@@ -1,0 +1,5 @@
+CastMessage.source_id 		max_size:128
+CastMessage.destination_id 	max_size:128
+CastMessage.namespace		max_size:128
+CastMessage.payload_utf8 	max_size:2048
+  

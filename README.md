@@ -26,5 +26,5 @@ https://github.com/philippe44/mDNS-SD
 
 https://github.com/philippe44/TinySVCmDNS
 
-needs libFLAC as well
+needs libFLAC and libupnp as well
 

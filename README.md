@@ -1,5 +1,6 @@
 # AirCast: Send audio to Chromecast using AirPlay
-# AirCast: Send audio to UPnP players (includign Sonos) using AirPlay
+
+# AirUPnP: Send audio to UPnP players (includign Sonos) using AirPlay
 
 =============================================
 

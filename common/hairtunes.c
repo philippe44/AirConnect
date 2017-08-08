@@ -605,7 +605,7 @@ static void *rtp_thread_func(void *arg) {
 						ctx->timing.gap_adjust += GAP_THRES;
 					}
 
-					if (abs(ctx->timing.gap_sum) < 8) ctx->timing.gap_count = 0;
+					if (llabs(ctx->timing.gap_sum) < 8) ctx->timing.gap_count = 0;
 
 					pthread_mutex_unlock(&ctx->ab_mutex);
 				}
@@ -814,7 +814,7 @@ static void *http_thread_func(void *arg) {
 		FD_ZERO(&rfds);
 		FD_SET(sock, &rfds);
 
-		//timeout.tv_usec = ctx->frame_size*((1000*2*1000)/(44100*3));
+		timeout.tv_usec = ctx->frame_size*((1000*2*1000)/(44100*3));
 		n = select(sock + 1, &rfds, NULL, NULL, &timeout);
 
 		if (n > 0) {

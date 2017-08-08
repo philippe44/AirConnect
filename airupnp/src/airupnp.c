@@ -217,7 +217,7 @@ void callback(void *owner, raop_event_t event, void *param)
 			NFREE(device->CurrentURI);
 			break;
 		case RAOP_PLAY: {
-			int Latency = 0;
+			char *p;
 
 			if (device->RaopState != RAOP_PLAY) {
 #pragma GCC diagnostic push
@@ -231,9 +231,10 @@ void callback(void *owner, raop_event_t event, void *param)
 			}
 
 			// some players (Sonos) can't buffer properly by themselves
-			if (sscanf(device->Config.Latency, "%*[^:]:%d", &Latency)) {
+			// this should work but glibc does not match if leading is ':' f...
+			if ((p = strchr(device->Config.Latency, ':')) != NULL) {
 				device->PlayWait = true;
-				device->PlayTime = gettime_ms() + Latency;
+				device->PlayTime = gettime_ms() + atoi(p + 1);
 			}
 			else AVTPlay(device);
 

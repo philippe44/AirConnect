@@ -33,7 +33,7 @@ typedef struct raop_ctx_s {
 	int sock;               // socket of the above
 	short unsigned hport; 	// HTTP port of audio server where CC can "GET" audio
 	struct in_addr peer;	// IP of the iDevice (airplay sender)
-	int latency;
+	int rtp_latency, http_latency;
 	bool running;
 	bool use_flac;
 	pthread_t thread, search_thread;
@@ -59,8 +59,8 @@ typedef struct raop_ctx_s {
 
 
 raop_ctx_t*   raop_create(struct in_addr host, struct mdnsd *svr, char *name,
-						  unsigned char mac[6], bool use_flac, int latency,
-						  void *owner, raop_cb_t callback);
+						  unsigned char mac[6], bool use_flac,
+						  int rtp_latency, int http_latency, void *owner, raop_cb_t callback);
 void  		  raop_delete(struct raop_ctx_s *ctx);
 void		  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param);
 #ifdef _FIXME_MDNS_DEREGISTER_

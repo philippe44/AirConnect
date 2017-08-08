@@ -71,7 +71,8 @@ tMRConfig			glMRConfig = {
 							100,		// MaxVolume
 							1,			// UPnPRemoveCount
 							true,	    // UseFlac
-							0,			// Latency
+							0,			// RtpLatency (0 = use AirPlay requested)
+							0,			// HttpLatency
 							{0, 0, 0, 0, 0, 0 } // MAC
 					};
 
@@ -129,6 +130,7 @@ static struct sLocList {
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
+		   "  -l <[rtp][:http]>\t\tset RTP and HTTP latency (ms)\n"
 		   "  -f <logfile>\t\twrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -m <name1;name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
@@ -667,7 +669,8 @@ static void *UpdateMRThread(void *args)
 				// create a new AirPlay
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->FriendlyName,
 										   Device->Config.mac, Device->Config.UseFlac,
-										   Device->Config.Latency, Device, callback);
+										   Device->Config.RtpLatency, Device->Config.HttpLatency,
+										   Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->FriendlyName);
 					DelMRDevice(Device);
@@ -922,6 +925,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	return true;
 }
 
+
 /*----------------------------------------------------------------------------*/
 bool isExcluded(char *Model)
 {
@@ -1067,7 +1071,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpifm", opt) && optind < argc - 1) {
+		if (strstr("bxdpifml", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIk", opt)) {
@@ -1104,6 +1108,12 @@ bool ParseArgs(int argc, char **argv) {
 		case 'm':
 			glExcluded = optarg;
 			break;
+		case 'l': {
+			char buf[7] = "";
+			sscanf(optarg, "%6[^:]:%d", buf, &glMRConfig.HttpLatency);
+			if (*buf) glMRConfig.RtpLatency = atoi(buf);
+			break;
+		}
 #if LINUX || FREEBSD
 		case 'z':
 			glDaemonize = true;

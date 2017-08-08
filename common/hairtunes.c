@@ -104,7 +104,7 @@ typedef struct hairtunes_s {
 		u8_t  	status;
 		bool	first, required;
 	} synchro;
-	int latency;
+	int rtp_latency, http_latency;
 	abuf_t audio_buffer[BUFFER_FRAMES];
 	int http_listener;
 	seq_t ab_read, ab_write;
@@ -210,7 +210,8 @@ static alac_file* init_alac(int fmtp[32]) {
 }
 
 /*---------------------------------------------------------------------------*/
-hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, int latency,
+hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync,
+								int rtp_latency, int http_latency,
 								char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
 								void *owner, hairtunes_cb_t callback)
@@ -231,7 +232,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, int l
 	pthread_mutex_init(&ctx->ab_mutex, 0);
 	ctx->flush_seqno = -1;
 	ctx->use_flac = flac;
-	ctx->latency = latency;
+	ctx->rtp_latency = rtp_latency;
+	ctx->http_latency = http_latency;
 	ctx->callback = callback;
 	ctx->owner = owner;
 	ctx->synchro.required = sync;
@@ -529,7 +531,7 @@ static void *rtp_thread_func(void *arg) {
 				u32_t rtp_now = ntohl(*(u32_t*)(pktp+16));
 
 				// re-align timestamp and expected local playback time (mutex not needed)
-				ctx->synchro.rtp = (ctx->latency) ? rtp_now - (ctx->latency*44100)/1000 : rtp_now_latency;
+				ctx->synchro.rtp = (ctx->rtp_latency) ? rtp_now - (ctx->rtp_latency*44100)/1000 : rtp_now_latency;
 				ctx->synchro.time = ctx->timing.local + (u32_t) NTP2MS(remote - ctx->timing.remote);
 
 				// now we are synced on RTP frames
@@ -812,7 +814,7 @@ static void *http_thread_func(void *arg) {
 		FD_ZERO(&rfds);
 		FD_SET(sock, &rfds);
 
-		timeout.tv_usec = ctx->frame_size*((1000*2*1000)/(44100*3));
+		//timeout.tv_usec = ctx->frame_size*((1000*2*1000)/(44100*3));
 		n = select(sock + 1, &rfds, NULL, NULL, &timeout);
 
 		if (n > 0) {
@@ -820,6 +822,8 @@ static void *http_thread_func(void *arg) {
 			http_ready = res;
 			// send STREAMINFO for flac
 			if (http_ready && ctx->use_flac && ctx->flac_len) {
+				// wait for the RTP buffer to build-up
+				if (ctx->http_latency) usleep(ctx->http_latency * 1000L);
 				send(sock, (void*) ctx->flac_buffer, ctx->flac_len, 0);
 				ctx->flac_len = 0;
 			}

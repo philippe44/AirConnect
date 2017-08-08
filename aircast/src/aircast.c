@@ -77,7 +77,7 @@ tMRConfig			glMRConfig = {
 							3,
 							0.5,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-							0,		// latency (0 = use client's request)
+							0,		// rtp_latency (0 = use client's request)
 					};
 
 /*----------------------------------------------------------------------------*/
@@ -111,6 +111,7 @@ static char usage[] =
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
+   		   "  -l <rtp>\t\tset RTP latency (ms)\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|raop|main|util|cast, level: error|warn|info|debug|sdebug\n"
@@ -394,7 +395,8 @@ static void *UpdateMRThread(void *args)
 			NFREE(Model);
 
 			if (AddCastDevice(Device, Name, UDN, Group, p->addr, p->port) && !glSaveConfigFile) {
-				Device->Raop = raop_create(glHost, glmDNSServer, Name, Device->Config.mac, true, Device->Config.Latency, Device, callback);
+				Device->Raop = raop_create(glHost, glmDNSServer, Name, Device->Config.mac, true,
+											Device->Config.RtpLatency, 0, Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->FriendlyName);
 					RemoveCastDevice(Device);
@@ -719,7 +721,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpif", opt) && optind < argc - 1) {
+		if (strstr("bxdpifl", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIk", opt)) {
@@ -753,7 +755,9 @@ bool ParseArgs(int argc, char **argv) {
 		case 'k':
 			glGracefullShutdown = false;
 			break;
-
+		case 'l':
+			glMRConfig.RtpLatency = atoi(optarg);
+			break;
 #if LINUX || FREEBSD
 		case 'z':
 			glDaemonize = true;

@@ -57,7 +57,7 @@ typedef struct sMRConfig
 	int			RemoveCount;
 	double		MediaVolume;
 	u8_t		mac[6];
-	int 		Latency;
+	int 		RtpLatency;
 } tMRConfig;
 
 struct sMR {

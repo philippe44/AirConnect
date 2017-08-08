@@ -81,10 +81,10 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
 
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
-	XMLUpdateNode(doc, common, false, "max_volume", "%0.4lf", glMRConfig.MaxVolume);
+	XMLUpdateNode(doc, common, false, "max_volume", "%d", glMRConfig.MaxVolume);
 	XMLUpdateNode(doc, common, false, "use_flac", "%d", (int) glMRConfig.UseFlac);
-	XMLUpdateNode(doc, common, false, "send_metadata", "%d", (int) glMRConfig.SendMetaData);
-	XMLUpdateNode(doc, common, false, "send_coverart", "%d", (int) glMRConfig.SendCoverArt);
+	XMLUpdateNode(doc, common, false, "rtp_latency", "%d", (int) glMRConfig.RtpLatency);
+	XMLUpdateNode(doc, common, false, "http_latency", "%d", (int) glMRConfig.HttpLatency);
 	XMLUpdateNode(doc, common, false, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -144,10 +144,10 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 {
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
-	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atof(val);
+	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atoi(val);
 	if (!strcmp(name, "use_flac")) Conf->UseFlac = atol(val);
-	if (!strcmp(name, "send_metadata")) Conf->SendMetaData = atol(val);
-	if (!strcmp(name, "send_coverart")) Conf->SendCoverArt = atol(val);
+	if (!strcmp(name, "rtp_latency")) Conf->RtpLatency = atol(val);
+	if (!strcmp(name, "http_latency")) Conf->HttpLatency = atol(val);
 	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];

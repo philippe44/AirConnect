@@ -52,7 +52,9 @@ extern char private_key[];
 enum { RSA_MODE_KEY, RSA_MODE_AUTH };
 
 /*----------------------------------------------------------------------------*/
-raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name, unsigned char mac[6], bool use_flac, int latency, void *owner, raop_cb_t callback) {
+raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
+						unsigned char mac[6], bool use_flac,
+						int rtp_latency, int http_latency, void *owner, raop_cb_t callback) {
 	struct raop_ctx_s *ctx = malloc(sizeof(struct raop_ctx_s));
 	struct sockaddr_in addr;
 	socklen_t nlen = sizeof(struct sockaddr);
@@ -71,7 +73,8 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name, unsi
 	ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
 	ctx->callback = callback;
 	ctx->use_flac = use_flac;
-	ctx->latency = latency;
+	ctx->rtp_latency = rtp_latency;
+	ctx->http_latency = http_latency;
 	ctx->owner = owner;
 	ctx->volume_stamp = gettime_ms() - 1000;
 	S_ADDR(ctx->active_remote.host) = INADDR_ANY;
@@ -362,7 +365,10 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		if ((p = stristr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
 		if ((p = stristr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
 
-		ht = hairtunes_init(ctx->peer, ctx->use_flac, false, ctx->latency, ctx->rtsp.aeskey, ctx->rtsp.aesiv, ctx->rtsp.fmtp, cport, tport, ctx, hairtunes_cb);
+		ht = hairtunes_init(ctx->peer, ctx->use_flac, false, ctx->rtp_latency,
+							ctx->http_latency, ctx->rtsp.aeskey, ctx->rtsp.aesiv,
+							ctx->rtsp.fmtp, cport, tport, ctx, hairtunes_cb);
+
 		ctx->hport = ht.hport;
 		ctx->ht = ht.ctx;
 

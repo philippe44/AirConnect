@@ -973,6 +973,8 @@ static bool Start(void)
 	gethostname(glHostName, _STR_LEN_);
 	if (!glPort) glPort = UpnpGetServerPort();
 
+	LOG_INFO("Binding to %s:%d", IP, glPort);
+
 	rc = UpnpRegisterClient(CallbackEventHandler,
 				&glControlPointHandle, &glControlPointHandle);
 

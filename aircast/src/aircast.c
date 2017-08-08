@@ -643,6 +643,8 @@ static bool Start(void)
 	glHost.s_addr = get_localhost(&glHostName);
 	if (!strstr(glInterface, "?")) glHost.s_addr = inet_addr(glInterface);
 
+	LOG_INFO("Binding to %s", inet_ntoa(glHost));
+
 	gl_mDNSId = init_mDNS(false, glHost);
 
 	snprintf(hostname, _STR_LEN_, "%s.local", glHostName);

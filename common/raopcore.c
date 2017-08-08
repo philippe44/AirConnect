@@ -362,7 +362,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		if ((p = stristr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
 		if ((p = stristr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
 
-		ht = hairtunes_init(ctx->peer, true, ctx->use_flac, ctx->latency, ctx->rtsp.aeskey, ctx->rtsp.aesiv, ctx->rtsp.fmtp, cport, tport, ctx, hairtunes_cb);
+		ht = hairtunes_init(ctx->peer, ctx->use_flac, false, ctx->latency, ctx->rtsp.aeskey, ctx->rtsp.aesiv, ctx->rtsp.fmtp, cport, tport, ctx, hairtunes_cb);
 		ctx->hport = ht.hport;
 		ctx->ht = ht.ctx;
 

@@ -71,8 +71,7 @@ tMRConfig			glMRConfig = {
 							100,		// MaxVolume
 							1,			// UPnPRemoveCount
 							true,	    // UseFlac
-							0,			// Latency (0 = use AirPlay requested)
-							0,			// HttpLatency
+							"",			// RTP:HTTP Latency (0 = use AirPlay requested)
 							{0, 0, 0, 0, 0, 0 } // MAC
 					};
 
@@ -217,7 +216,9 @@ void callback(void *owner, raop_event_t event, void *param)
 			device->PlayWait = false;
 			NFREE(device->CurrentURI);
 			break;
-		case RAOP_PLAY:
+		case RAOP_PLAY: {
+			int Latency = 0;
+
 			if (device->RaopState != RAOP_PLAY) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
@@ -230,15 +231,16 @@ void callback(void *owner, raop_event_t event, void *param)
 			}
 
 			// some players (Sonos) can't buffer properly by themselves
-			if (device->Config.HttpLatency) {
+			if (sscanf(device->Config.Latency, "%*[^:]:%d", &Latency)) {
 				device->PlayWait = true;
-				device->PlayTime = gettime_ms() + device->Config.HttpLatency;
+				device->PlayTime = gettime_ms() + Latency;
 			}
 			else AVTPlay(device);
 
 			CtrlSetVolume(device, device->Volume, device->seqN++);
 			device->RaopState = event;
 			break;
+		}
 		case RAOP_VOLUME: {
 			device->Volume = *((double*) param) * device->Config.MaxVolume;
 			CtrlSetVolume(device, device->Volume, device->seqN++);
@@ -684,7 +686,7 @@ static void *UpdateMRThread(void *args)
 				// create a new AirPlay
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->FriendlyName,
 										   Device->Config.mac, Device->Config.UseFlac,
-										   Device->Config.Latency, Device, callback);
+										   atoi(Device->Config.Latency), Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->FriendlyName);
 					DelMRDevice(Device);
@@ -1123,12 +1125,9 @@ bool ParseArgs(int argc, char **argv) {
 		case 'm':
 			glExcluded = optarg;
 			break;
-		case 'l': {
-			char buf[7] = "";
-			sscanf(optarg, "%6[^:]:%d", buf, &glMRConfig.HttpLatency);
-			if (*buf) glMRConfig.Latency = atoi(buf);
+		case 'l':
+			strcpy(glMRConfig.Latency, optarg);
 			break;
-		}
 #if LINUX || FREEBSD
 		case 'z':
 			glDaemonize = true;

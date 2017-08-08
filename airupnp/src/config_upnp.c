@@ -83,8 +83,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "max_volume", "%d", glMRConfig.MaxVolume);
 	XMLUpdateNode(doc, common, false, "use_flac", "%d", (int) glMRConfig.UseFlac);
-	XMLUpdateNode(doc, common, false, "latency", "%d", (int) glMRConfig.Latency);
-	XMLUpdateNode(doc, common, false, "http_latency", "%d", (int) glMRConfig.HttpLatency);
+	XMLUpdateNode(doc, common, false, "latency", glMRConfig.Latency);
 	XMLUpdateNode(doc, common, false, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -146,8 +145,7 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atoi(val);
 	if (!strcmp(name, "use_flac")) Conf->UseFlac = atol(val);
-	if (!strcmp(name, "latency")) Conf->Latency = atol(val);
-	if (!strcmp(name, "http_latency")) Conf->HttpLatency = atol(val);
+	if (!strcmp(name, "latency")) strcpy(Conf->Latency, val);
 	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];

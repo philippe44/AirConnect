@@ -66,8 +66,7 @@ struct sService {
 	int			MaxVolume;
 	int			RemoveCount;
 	bool		UseFlac;
-	int 		Latency;
-	int			HttpLatency;
+	char		Latency[_STR_LEN_];
 	u8_t		mac[6];
 } tMRConfig;
 

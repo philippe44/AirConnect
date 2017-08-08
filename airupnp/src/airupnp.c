@@ -71,7 +71,7 @@ tMRConfig			glMRConfig = {
 							100,		// MaxVolume
 							1,			// UPnPRemoveCount
 							true,	    // UseFlac
-							0,			// RtpLatency (0 = use AirPlay requested)
+							0,			// Latency (0 = use AirPlay requested)
 							0,			// HttpLatency
 							{0, 0, 0, 0, 0, 0 } // MAC
 					};
@@ -204,6 +204,7 @@ void callback(void *owner, raop_event_t event, void *param)
 			if (device->RaopState == RAOP_PLAY) {
 				AVTStop(device);
 				device->ExpectStop = true;
+				device->PlayWait = false;
 			}
 			device->RaopState = event;
 			NFREE(device->CurrentURI);
@@ -213,6 +214,7 @@ void callback(void *owner, raop_event_t event, void *param)
 			AVTStop(device);
 			device->RaopState = event;
 			device->ExpectStop = true;
+			device->PlayWait = false;
 			NFREE(device->CurrentURI);
 			break;
 		case RAOP_PLAY:
@@ -226,7 +228,14 @@ void callback(void *owner, raop_event_t event, void *param)
 				AVTSetURI(device);
 				NFREE(device->CurrentURI);
 			}
-			AVTPlay(device);
+
+			// some players (Sonos) can't buffer properly by themselves
+			if (device->Config.HttpLatency) {
+				device->PlayWait = true;
+				device->PlayTime = gettime_ms() + device->Config.HttpLatency;
+			}
+			else AVTPlay(device);
+
 			CtrlSetVolume(device, device->Volume, device->seqN++);
 			device->RaopState = event;
 			break;
@@ -547,12 +556,18 @@ static void *MRThread(void *args)
 
 	last = gettime_ms();
 
-	for (; p->Running;  usleep(500000)) {
+	for (; p->Running;  usleep(250000)) {
 		elapsed = gettime_ms() - last;
 		p->StatePoll += elapsed;
 		p->TrackPoll += elapsed;
 
 		ithread_mutex_lock(&p->Mutex);
+
+		// in case we have a delayed playback
+		if (p->PlayWait && last > p->PlayTime) {
+			AVTPlay(p);
+			p->PlayWait = false;
+		}
 
 		/*
 		should not request any status update if we are stopped, off or waiting
@@ -669,8 +684,7 @@ static void *UpdateMRThread(void *args)
 				// create a new AirPlay
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->FriendlyName,
 										   Device->Config.mac, Device->Config.UseFlac,
-										   Device->Config.RtpLatency, Device->Config.HttpLatency,
-										   Device, callback);
+										   Device->Config.Latency, Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->FriendlyName);
 					DelMRDevice(Device);
@@ -866,6 +880,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->RaopState = RAOP_STOP;
 	Device->State = STOPPED;
 	Device->ExpectStop = false;
+	Device->PlayWait = false;
 	Device->WaitCookie = Device->StartCookie = NULL;
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
@@ -1111,7 +1126,7 @@ bool ParseArgs(int argc, char **argv) {
 		case 'l': {
 			char buf[7] = "";
 			sscanf(optarg, "%6[^:]:%d", buf, &glMRConfig.HttpLatency);
-			if (*buf) glMRConfig.RtpLatency = atoi(buf);
+			if (*buf) glMRConfig.Latency = atoi(buf);
 			break;
 		}
 #if LINUX || FREEBSD

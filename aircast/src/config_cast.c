@@ -80,7 +80,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "stop_receiver", "%d", (int) glMRConfig.StopReceiver);
 	XMLUpdateNode(doc, common, false, "media_volume", "%0.4lf", glMRConfig.MediaVolume);
-	XMLUpdateNode(doc, common, false, "rtp_latency", "%d", (int) glMRConfig.RtpLatency);
+	XMLUpdateNode(doc, common, false, "latency", "%d", (int) glMRConfig.Latency);
 	XMLUpdateNode(doc, common, false, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -142,7 +142,7 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 	if (!strcmp(name, "stop_receiver")) Conf->StopReceiver = atol(val);
 	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
 	if (!strcmp(name, "media_volume")) Conf->MediaVolume = atof(val);
-	if (!strcmp(name, "send_rtp_latency")) Conf->RtpLatency = atol(val);
+	if (!strcmp(name, "latency")) Conf->Latency = atol(val);
 	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];

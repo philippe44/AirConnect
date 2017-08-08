@@ -104,7 +104,7 @@ typedef struct hairtunes_s {
 		u8_t  	status;
 		bool	first, required;
 	} synchro;
-	int rtp_latency, http_latency;
+	int latency;
 	abuf_t audio_buffer[BUFFER_FRAMES];
 	int http_listener;
 	seq_t ab_read, ab_write;
@@ -113,7 +113,7 @@ typedef struct hairtunes_s {
 	FLAC__StreamEncoder *flac_codec;
 	char flac_buffer[MAX_FLAC_BYTES];
 	int flac_len;
-	bool flac_ready;
+	bool flac_ready, flac_header;
 	alac_file *alac_codec;
 	int flush_seqno;
 	bool playing;
@@ -146,6 +146,7 @@ static void reset_flac(hairtunes_t *ctx) {
 
 	ctx->flac_len = 0;
 	ctx->flac_ready = true;
+	ctx->flac_header = true;
 
 	ok &= FLAC__stream_encoder_set_verify(ctx->flac_codec, false);
 	ok &= FLAC__stream_encoder_set_compression_level(ctx->flac_codec, 5);
@@ -210,8 +211,7 @@ static alac_file* init_alac(int fmtp[32]) {
 }
 
 /*---------------------------------------------------------------------------*/
-hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync,
-								int rtp_latency, int http_latency,
+hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, int latency,
 								char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
 								void *owner, hairtunes_cb_t callback)
@@ -232,8 +232,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync,
 	pthread_mutex_init(&ctx->ab_mutex, 0);
 	ctx->flush_seqno = -1;
 	ctx->use_flac = flac;
-	ctx->rtp_latency = rtp_latency;
-	ctx->http_latency = http_latency;
+	ctx->flac_header = false;
+	ctx->latency = latency;
 	ctx->callback = callback;
 	ctx->owner = owner;
 	ctx->synchro.required = sync;
@@ -531,7 +531,7 @@ static void *rtp_thread_func(void *arg) {
 				u32_t rtp_now = ntohl(*(u32_t*)(pktp+16));
 
 				// re-align timestamp and expected local playback time (mutex not needed)
-				ctx->synchro.rtp = (ctx->rtp_latency) ? rtp_now - (ctx->rtp_latency*44100)/1000 : rtp_now_latency;
+				ctx->synchro.rtp = (ctx->latency) ? rtp_now - (ctx->latency*44100)/1000 : rtp_now_latency;
 				ctx->synchro.time = ctx->timing.local + (u32_t) NTP2MS(remote - ctx->timing.remote);
 
 				// now we are synced on RTP frames
@@ -820,13 +820,6 @@ static void *http_thread_func(void *arg) {
 		if (n > 0) {
 			res = handle_http(ctx, sock);
 			http_ready = res;
-			// send STREAMINFO for flac
-			if (http_ready && ctx->use_flac && ctx->flac_len) {
-				// wait for the RTP buffer to build-up
-				if (ctx->http_latency) usleep(ctx->http_latency * 1000L);
-				send(sock, (void*) ctx->flac_buffer, ctx->flac_len, 0);
-				ctx->flac_len = 0;
-			}
 		}
 
 		// terminate connection if required by HTTP peer
@@ -843,7 +836,15 @@ static void *http_thread_func(void *arg) {
 
 			if (!http_ready) continue;
 
-			if (ctx->use_flac) {
+			if (ctx->use_flac && ctx->flac_ready) {
+				// send streaminfo at beginning
+				if (ctx->flac_header && ctx->flac_len) {
+					send(sock, (void*) ctx->flac_buffer, ctx->flac_len, 0);
+					ctx->flac_len = 0;
+					ctx->flac_header = false;
+				}
+
+				// now send body
 				for (len = 0; len < 2*ctx->frame_size; len++) flac_samples[len] = inbuf[len];
 				FLAC__stream_encoder_process_interleaved(ctx->flac_codec, flac_samples, ctx->frame_size);
 				inbuf = (void*) ctx->flac_buffer;

@@ -396,7 +396,7 @@ static void *UpdateMRThread(void *args)
 
 			if (AddCastDevice(Device, Name, UDN, Group, p->addr, p->port) && !glSaveConfigFile) {
 				Device->Raop = raop_create(glHost, glmDNSServer, Name, Device->Config.mac, true,
-											Device->Config.RtpLatency, 0, Device, callback);
+											Device->Config.Latency, Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->FriendlyName);
 					RemoveCastDevice(Device);
@@ -756,7 +756,7 @@ bool ParseArgs(int argc, char **argv) {
 			glGracefullShutdown = false;
 			break;
 		case 'l':
-			glMRConfig.RtpLatency = atoi(optarg);
+			glMRConfig.Latency = atoi(optarg);
 			break;
 #if LINUX || FREEBSD
 		case 'z':

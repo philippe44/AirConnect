@@ -66,7 +66,7 @@ struct sService {
 	int			MaxVolume;
 	int			RemoveCount;
 	bool		UseFlac;
-	int 		RtpLatency;
+	int 		Latency;
 	int			HttpLatency;
 	u8_t		mac[6];
 } tMRConfig;
@@ -101,6 +101,8 @@ struct sMR {
 	u16_t			ErrorCount;
 	int				MissingCount;
 	bool			TimeOut, Connected;
+	bool			PlayWait;
+	u32_t			PlayTime;
 	bool			Running;
 };
 

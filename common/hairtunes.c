@@ -834,7 +834,7 @@ static void *http_thread_func(void *arg) {
 		}
 
 		// even if the HTTP session is not established, empty the buffer queue
-		while ((inbuf = buffer_get_frame(ctx)) != NULL) {
+		if ((inbuf = buffer_get_frame(ctx)) != NULL) {
 			int len;
 
 			if (!http_ready) continue;

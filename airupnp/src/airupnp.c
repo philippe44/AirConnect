@@ -125,7 +125,7 @@ static struct sLocList {
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -h <server>[:<port>]\tnetwork interface and UPnP port to use \n"
+		   "  -b <server>[:<port>]\tnetwork interface and UPnP port to use \n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
@@ -612,6 +612,9 @@ static void *UpdateMRThread(void *args)
 	struct sLocList *p, *m;
 	struct sMR *Device = NULL;
 	int i, TimeStamp;
+#ifdef _FIXME_MDNS_DEREGISTER_
+	bool mDNSRestart = false;
+#endif
 
 	LOG_DEBUG("Begin UPnP devices update", NULL);
 	TimeStamp = gettime_ms();
@@ -695,6 +698,9 @@ static void *UpdateMRThread(void *args)
 		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
 		raop_delete(Device->Raop);
 		DelMRDevice(Device);
+#ifdef _FIXME_MDNS_DEREGISTER_
+		mDNSRestart = true;
+#endif
 	}
 
 	glDiscovery = true;
@@ -703,7 +709,30 @@ static void *UpdateMRThread(void *args)
 		SaveConfig(glConfigName, glConfigID, false);
 	}
 
+
+#ifdef _FIXME_MDNS_DEREGISTER_
+	if (mDNSRestart) {
+		char *hostname;
+
+		mdnsd_stop(glmDNSServer);
+		glmDNSServer = mdnsd_start(glHost);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+		asprintf(&hostname, "%s.local", glHostName);
+#pragma GCC diagnostic pop
+		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
+
+		for (i = 0; i < MAX_RENDERERS; i++) {
+			if (!glMRDevices[i].InUse) continue;
+			raop_fixme_register(glMRDevices[i].Raop, glmDNSServer);
+		}
+
+		free(hostname);
+	}
+#endif
+
 	LOG_DEBUG("End UPnP devices update %d", gettime_ms() - TimeStamp);
+
 	return NULL;
 }
 
@@ -1036,7 +1065,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("hxdpifm", opt) && optind < argc - 1) {
+		if (strstr("bxdpifm", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIk", opt)) {
@@ -1049,7 +1078,7 @@ bool ParseArgs(int argc, char **argv) {
 		}
 
 		switch (opt[0]) {
-		case 'h':
+		case 'b':
 			strcpy(glUPnPSocket, optarg);
 			break;
 		case 'f':

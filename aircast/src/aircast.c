@@ -107,7 +107,7 @@ static char usage[] =
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -h <address>\t\tnetwork address to bind to\n"
+		   "  -b <address>\t\tnetwork address to bind to\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
@@ -459,6 +459,7 @@ static void *UpdateMRThread(void *args)
 #endif
 
 	LOG_DEBUG("End Cast devices update %d", gettime_ms() - TimeStamp);
+
 	return NULL;
 }
 
@@ -716,7 +717,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("hxdpif", opt) && optind < argc - 1) {
+		if (strstr("bxdpif", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIk", opt)) {
@@ -732,7 +733,7 @@ bool ParseArgs(int argc, char **argv) {
 		case 'f':
 			glLogFile = optarg;
 			break;
-		case 'h':
+		case 'b':
 			strcpy(glInterface, optarg);
 			break;
 		case 'i':

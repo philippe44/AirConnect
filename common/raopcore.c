@@ -165,7 +165,7 @@ void  raop_delete(struct raop_ctx_s *ctx) {
 
 #ifdef _FIXME_MDNS_DEREGISTER_
 	free(ctx->_fixme_id);
-   	free(ctx->_fixme_id);
+   	free(ctx->_fixme_model);
 #endif
 
 	if (ctx) free(ctx);

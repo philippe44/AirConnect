@@ -53,13 +53,14 @@ typedef struct raop_ctx_s {
 	} active_remote;
 	void *owner;
 #ifdef _FIXME_MDNS_DEREGISTER_
+	char *_fixme_model;
 	char *_fixme_id;
 #endif
 } raop_ctx_t;
 
 
 raop_ctx_t*   raop_create(struct in_addr host, struct mdnsd *svr, char *name,
-						  unsigned char mac[6], bool use_flac,
+						  char *model, unsigned char mac[6], bool use_flac,
 						  int latency, void *owner, raop_cb_t callback);
 void  		  raop_delete(struct raop_ctx_s *ctx);
 void		  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param);

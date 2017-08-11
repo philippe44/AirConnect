@@ -686,7 +686,7 @@ static void *UpdateMRThread(void *args)
 			if (AddMRDevice(Device, UDN, DescDoc, p->Location) && !glSaveConfigFile) {
 				// create a new AirPlay
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->FriendlyName,
-										   Device->Config.mac, Device->Config.UseFlac,
+										   "airupnp", Device->Config.mac, Device->Config.UseFlac,
 										   atoi(Device->Config.Latency), Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->FriendlyName);

@@ -395,7 +395,7 @@ static void *UpdateMRThread(void *args)
 			NFREE(Model);
 
 			if (AddCastDevice(Device, Name, UDN, Group, p->addr, p->port) && !glSaveConfigFile) {
-				Device->Raop = raop_create(glHost, glmDNSServer, Name, Device->Config.mac, true,
+				Device->Raop = raop_create(glHost, glmDNSServer, Name, "aircast", Device->Config.mac, true,
 											Device->Config.Latency, Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->FriendlyName);

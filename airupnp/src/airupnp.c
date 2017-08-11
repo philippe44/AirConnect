@@ -950,7 +950,7 @@ bool isExcluded(char *Model)
 	char item[_STR_LEN_];
 	char *p = glExcluded;
 
-	while (p && *p && sscanf(p, "%[^:]", item)) {
+	while (p && *p && sscanf(p, "%[^;]", item)) {
 		if (stristr(Model, item)) return true;
 		p += strlen(item) + 1;
 	}

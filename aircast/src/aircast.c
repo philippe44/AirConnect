@@ -348,9 +348,6 @@ static void *UpdateMRThread(void *args)
 	struct sMR *Device = NULL;
 	int i, TimeStamp;
 	DiscoveredList DiscDevices;
-#ifdef _FIXME_MDNS_DEREGISTER_
-	bool mDNSRestart = false;
-#endif
 
 	LOG_DEBUG("Begin Cast devices update", NULL);
 	TimeStamp = gettime_ms();
@@ -427,9 +424,6 @@ static void *UpdateMRThread(void *args)
 
 		raop_delete(Device->Raop);
 		RemoveCastDevice(Device);
-#ifdef _FIXME_MDNS_DEREGISTER_
-		mDNSRestart = true;
-#endif
 	}
 
 	glDiscovery = true;
@@ -438,27 +432,6 @@ static void *UpdateMRThread(void *args)
 		LOG_DEBUG("Updating configuration %s", glConfigName);
 		SaveConfig(glConfigName, glConfigID, false);
 	}
-
-#ifdef _FIXME_MDNS_DEREGISTER_
-	if (mDNSRestart) {
-		char *hostname;
-
-		mdnsd_stop(glmDNSServer);
-		glmDNSServer = mdnsd_start(glHost);
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-		asprintf(&hostname, "%s.local", glHostName);
-#pragma GCC diagnostic pop
-		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
-
-		for (i = 0; i < MAX_RENDERERS; i++) {
-			if (!glMRDevices[i].InUse) continue;
-			raop_fixme_register(glMRDevices[i].Raop, glmDNSServer);
-		}
-
-		free(hostname);
-	}
-#endif
 
 	LOG_DEBUG("End Cast devices update %d", gettime_ms() - TimeStamp);
 

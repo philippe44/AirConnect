@@ -111,11 +111,6 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 	ctx->svr = svr;
 	ctx->svc = mdnsd_register_svc(svr, id, "_raop._tcp.local", ctx->port, NULL, (const char**) txt);
 
-#ifdef _FIXME_MDNS_DEREGISTER_
-	mdns_service_destroy(ctx->svc);
-	ctx->_fixme_id = strdup(id);
-	ctx->_fixme_model = strdup(model);
-#endif
 	free(txt[0]);
 	free(id);
 
@@ -124,25 +119,6 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 
 	return ctx;
 }
-
-
-#ifdef _FIXME_MDNS_DEREGISTER_
-/*----------------------------------------------------------------------------*/
-void raop_fixme_register(struct raop_ctx_s *ctx, struct mdnsd *svr) {
-	char *txt[] = { NULL, "tp=UDP", "sm=false", "sv=false", "ek=1",
-					"et=0,1", "md=0,1,2", "cn=0,1", "ch=2",
-					"ss=16", "sr=44100", "vn=3", "txtvers=1",
-					NULL };
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-	asprintf(&(txt[0]), "am=%s", ctx->_fixme_model);
-#pragma GCC diagnostic pop
-	ctx->svc = mdnsd_register_svc(svr, ctx->_fixme_id, "_raop._tcp.local", ctx->port, NULL, (const char**) txt);
-	mdns_service_destroy(ctx->svc);
-	free(txt[0]);
-}
-#endif
 
 
 /*----------------------------------------------------------------------------*/
@@ -164,12 +140,7 @@ void  raop_delete(struct raop_ctx_s *ctx) {
 	NFREE(ctx->rtsp.aeskey);
 	NFREE(ctx->rtsp.aesiv);
 
-#ifdef _FIXME_MDNS_DEREGISTER_
-	free(ctx->_fixme_id);
-   	free(ctx->_fixme_model);
-#else
 	mdns_service_remove(ctx->svr, ctx->svc);
-#endif
 
 	if (ctx) free(ctx);
 }

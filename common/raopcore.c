@@ -108,10 +108,11 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 	for (i = 0; i < 6; i++) sprintf(id + i*2, "%02X", mac[i]);
 	sprintf(id + 12, "@%s", name);
 
+	ctx->svr = svr;
 	ctx->svc = mdnsd_register_svc(svr, id, "_raop._tcp.local", ctx->port, NULL, (const char**) txt);
-	mdns_service_destroy(ctx->svc);
 
 #ifdef _FIXME_MDNS_DEREGISTER_
+	mdns_service_destroy(ctx->svc);
 	ctx->_fixme_id = strdup(id);
 	ctx->_fixme_model = strdup(model);
 #endif
@@ -166,6 +167,8 @@ void  raop_delete(struct raop_ctx_s *ctx) {
 #ifdef _FIXME_MDNS_DEREGISTER_
 	free(ctx->_fixme_id);
    	free(ctx->_fixme_model);
+#else
+	mdns_service_remove(ctx->svr, ctx->svc);
 #endif
 
 	if (ctx) free(ctx);

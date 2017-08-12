@@ -28,6 +28,7 @@ typedef enum { RAOP_STREAM, RAOP_PLAY, RAOP_FLUSH, RAOP_PAUSE, RAOP_STOP, RAOP_V
 typedef void (*raop_cb_t)(void *owner, raop_event_t event, void *param);
 typedef struct raop_ctx_s {
 	struct mdns_service *svc;
+	struct mdnsd *svr;
 	struct in_addr host;	// IP of bridge
 	short unsigned port;    // RTSP port for AirPlay
 	int sock;               // socket of the above

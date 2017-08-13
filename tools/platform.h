@@ -50,6 +50,7 @@
 #include <sys/stat.h>
 
 #if LINUX || OSX || FREEBSD
+#include <strings.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <netinet/in.h>

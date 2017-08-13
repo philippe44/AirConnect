@@ -22,7 +22,7 @@
 
 #include "platform.h"
 
-#if LINUX || OSX || FREEBSD
+#if LINUX || OSX || FREEBSD || SUNOS
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <net/if_arp.h>
@@ -51,8 +51,6 @@
 #endif
 
 #include "pthread.h"
-#include "upnp.h"
-#include "upnptools.h"
 #include "util.h"
 #include "log_util.h"
 
@@ -68,8 +66,6 @@ extern log_level	util_loglevel;
 extern log_level 	util_loglevel;
 static log_level 	*loglevel = &util_loglevel;
 
-static IXML_Node*	_getAttributeNode(IXML_Node *node, char *SearchAttr);
-
 /*----------------------------------------------------------------------------*/
 /* 																			  */
 /* pthread utils															  */
@@ -81,7 +77,7 @@ int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_
 {
 	struct timespec ts;
 	u32_t	nsec;
-#if OSX
+#if OSX || SUNOS
 	struct timeval tv;
 #endif
 
@@ -93,7 +89,7 @@ int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_
 	ts.tv_nsec = 1000000 * SysTime.millitm;
 #elif LINUX || FREEBSD
 	clock_gettime(CLOCK_REALTIME, &ts);
-#elif OSX
+#elif OSX || SUNOS
 	gettimeofday(&tv, NULL);
 	ts.tv_sec = (long) tv.tv_sec;
 	ts.tv_nsec = 1000L * tv.tv_usec;
@@ -143,92 +139,9 @@ int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */
-/* JSON parsing																  */
-/* 																			  */
-/*----------------------------------------------------------------------------*/
-
-
-/*----------------------------------------------------------------------------*/
-const char *GetAppIdItem(json_t *root, char* appId, char *item)
-{
-	json_t *elm;
-	unsigned i;
-
-	if ((elm = json_object_get(root, "status")) == NULL) return NULL;
-	if ((elm = json_object_get(elm, "applications")) == NULL) return NULL;
-	for (i = 0; i < json_array_size(elm); i++) {
-		json_t *id, *data = json_array_get(elm, i);
-		id = json_object_get(data, "appId");
-		if (strcasecmp(json_string_value(id), appId)) continue;
-		id = json_object_get(data, item);
-		return json_string_value(id);
-	}
-
-	return NULL;
-}
-
-
-/*----------------------------------------------------------------------------*/
-int GetMediaItem_I(json_t *root, int n, char *item)
-{
-	json_t *elm;
-
-	if ((elm = json_object_get(root, "status")) == NULL) return 0;
-	if ((elm = json_array_get(elm, n)) == NULL) return 0;
-	if ((elm = json_object_get(elm, item)) == NULL) return 0;
-	return json_integer_value(elm);
-}
-
-
-/*----------------------------------------------------------------------------*/
-double GetMediaItem_F(json_t *root, int n, char *item)
-{
-	json_t *elm;
-
-	if ((elm = json_object_get(root, "status")) == NULL) return 0;
-	if ((elm = json_array_get(elm, n)) == NULL) return 0;
-	if ((elm = json_object_get(elm, item)) == NULL) return 0;
-	return json_number_value(elm);
-}
-
-
-/*----------------------------------------------------------------------------*/
-bool GetMediaVolume(json_t *root, int n, double *volume, bool *muted)
-{
-	json_t *elm, *data;
-	*volume = -1;
-	*muted = false;
-
-	if ((elm = json_object_get(root, "status")) == NULL) return false;
-	if ((elm = json_object_get(elm, "volume")) == NULL) return false;
-
-	if ((data = json_object_get(elm, "level")) != NULL) *volume = json_number_value(data);
-	if ((data = json_object_get(elm, "muted")) != NULL) *muted = json_boolean_value(data);
-
-	return true;
-}
-
-
-/*----------------------------------------------------------------------------*/
-const char *GetMediaItem_S(json_t *root, int n, char *item)
-{
-	json_t *elm;
-	const char *str;
-
-	if ((elm = json_object_get(root, "status")) == NULL) return NULL;
-	elm = json_array_get(elm, n);
-	elm = json_object_get(elm, item);
-	str = json_string_value(elm);
-	return str;
-}
-
-
-/*----------------------------------------------------------------------------*/
-/* 																			  */
 /* QUEUE management															  */
 /* 																			  */
 /*----------------------------------------------------------------------------*/
-
 
 /*----------------------------------------------------------------------------*/
 void QueueInit(tQueue *queue)
@@ -284,7 +197,6 @@ void QueueFlush(tQueue *queue)
 /* NETWORKING utils															  */
 /* 																			  */
 /*----------------------------------------------------------------------------*/
-
 
 /*----------------------------------------------------------------------------*/
 // mac address
@@ -570,7 +482,7 @@ in_addr_t get_localhost(char **name)
 	freeifaddrs(ifap);
 
 	return INADDR_ANY;
-#else
+#elif defined(linux)
 	char szBuffer[MAX_INTERFACES * sizeof (struct ifreq)];
 	struct ifconf ifConf;
 	struct ifreq ifReq;
@@ -637,6 +549,9 @@ in_addr_t get_localhost(char **name)
 	close(LocalSock);
 
 	return LocalAddr.sin_addr.s_addr;
+#else
+	// missing platform here ...
+	return INADDR_ANY;
 #endif
 }
 
@@ -658,6 +573,85 @@ void winsock_close(void) {
 	WSACleanup();
 }
 #endif
+
+
+/*----------------------------------------------------------------------------*/
+int close_socket(int sd)
+{
+	if (sd <= 0) return -1;
+
+#ifdef WIN32
+	shutdown(sd, SD_BOTH);
+#else
+	shutdown(sd, SHUT_RDWR);
+#endif
+
+	LOG_DEBUG("closed socket %d", sd);
+
+	return close(sd);
+}
+
+
+/*----------------------------------------------------------------------------*/
+int bind_socket(unsigned short *port, int mode)
+{
+	int sock;
+	socklen_t len = sizeof(struct sockaddr);
+	struct sockaddr_in addr;
+
+	if ((sock = socket(AF_INET, mode, 0)) < 0) {
+		LOG_ERROR("cannot create socket %d", sock);
+		return sock;
+	}
+
+	/*  Populate socket address structure  */
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family      = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_port        = htons(*port);
+#ifdef SIN_LEN
+	si.sin_len = sizeof(si);
+#endif
+
+	if (bind(sock, (struct sockaddr*) &addr, sizeof(addr)) < 0) {
+		LOG_ERROR("cannot bind socket %d", sock);
+		return -1;
+	}
+
+	if (!*port) {
+		getsockname(sock, (struct sockaddr *) &addr, &len);
+		*port = ntohs(addr.sin_port);
+	}
+
+	LOG_DEBUG("socket binding %d on port %d", sock, *port);
+
+	return sock;
+}
+
+
+/*----------------------------------------------------------------------------*/
+int conn_socket(unsigned short port)
+{
+	struct sockaddr_in addr;
+	int sd;
+
+	sd = socket(AF_INET, SOCK_STREAM, 0);
+	// set_nonblock(ctx->cli_sock);
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	addr.sin_port = htons(port);
+
+	if (sd < 0 || connect(sd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+		close(sd);
+		return -1;
+	}
+
+	LOG_DEBUG("created socket %d", sd);
+
+	return sd;
+}
+
+
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */
@@ -757,7 +751,7 @@ u32_t gettime_ms(void) {
 /* 																			  */
 /*----------------------------------------------------------------------------*/
 
-#if LINUX || OSX || FREEBSD
+#if LINUX || OSX || FREEBSD || SUNOS
 /*---------------------------------------------------------------------------*/
 char *strlwr(char *str)
 {
@@ -1109,7 +1103,7 @@ char *kd_dump(key_data_t *kd)
 /* 																			  */
 /*----------------------------------------------------------------------------*/
 
-
+#ifdef _USE_XML_
 /*----------------------------------------------------------------------------*/
 IXML_Node *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...)
 {
@@ -1157,7 +1151,6 @@ IXML_Node *XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, ch
 }
 
 
-
 /*----------------------------------------------------------------------------*/
 char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item)
 {
@@ -1192,6 +1185,7 @@ char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item)
 	return ret;
 }
 
+
 /*----------------------------------------------------------------------------*/
 char *XMLGetFirstElementItem(IXML_Element *element, const char *item)
 {
@@ -1219,175 +1213,6 @@ char *XMLGetFirstElementItem(IXML_Element *element, const char *item)
 		return NULL;
 	}
 	ixmlNodeList_free(nodeList);
-
-	return ret;
-}
-
-/*----------------------------------------------------------------------------*/
-static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, bool *contd)
-{
-	IXML_NodeList *ServiceList = NULL;
-	IXML_NodeList *servlistnodelist = NULL;
-	IXML_Node *servlistnode = NULL;
-	*contd = false;
-
-	/*  ixmlDocument_getElementsByTagName()
-	 *  Returns a NodeList of all Elements that match the given
-	 *  tag name in the order in which they were encountered in a preorder
-	 *  traversal of the Document tree.
-	 *
-	 *  return (NodeList*) A pointer to a NodeList containing the
-	 *                      matching items or NULL on an error. 	 */
-	LOG_SDEBUG("GetNthServiceList called : n = %d", n);
-	servlistnodelist = ixmlDocument_getElementsByTagName(doc, "serviceList");
-	if (servlistnodelist &&
-		ixmlNodeList_length(servlistnodelist) &&
-		n < ixmlNodeList_length(servlistnodelist)) {
-		/* Retrieves a Node from a NodeList} specified by a
-		 *  numerical index.
-		 *
-		 *  return (Node*) A pointer to a Node or NULL if there was an
-		 *                  error. */
-		servlistnode = ixmlNodeList_item(servlistnodelist, n);
-		if (servlistnode) {
-			/* create as list of DOM nodes */
-			ServiceList = ixmlElement_getElementsByTagName(
-				(IXML_Element *)servlistnode, "service");
-			*contd = true;
-		} else
-			LOG_WARN("ixmlNodeList_item(nodeList, n) returned NULL", NULL);
-	}
-	if (servlistnodelist)
-		ixmlNodeList_free(servlistnodelist);
-
-	return ServiceList;
-}
-
-/*----------------------------------------------------------------------------*/
-int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
-	const char *serviceTypeBase, char **serviceType, char **serviceId, char **eventURL, char **controlURL)
-{
-	unsigned int i;
-	unsigned long length;
-	int found = 0;
-	int ret;
-	unsigned int sindex = 0;
-	char *tempServiceType = NULL;
-	char *baseURL = NULL;
-	const char *base = NULL;
-	char *relcontrolURL = NULL;
-	char *releventURL = NULL;
-	IXML_NodeList *serviceList = NULL;
-	IXML_Element *service = NULL;
-	bool contd = true;
-
-	baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase");
-	if (baseURL) base = baseURL;
-	else base = location;
-
-	for (sindex = 0; contd; sindex++) {
-		tempServiceType = NULL;
-		relcontrolURL = NULL;
-		releventURL = NULL;
-		service = NULL;
-
-		if ((serviceList = XMLGetNthServiceList(DescDoc , sindex, &contd)) == NULL) continue;
-		length = ixmlNodeList_length(serviceList);
-		for (i = 0; i < length; i++) {
-			service = (IXML_Element *)ixmlNodeList_item(serviceList, i);
-			tempServiceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
-			LOG_SDEBUG("serviceType %s", serviceType);
-
-			// remove version from service type
-			*strrchr(tempServiceType, ':') = '\0';
-			if (tempServiceType && strcmp(tempServiceType, serviceTypeBase) == 0) {
-				NFREE(*serviceType);
-				*serviceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
-				NFREE(*serviceId);
-				*serviceId = XMLGetFirstElementItem(service, "serviceId");
-				LOG_SDEBUG("Service %s, serviceId: %s", serviceType, serviceId);
-				relcontrolURL = XMLGetFirstElementItem(service, "controlURL");
-				releventURL = XMLGetFirstElementItem(service, "eventSubURL");
-				NFREE(*controlURL);
-				*controlURL = (char*) malloc(strlen(base) + strlen(relcontrolURL) + 1);
-				if (*controlURL) {
-					ret = UpnpResolveURL(base, relcontrolURL, *controlURL);
-					if (ret != UPNP_E_SUCCESS) LOG_ERROR("Error generating controlURL from %s + %s", base, relcontrolURL);
-				}
-				NFREE(*eventURL);
-				*eventURL = (char*) malloc(strlen(base) + strlen(releventURL) + 1);
-				if (*eventURL) {
-					ret = UpnpResolveURL(base, releventURL, *eventURL);
-					if (ret != UPNP_E_SUCCESS) LOG_ERROR("Error generating eventURL from %s + %s", base, releventURL);
-				}
-				free(relcontrolURL);
-				free(releventURL);
-				relcontrolURL = NULL;
-				releventURL = NULL;
-				found = 1;
-				break;
-			}
-			free(tempServiceType);
-			tempServiceType = NULL;
-		}
-		free(tempServiceType);
-		tempServiceType = NULL;
-		if (serviceList) ixmlNodeList_free(serviceList);
-		serviceList = NULL;
-	}
-
-	free(baseURL);
-
-	return found;
-}
-
-
-/*----------------------------------------------------------------------------*/
-char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr)
-{
-	IXML_Node *node;
-	IXML_Document *ItemDoc;
-	IXML_Element *LastChange;
-	IXML_NodeList *List;
-	char *buf, *ret = NULL;
-	u32_t i;
-
-	LastChange = ixmlDocument_getElementById(doc, "LastChange");
-	if (!LastChange) return NULL;
-
-	node = ixmlNode_getFirstChild((IXML_Node*) LastChange);
-	if (!node) return NULL;
-
-	buf = (char*) ixmlNode_getNodeValue(node);
-	if (!buf) return NULL;
-
-	ItemDoc = ixmlParseBuffer(buf);
-	if (!ItemDoc) return NULL;
-
-	List = ixmlDocument_getElementsByTagName(ItemDoc, Tag);
-	if (!List) {
-		ixmlDocument_free(ItemDoc);
-		return NULL;
-	}
-
-	for (i = 0; i < ixmlNodeList_length(List); i++) {
-		IXML_Node *node = ixmlNodeList_item(List, i);
-		IXML_Node *attr = _getAttributeNode(node, SearchAttr);
-
-		if (!attr) continue;
-
-		if (!strcasecmp(ixmlNode_getNodeValue(attr), SearchVal)) {
-			if ((node = ixmlNode_getNextSibling(attr)) == NULL)
-				if ((node = ixmlNode_getPreviousSibling(attr)) == NULL) continue;
-			if (!strcasecmp(ixmlNode_getNodeName(node), "val")) {
-				ret = strdup(ixmlNode_getNodeValue(node));
-				break;
-			}
-		}
-	}
-
-	ixmlNodeList_free(List);
-	ixmlDocument_free(ItemDoc);
 
 	return ret;
 }
@@ -1421,30 +1246,7 @@ const char *XMLGetLocalName(IXML_Document *doc, int Depth)
 
 	return ixmlNode_getLocalName(node);
 }
-
-
-/*----------------------------------------------------------------------------*/
-static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
-{
-	IXML_Node *ret;
-	IXML_NamedNodeMap *map = ixmlNode_getAttributes(node);
-	int i;
-
-	/*
-	supposed to act like but case insensitive
-	ixmlElement_getAttributeNode((IXML_Element*) node, SearchAttr);
-	*/
-
-	for (i = 0; i < ixmlNamedNodeMap_getLength(map); i++) {
-		ret = ixmlNamedNodeMap_item(map, i);
-		if (strcasecmp(ixmlNode_getNodeName(ret), SearchAttr)) ret = NULL;
-		else break;
-	}
-
-	ixmlNamedNodeMap_free(map);
-
-	return ret;
-}
+#endif
 
 
 /*--------------------------------------------------------------------------*/
@@ -1457,6 +1259,25 @@ void free_metadata(struct metadata_s *metadata)
 	NFREE(metadata->path);
 	NFREE(metadata->artwork);
 }
+
+
+
+/*----------------------------------------------------------------------------*/
+
+int _fprintf(FILE *file, ...)
+{
+	va_list args;
+	char *fmt;
+	int n;
+
+	va_start(args, file);
+	fmt = va_arg(args, char*);
+
+	n = vfprintf(file, fmt, args);
+	va_end(args);
+	return n;
+}
+
 
 
 

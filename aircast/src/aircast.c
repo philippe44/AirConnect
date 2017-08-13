@@ -28,6 +28,7 @@
 #include "log_util.h"
 #include "util.h"
 #include "cast_util.h"
+#include "cast_parse.h"
 #include "castitf.h"
 #include "mdnssd-itf.h"
 #include "mdnsd.h"

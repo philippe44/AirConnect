@@ -3,6 +3,8 @@
  * Copyright (c) James Laird 2011
  * All rights reserved.
  *
+ * Modularisation: philippe_44@outlook.com, 2017
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -132,11 +134,8 @@ static void*	rtp_thread_func(void *arg);
 static void*	http_thread_func(void *arg);
 static bool 	handle_http(hairtunes_t *ctx, int sock);
 static void 	ab_reset(abuf_t *audio_buffer);
-static int 		bind_socket(unsigned short *port, int mode);
 static int	  	seq_order(seq_t a, seq_t b);
 static FLAC__StreamEncoderWriteStatus 	flac_write_callback(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void *client_data);
-
-int close_socket(int sd);
 
 /*---------------------------------------------------------------------------*/
 static void reset_flac(hairtunes_t *ctx) {
@@ -684,40 +683,6 @@ static bool rtp_request_resend(hairtunes_t *ctx, seq_t first, seq_t last) {
 	return true;
 }
 
-static int bind_socket(unsigned short *port, int mode)
-{
-	int sock;
-	socklen_t len = sizeof(struct sockaddr);
-	struct sockaddr_in addr;
-
-	if ((sock = socket(AF_INET, mode, 0)) < 0) {
-		LOG_ERROR("cannot create socket %d", sock);
-		return sock;
-	}
-
-	/*  Populate socket address structure  */
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family      = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr.sin_port        = htons(*port);
-#ifdef SIN_LEN
-	si.sin_len = sizeof(si);
-#endif
-
-	if (bind(sock, (struct sockaddr*) &addr, sizeof(addr)) < 0) {
-		LOG_ERROR("cannot bind socket %d", sock);
-		return -1;
-	}
-
-	if (!*port) {
-		getsockname(sock, (struct sockaddr *) &addr, &len);
-		*port = ntohs(addr.sin_port);
-	}
-
-	LOG_DEBUG("socket binding %d on port %d", sock, *port);
-
-	return sock;
-}
 
 /*---------------------------------------------------------------------------*/
 // get the next frame, when available. return 0 if underrun/stream reset.
@@ -908,37 +873,5 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	return true;
 }
 
-
-/*----------------------------------------------------------------------------*/
-int close_socket(int sd)
-{
-	if (sd <= 0) return -1;
-
-#ifdef WIN32
-	shutdown(sd, SD_BOTH);
-#else
-	shutdown(sd, SHUT_RDWR);
-#endif
-
-	LOG_DEBUG("closed socket %d", sd);
-
-	return close(sd);
-}
-
-
-/*----------------------------------------------------------------------------*/
-int _fprintf(FILE *file, ...)
-{
-	va_list args;
-	char *fmt;
-	int n;
-
-	va_start(args, file);
-	fmt = va_arg(args, char*);
-
-	n = vfprintf(file, fmt, args);
-	va_end(args);
-	return n;
-}
 
 

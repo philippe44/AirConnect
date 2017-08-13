@@ -11,7 +11,7 @@ TINYSVCMDNS	= $(BASE)/tinysvcmdns
 VALGRIND	= $(BASE)/valgrind
 UPNP 		= $(BASE)/libupnp/1.6.19
 
-DEFINES 	= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DNDEBUG -D_GNU_SOURCE -D_FIXME_MDNS_DEREGISTER_
+DEFINES 	= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DNDEBUG -D_GNU_SOURCE -D_USE_XML_
 
 CFLAGS 		+= -fdata-sections -ffunction-sections 
 
@@ -37,7 +37,7 @@ INCLUDE = -I. \
 		  		  
 DEPS	= $(SRC)/aircast.h
 				  
-SOURCES = castcore.c castmessage.pb.c aircast.c cast_util.c config_cast.c  \
+SOURCES = castcore.c castmessage.pb.c aircast.c cast_util.c cast_parse.c config_cast.c  \
 		  alac.c base64.c hairtunes.c raopcore.c util.c log_util.c \
 		  pb_common.c pb_decode.c pb_encode.c dump.c error.c hashtable.c strconv.c \
 		  hashtable_seed.c load.c memory.c pack_unpack.c strbuffer.c utf.c value.c \

@@ -1,6 +1,8 @@
 /*
- *  Chromecast protocol handler 
+ *  Chromecast control utils
+ *
  *  (c) Philippe 2016-2017, philippe_44@outlook.com
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -16,28 +18,16 @@
  *
  */
 
-#ifndef __CASTITF_H
-#define __CASTITF_H
+#ifndef __CAST_PARSE_H
+#define __CAST_PARSE_H
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-
-#include <pb_encode.h>
-#include <pb_decode.h>
 #include "jansson.h"
-#include "castmessage.pb.h"
 
-void InitSSL(void);
-void EndSSL(void);
-
-struct sCastCtx;
-
-json_t 	*GetTimedEvent(void *p, u32_t msWait);
-void 	*CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, u16_t port, double MediaVolume);
-void 	UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, u16_t port);
-void 	DeleteCastDevice(struct sCastCtx *Ctx);
-bool	CastIsConnected(struct sCastCtx *Ctx);
-bool 	CastIsMediaSession(struct sCastCtx *Ctx);
+int 		GetMediaItem_I(json_t *root, int n, char *item);
+double 		GetMediaItem_F(json_t *root, int n, char *item);
+const char* GetMediaItem_S(json_t *root, int n, char *item);
+const char* GetAppIdItem(json_t *root, char* appId, char *item);
+bool 		GetMediaVolume(json_t *root, int n, double *volume, bool *muted);
 
 #endif
+

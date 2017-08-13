@@ -28,7 +28,6 @@ struct sMR;
 
 typedef struct sAction {
 	struct sMR *Device;
-	int    Time;
 	void   *ActionNode;
 	union {
 		u8_t Volume;

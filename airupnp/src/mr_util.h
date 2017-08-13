@@ -32,6 +32,12 @@ struct sMR* 	UDN2Device(char *SID);
 
 void 			MakeMacUnique(struct sMR *Device);
 in_addr_t 		ExtractIP(const char *URL);
+
+int 	   	XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
+							const char *serviceTypeBase, char **serviceId,
+							char **serviceType, char **eventURL, char **controlURL);
+char 	   	*XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr);
+
 char*			uPNPEvent2String(Upnp_EventType S);
 
 #endif

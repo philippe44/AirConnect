@@ -20,9 +20,10 @@
 
 #include <stdarg.h>
 
-#include "aircast.h"
+
 #include "log_util.h"
 #include "util.h"
+#include "cast_parse.h"
 #include "castcore.h"
 #include "castitf.h"
 
@@ -41,7 +42,6 @@ static log_level *loglevel = &cast_loglevel;
 
 
 #define DEFAULT_RECEIVER	"CC1AD845"
-//#define DEFAULT_RECEIVER	"B590F65D"
 
 
 /*----------------------------------------------------------------------------*/

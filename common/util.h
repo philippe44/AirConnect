@@ -28,8 +28,9 @@
 
 #include "platform.h"
 #include "pthread.h"
-#include "jansson.h"
+#ifdef _USE_XML_
 #include "ixml.h"
+#endif
 
 #define NFREE(p) if (p) { free(p); p = NULL; }
 
@@ -59,21 +60,14 @@ void 		free_metadata(struct metadata_s *metadata);
 
 int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait);
 
-int 		GetMediaItem_I(json_t *root, int n, char *item);
-double 		GetMediaItem_F(json_t *root, int n, char *item);
-const char* GetMediaItem_S(json_t *root, int n, char *item);
-const char* GetAppIdItem(json_t *root, char* appId, char *item);
-bool 		GetMediaVolume(json_t *root, int n, double *volume, bool *muted);
-
-char 	   	*XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr);
+#ifdef _USE_XML_
 const char 	*XMLGetLocalName(IXML_Document *doc, int Depth);
 IXML_Node  	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);
-int 	   	XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
-							const char *serviceTypeBase, char **serviceId,
-							char **serviceType, char **eventURL, char **controlURL);
+char 		*XMLGetFirstElementItem(IXML_Element *element, const char *item);
+#endif
 
 u32_t 		gettime_ms(void);
 
@@ -81,6 +75,8 @@ char*		stristr(char *s1, char *s2);
 #if WIN
 char* 		strsep(char** stringp, const char* delim);
 int 		asprintf(char **strp, const char *fmt, ...);
+#else
+char 		*strlwr(char *str);
 #endif
 char* 		strextract(char *s1, char *beg, char *end);
 u32_t 		hash32(char *str);
@@ -93,12 +89,13 @@ in_addr_t 	get_localhost(char **name);
 void 		get_mac(u8_t mac[]);
 void 		winsock_init(void);
 void 		winsock_close(void);
-
-typedef struct {
+int 		close_socket(int sd);
+int 		bind_socket(short unsigned *port, int mode);
+int 		conn_socket(unsigned short port);#if !WINint SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size);#endif
+typedef struct {
 	char *key;
 	char *data;
 } key_data_t;
-
 
 bool 		http_parse(int sock, char *method, key_data_t *rkd, char **body, int *len);
 char*		http_send(int sock, char *method, key_data_t *rkd);
@@ -110,9 +107,6 @@ bool 		kd_add(key_data_t *kd, char *key, char *value);
 char* 		kd_dump(key_data_t *kd);
 void 		kd_free(key_data_t *kd);
 
+int _fprintf(FILE *file, ...);
+#endif
 
-#if WIN
-int asprintf(char **strp, const char *fmt, ...);
-#endif
-
-#endif

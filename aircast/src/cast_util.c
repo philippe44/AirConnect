@@ -246,23 +246,26 @@ void CastSetDeviceVolume(struct sCastCtx *Ctx, double Volume, bool Queue)
 	pthread_mutex_lock(&Ctx->Mutex);
 
 	if (Ctx->Status == CAST_LAUNCHED && (!Ctx->waitId || !Queue)) {
-		Ctx->waitId = Ctx->reqId++;
 
 		if (Volume) {
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
 						"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"level\":%0.4lf}}",
-						Ctx->waitId, Volume);
-
-			Ctx->waitId = Ctx->reqId++;
+						Ctx->reqId++, Volume);
 
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
 						"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":false}}",
-						Ctx->waitId);
+						Ctx->reqId);
+
 		} else {
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
 						"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":true}}",
-						Ctx->waitId);
+						Ctx->reqId);
 	  }
+
+		// Only set waitId if this is NOT queue bypass
+		if (Queue) Ctx->waitId = Ctx->reqId;
+
+		Ctx->reqId++;
 
 	}
 	// otherwise queue it for later

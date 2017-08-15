@@ -48,9 +48,4 @@ Parameters of importance
 - enabled <0|1>			: in common section, let newly discovered players to be enabled by default. In a dedicated section, enables the player
 - name 				: name under which player appear in AirPlay 
 - log_limit <-1 | n> (-1)	: when using log file, limits its size (-1 = no limit)
-<<<<<<< HEAD
-
 - Source code available here: https://github.com/philippe44/AirConnect
-
-=======
->>>>>>> origin/master

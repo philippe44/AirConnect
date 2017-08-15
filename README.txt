@@ -1,6 +1,9 @@
 Use these applications to add AirPlay capabilities to Chromecast and UPnP players
 
+====================================================================
 Chromecast version:
+====================================================================
+
 - Simply launch the application and after ~30s, Chromecast devices will appear (under their CC name) in your AirPlay list
 - Works for Windows, Linux (x86, x64, ARM) and MacOS 
 - Groups are supported
@@ -15,6 +18,7 @@ Chromecast version:
 
 There is a <common> section where parameters found apply to all players, unless the same parameter appears in an individual section, which takes precedence
 
+--------------------------------------------------------------------
 Parameters of importance
 
 - latency <0 | 500..n> (0)	: buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start). Set the amount of buffering for AirPlay realtime audio. Below 500ms is not recommended. 0 means automatic handling by AirPlay
@@ -24,7 +28,10 @@ Parameters of importance
 - name 				: name under which player appear in AirPlay 
 - log_limit <-1 | n> (-1)	: when using log file, limits its size (-1 = no limit)
 
+====================================================================
 UPnP version:
+====================================================================
+
 - Simply launch the application and after ~30s, UPnP devices will appear (under their UPnP model name) in your AirPlay list
 - Works for Windows, Linux (x86, x64, ARM) and MacOS 
 - Volume changes on the player or other control application are synchronized to the AirPlay client
@@ -38,6 +45,7 @@ UPnP version:
 
 There is a <common> section where parameters found apply to all players, unless the same parameter appears in an individual section, which takes precedence
 
+--------------------------------------------------------------------
 Parameters of importance
 
 - use_flac <0|1> (0)		: send audio in flac format to player. Highly recommended and should work with all players. Otherwise, raw PCM is used but consumes more bandwidth works with fewer players.
@@ -48,4 +56,6 @@ Parameters of importance
 - enabled <0|1>			: in common section, let newly discovered players to be enabled by default. In a dedicated section, enables the player
 - name 				: name under which player appear in AirPlay 
 - log_limit <-1 | n> (-1)	: when using log file, limits its size (-1 = no limit)
-- Source code available here: https://github.com/philippe44/AirConnect
+
+====================================================================
+Source code available here: https://github.com/philippe44/AirConnect

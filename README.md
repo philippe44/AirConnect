@@ -6,11 +6,11 @@
 
 Works for Windows, Linux (x86, x64 and ARM and Sparc) and MacOS
 
-No dependency except openSSL that every Linux box alread has. For Windows, copy all the DLLs
+No dependency except openSSL that every Linux box already has. For Windows, copy all the DLLs
 
 Take any computer on your network, launch the app and 30s after your CC/UPnP devices will appear as AirPlay targets
 
-Use -h to view options. A config file to fine tweaking can be generated, see -i and -I options (doc to come later)
+Use -h to view options. A config file for fine tweaking can be generated, see -i and -I options (doc to come later)
 
 UPnP works with Sonos players
 

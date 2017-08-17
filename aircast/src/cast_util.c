@@ -89,6 +89,7 @@ void CastGetMediaStatus(struct sCastCtx *Ctx)
 
 
 /*----------------------------------------------------------------------------*/
+#define LOAD_FLUSH
 bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadata_s *MetaData)
 {
 	json_t *msg;
@@ -123,8 +124,21 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadat
 
 	pthread_mutex_lock(&Ctx->Mutex);
 
-	// if receiver launched and no STOP pending (precaution) just send message
+#ifdef LOAD_FLUSH
+	if (Ctx->Status == CAST_LAUNCHED && (!Ctx->waitId || Ctx->waitMedia)) {
+
+		/*
+		For some reason a LOAD request is pending (maybe not enough data have
+		been buffered yet, so LOAD has not been acknowledged, a stop might
+		be stuck in the queue and the source does not send any more data, so
+		this is a deadlock (see usage with iOS 10.x). Best is to have LOAD
+		request flushing the queue then
+		*/
+		if (Ctx->waitMedia) CastQueueFlush(&Ctx->reqQueue);
+#else
 	if (Ctx->Status == CAST_LAUNCHED && !Ctx->waitId) {
+#endif
+
 		Ctx->waitId = Ctx->reqId++;
 		Ctx->waitMedia = Ctx->waitId;
 		Ctx->mediaSessionId = 0;
@@ -138,10 +152,17 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadat
 		SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str);
 		json_decref(msg);
 		NFREE(str);
+
+		LOG_INFO("[%p]: Immediate LOAD (id:%u)", Ctx->owner, Ctx->waitId);
 	}
 	// otherwise queue it for later
 	else {
 		tReqItem *req = malloc(sizeof(tReqItem));
+#ifndef LOAD_FLUSH
+		// if waiting for a media, need to unlock queue and take precedence
+		if (Ctx->waitMedia) Ctx->waitId = Ctx->waitMedia = 0;
+#endif
+
 		strcpy(req->Type, "LOAD");
 		req->data.msg = msg;
 		QueueInsert(&Ctx->reqQueue, req);
@@ -159,6 +180,7 @@ void CastSimple(struct sCastCtx *Ctx, char *Type)
 {
 	// lock on wait for a Cast response
 	pthread_mutex_lock(&Ctx->Mutex);
+
 	if (Ctx->Status == CAST_LAUNCHED && !Ctx->waitId) {
 		// no media session, nothing to do
 		if (Ctx->mediaSessionId) {
@@ -168,10 +190,13 @@ void CastSimple(struct sCastCtx *Ctx, char *Type)
 							"{\"type\":\"%s\",\"requestId\":%d,\"mediaSessionId\":%d}",
 							Type, Ctx->waitId, Ctx->mediaSessionId);
 
+			LOG_INFO("[%p]: Immediate %s (id:%u)", Ctx->owner, Type, Ctx->waitId);
+
 		}
 		else {
-			LOG_WARN("[%p]: %s req w/o a session", Type, Ctx->owner);
+			LOG_WARN("[%p]: %s req w/o a session", Ctx->owner, Type);
 	   }
+
 	}
 	else {
 		tReqItem *req = malloc(sizeof(tReqItem));
@@ -189,11 +214,15 @@ void CastStop(struct sCastCtx *Ctx)
 {
 	// lock on wait for a Cast response
 	pthread_mutex_lock(&Ctx->Mutex);
+
 	CastQueueFlush(&Ctx->reqQueue);
-	if (Ctx->Status == CAST_LAUNCHED && Ctx->mediaSessionId) {
+
+	// if a session is active, stop can be sent-immediately
+	if (Ctx->mediaSessionId) {
+
 		Ctx->waitId = Ctx->reqId++;
 
-		// VERSION_1_24
+		// version 1.24
 		if (Ctx->stopReceiver) {
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
 						"{\"type\":\"STOP\",\"requestId\":%d,\"sessionId\":%d}", Ctx->waitId, Ctx->mediaSessionId);
@@ -207,14 +236,23 @@ void CastStop(struct sCastCtx *Ctx)
 		}
 
 		Ctx->mediaSessionId = 0;
-	}
-	else {
-		if (Ctx->Status == CAST_LAUNCHING) {
+		LOG_INFO("[%p]: Immediate STOP (id:%u)", Ctx->owner, Ctx->waitId);
+
+	// waiting for a session, need to queue the stop
+	} else if (Ctx->waitMedia) {
+
+		tReqItem *req = malloc(sizeof(tReqItem));
+		strcpy(req->Type, "STOP");
+		QueueInsert(&Ctx->reqQueue, req);
+		LOG_INFO("[%p]: Queuing %s", Ctx->owner, req->Type);
+
+	// launching happening, just go back to CONNECT mode
+	} else if (Ctx->Status == CAST_LAUNCHING) {
 			Ctx->Status = CAST_CONNECTED;
 			LOG_WARN("[%p]: Stop while still launching receiver", Ctx->owner);
-		} else {
-			LOG_WARN("[%p]: Stop w/o session or connect", Ctx->owner);
-		}
+	// a random stop
+	} else {
+		LOG_WARN("[%p]: Stop w/o session or connect", Ctx->owner);
 	}
 
 	pthread_mutex_unlock(&Ctx->Mutex);
@@ -236,13 +274,12 @@ void CastPowerOn(struct sCastCtx *Ctx)
 
 
 /*----------------------------------------------------------------------------*/
-#if 1
 void CastSetDeviceVolume(struct sCastCtx *Ctx, double Volume, bool Queue)
 {
 	if (Ctx->group) Volume = Volume * Ctx->MediaVolume;
 
-	if (Volume > 1.0) Volume = 1.0;
-
+	if (Volume > 1.0) Volume = 1.0;
+
 	pthread_mutex_lock(&Ctx->Mutex);
 
 	if (Ctx->Status == CAST_LAUNCHED && (!Ctx->waitId || !Queue)) {
@@ -260,13 +297,14 @@ void CastSetDeviceVolume(struct sCastCtx *Ctx, double Volume, bool Queue)
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
 						"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":true}}",
 						Ctx->reqId);
-	  }
+		}
 
 		// Only set waitId if this is NOT queue bypass
 		if (Queue) Ctx->waitId = Ctx->reqId;
 
-		Ctx->reqId++;
+		LOG_INFO("[%p]: Immediate VOLUME (id:%u)", Ctx->owner, Ctx->reqId);
 
+		Ctx->reqId++;
 	}
 	// otherwise queue it for later
 	else {
@@ -279,37 +317,8 @@ void CastSetDeviceVolume(struct sCastCtx *Ctx, double Volume, bool Queue)
 
 	pthread_mutex_unlock(&Ctx->Mutex);
 }
-/*----------------------------------------------------------------------------*/
-#else
-void CastSetDeviceVolume(struct sCastCtx *Ctx, double Volume, bool Queue)
-{
-	if (Ctx->group) Volume = Volume * Ctx->MediaVolume;
 
-	if (Volume > 1.0) Volume = 1.0;
-
-	pthread_mutex_lock(&Ctx->Mutex);
-
-	if (Volume) {
-		SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-						"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"level\":%ff}}",
-						Ctx->reqId++, Volume);
-
-		SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-						"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":false}}",
-						Ctx->reqId++);
-	}
-	else {
-		SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-						"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":true}}",
-						Ctx->reqId++);
-	}
-
-	pthread_mutex_unlock(&Ctx->Mutex);
-}
-#endif
-
-
-/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 int CastSeek(char *ControlURL, unsigned Interval)
 {
 	int rc = 0;

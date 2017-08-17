@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.0.1.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.0.2.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
@@ -191,6 +191,9 @@ void callback(void *owner, raop_event_t event, void *param)
 {
 	struct sMR *device = (struct sMR*) owner;
 
+	// need to use a mutex as PLAY comes from another thread than the others
+	pthread_mutex_lock(&device->Mutex);
+
 	switch (event) {
 		case RAOP_STREAM:
 			// a PLAY will come later, so we'll do the load at that time
@@ -231,7 +234,7 @@ void callback(void *owner, raop_event_t event, void *param)
 			}
 
 			// some players (Sonos) can't buffer properly by themselves
-			// this should work but glibc does not match if leading is ':' f...
+			// this should work with sscanf but glibc does not match if leading is ':' f...
 			if ((p = strchr(device->Config.Latency, ':')) != NULL) {
 				device->PlayWait = true;
 				device->PlayTime = gettime_ms() + atoi(p + 1);
@@ -251,6 +254,8 @@ void callback(void *owner, raop_event_t event, void *param)
 		default:
 			break;
 	}
+
+	pthread_mutex_unlock(&device->Mutex);
 }
 
 

@@ -274,7 +274,8 @@ bool GetNextMessage(pthread_mutex_t *Mutex, SSL *ssl, CastMessage *message)
 }
 
 
-/*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
 json_t *GetTimedEvent(void *p, u32_t msWait)
 {
 	json_t *data;
@@ -436,8 +437,10 @@ void SetMediaVolume(tCastCtx *Ctx, double Volume)
 }
 
 
-/*----------------------------------------------------------------------------*/
-void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, u16_t port, double MediaVolume)
+
+/*----------------------------------------------------------------------------*/
+
+void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, u16_t port, double MediaVolume)
 {
 	tCastCtx *Ctx = malloc(sizeof(tCastCtx));
 	pthread_mutexattr_t mutexAttr;
@@ -501,7 +504,7 @@ void DeleteCastDevice(struct sCastCtx *Ctx)
 	free(Ctx);
 }
 
-
+
 /*----------------------------------------------------------------------------*/
 void CastQueueFlush(tQueue *Queue)
 {
@@ -549,8 +552,6 @@ void ProcessQueue(tCastCtx *Ctx) {
 
 	if (!strcasecmp(item->Type, "SET_VOLUME")) {
 
-		LOG_INFO("[%p]: Processing VOLUME (id:%u)", Ctx->owner, Ctx->waitId);
-
 		if (item->data.Volume) {
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
 							"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"level\":%0.4lf}}",
@@ -567,6 +568,8 @@ void ProcessQueue(tCastCtx *Ctx) {
 		}
 
 		Ctx->waitId = Ctx->reqId++;
+
+		LOG_INFO("[%p]: Processing VOLUME (id:%u)", Ctx->owner, Ctx->waitId);
 	}
 
 	if (!strcasecmp(item->Type, "PLAY") || !strcasecmp(item->Type, "PAUSE")) {
@@ -605,6 +608,26 @@ void ProcessQueue(tCastCtx *Ctx) {
 
 		json_decref(msg);
    }
+
+	if (!strcasecmp(item->Type, "STOP")) {
+
+		Ctx->waitId = Ctx->reqId++;
+
+		// version 1.24
+		if (Ctx->stopReceiver) {
+			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
+						"{\"type\":\"STOP\",\"requestId\":%d,\"sessionId\":%d}", Ctx->waitId, Ctx->mediaSessionId);
+			Ctx->Status = CAST_CONNECTED;
+
+		}
+		else {
+			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId,
+							"{\"type\":\"STOP\",\"requestId\":%d,\"mediaSessionId\":%d}",
+							Ctx->waitId, Ctx->mediaSessionId);
+		}
+
+		Ctx->mediaSessionId = 0;
+	}
 
    free(item);
 }
@@ -766,6 +789,10 @@ static void *CastSocketThread(void *args)
 						LOG_INFO("[%p]: Media session id %d", Ctx->owner, Ctx->mediaSessionId);
 						// set media volume when session is re-connected
 						SetMediaVolume(Ctx, Ctx->MediaVolume);
+					}
+					else {
+						LOG_ERROR("[%p]: waitMedia match but no session %u",
+							Ctx->owner, Ctx->waitMedia);
 					}
 
 					// Don't need to forward this, no valuable info

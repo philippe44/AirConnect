@@ -106,9 +106,13 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 
 	memcpy(ctx->mac, mac, 6);
 	for (i = 0; i < 6; i++) sprintf(id + i*2, "%02X", mac[i]);
+	// mDNS instance name length cannot be more than 63
 	sprintf(id + 12, "@%s", name);
-
-	ctx->svr = svr;
+#if WIN
+	if (strlen(id) > 63) id[63] = '\0';
+#endif
+
+	ctx->svr = svr;
 	ctx->svc = mdnsd_register_svc(svr, id, "_raop._tcp.local", ctx->port, NULL, (const char**) txt);
 
 	free(txt[0]);
@@ -267,7 +271,9 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 	if (!http_parse(sock, method, headers, &body, &len)) return false;
 
-	LOG_INFO("[%p]: received %s", ctx, method);
+	if (strcmp(method, "OPTIONS")) {
+		LOG_INFO("[%p]: received %s", ctx, method);
+	}
 
 	if ((buf = kd_lookup(headers, "Apple-Challenge")) != NULL) {
 		int n;
@@ -377,8 +383,8 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 	} else if (!strcmp(method, "RECORD")) {
 
 		if (ctx->latency) {
-			char latency[5];
-			snprintf(latency, 5, "%u", (ctx->latency * 44100) / 1000);
+			char latency[6];
+			snprintf(latency, 6, "%u", (ctx->latency * 44100) / 1000);
 			kd_add(resp, "Audio-Latency", latency);
 		}
 
@@ -436,7 +442,9 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 	if (success) buf = http_send(sock, "RTSP/1.0 200 OK", resp);
 	else buf = http_send(sock, "RTSP/1.0 500 ERROR", NULL);
 
-	LOG_INFO("[%p]: responding:\n%s", ctx, buf ? buf : "<void>");
+	if (strcmp(method, "OPTIONS")) {
+		LOG_INFO("[%p]: responding:\n%s", ctx, buf ? buf : "<void>");
+	}
 
 	NFREE(body);
 	NFREE(buf);

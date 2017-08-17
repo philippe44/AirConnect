@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.0.1.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.0.2.0"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -172,6 +172,9 @@ void callback(void *owner, raop_event_t event, void *param)
 {
 	struct sMR *device = (struct sMR*) owner;
 
+	// need to use a mutex as PLAY comes from another thread than the others
+	pthread_mutex_lock(&device->Mutex);
+
 	switch (event) {
 		case RAOP_STREAM:
 			// a PLAY will come later, so we'll do the load at that time
@@ -193,6 +196,7 @@ void callback(void *owner, raop_event_t event, void *param)
 			device->RaopState = event;
 			break;
 		case RAOP_PLAY:
+			LOG_INFO("[%p]: Play", device);
 			if (device->RaopState != RAOP_PLAY) {
 				char *uri;
 #pragma GCC diagnostic push
@@ -215,6 +219,8 @@ void callback(void *owner, raop_event_t event, void *param)
 		default:
 			break;
 	}
+
+	pthread_mutex_unlock(&device->Mutex);
 }
 
 

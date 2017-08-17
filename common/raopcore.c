@@ -108,11 +108,10 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 	for (i = 0; i < 6; i++) sprintf(id + i*2, "%02X", mac[i]);
 	// mDNS instance name length cannot be more than 63
 	sprintf(id + 12, "@%s", name);
-#if WIN
+	// Windows snprintf does not add NULL if string is larger than n ...
 	if (strlen(id) > 63) id[63] = '\0';
-#endif
-
-	ctx->svr = svr;
+
+	ctx->svr = svr;
 	ctx->svc = mdnsd_register_svc(svr, id, "_raop._tcp.local", ctx->port, NULL, (const char**) txt);
 
 	free(txt[0]);

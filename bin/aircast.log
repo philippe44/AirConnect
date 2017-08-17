@@ -1,0 +1,28 @@
+[22:48:51.271248] main:1197 Starting airupnp version: v0.0.1.0 (Aug 16 2017 @ 21:27:22)
+[22:48:51.279891] main:1205 no config file, using defaults
+[22:48:51.318779] Start:988 Binding to 192.168.2.123:49152
+[22:49:25.531792] main:1197 Starting airupnp version: v0.0.1.0 (Aug 16 2017 @ 21:27:22)
+[22:49:25.538559] main:1205 no config file, using defaults
+[22:49:25.549736] Start:988 Binding to 192.168.2.123:49152
+[22:49:40.054448] AddMRDevice:861 [0x86d24]: adding renderer (192.168.2.26 - Sonos PLAY:5)
+[22:49:40.065677] AddMRDevice:893 [0x86d24]: cannot get mac 192.168.2.26 - Sonos PLAY:5, creating fake b5d4ba8f
+[22:49:40.112226] HandleStateEvent:328 [0x86d24]: UPnP Volume local change 42
+[22:49:40.126835] AddMRDevice:861 [0x88200]: adding renderer (GGMM_E5_4C68)
+[22:49:40.133014] AddMRDevice:893 [0x88200]: cannot get mac GGMM_E5_4C68, creating fake f2413a09
+[22:49:40.244651] AddMRDevice:861 [0x896dc]: adding renderer (wx-010)
+[22:49:40.253673] AddMRDevice:893 [0x896dc]: cannot get mac wx-010, creating fake 36f90cf6
+[22:49:40.300052] HandleStateEvent:328 [0x896dc]: UPnP Volume local change 73
+[22:49:40.366515] AddMRDevice:861 [0x8abb8]: adding renderer (192.168.2.27 - Sonos PLAY:3)
+[22:49:40.372805] AddMRDevice:893 [0x8abb8]: cannot get mac 192.168.2.27 - Sonos PLAY:3, creating fake 1297514d
+[22:49:40.436856] HandleStateEvent:328 [0x8abb8]: UPnP Volume local change 64
+[22:49:40.533959] AddMRDevice:861 [0x8c094]: adding renderer (foobar2000 Renderer (Philippe Guillemette) [BUREAU-XP])
+[22:49:40.539779] AddMRDevice:893 [0x8c094]: cannot get mac foobar2000 Renderer (Philippe Guillemette) [BUREAU-XP], creating fake 6751f8b6
+[22:49:44.284819] main:819 Starting aircast version: v0.0.1.0 (Aug 16 2017 @ 21:27:07)
+[22:49:44.335637] main:827 no config file, using defaults
+[22:49:44.348170] Start:631 Binding to 192.168.2.123
+[22:49:59.777200] AddCastDevice:552 [0x75008]: adding renderer (Maison)
+[22:49:59.788986] AddCastDevice:558 [0x75008]: creating MAC 75232
+[22:49:59.794334] AddCastDevice:552 [0x75378]: adding renderer (GoogleHome7386)
+[22:49:59.800611] AddCastDevice:558 [0x75378]: creating MAC 755a2
+[22:50:29.622872] AddCastDevice:552 [0x756e8]: adding renderer (ChromecastAudio0185)
+[22:50:29.634041] AddCastDevice:558 [0x756e8]: creating MAC 75912

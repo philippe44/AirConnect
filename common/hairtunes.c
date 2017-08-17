@@ -763,9 +763,10 @@ static void *http_thread_func(void *arg) {
 		bool res = true;
 
 		if (sock == -1) {
+			struct timeval timeout = {0, 50*1000};
+
 			FD_ZERO(&rfds);
 			FD_SET(ctx->http_listener, &rfds);
-			timeout.tv_usec = 50*1000;
 
 			if (select(ctx->http_listener + 1, &rfds, NULL, NULL, &timeout) > 0) {
 				sock = accept(ctx->http_listener, NULL, NULL);
@@ -779,7 +780,6 @@ static void *http_thread_func(void *arg) {
 		FD_ZERO(&rfds);
 		FD_SET(sock, &rfds);
 
-		timeout.tv_usec = ctx->frame_size*((1000*2*1000)/(44100*3));
 		n = select(sock + 1, &rfds, NULL, NULL, &timeout);
 
 		if (n > 0) {
@@ -832,6 +832,13 @@ static void *http_thread_func(void *arg) {
 					LOG_WARN("[%p]: HTTP send() unexpected response: %li (data=%i): %s", ctx, (long int) sent, len, strerror(errno));
 				}
 			}
+			
+			// packet just sent, don't wait in case we have more so sent (catch-up mode)
+			timeout.tv_usec = 0;
+		} else {
+			
+			// nothing to send, so probably can wait a nominal amount, i.e 2/3 of length of a frame
+			timeout.tv_usec = ctx->frame_size*((1000*2*1000)/(44100*3));
 		}
 	}
 

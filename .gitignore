@@ -101,3 +101,4 @@ _backup/
 *.pcm
 *.#*
 *.bin
+*.log

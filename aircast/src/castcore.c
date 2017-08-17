@@ -403,7 +403,7 @@ void CastDisconnect(struct sCastCtx *Ctx)
 	}
 
 	Ctx->reqId = 1;
-	Ctx->waitId = Ctx->mediaSessionId = 0;
+	Ctx->waitId = Ctx->waitMedia = Ctx->mediaSessionId = 0;
 	NFREE(Ctx->sessionId);
 	NFREE(Ctx->transportId);
 	QueueFlush(&Ctx->eventQueue);
@@ -446,7 +446,7 @@ void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_add
 	pthread_mutexattr_t mutexAttr;
 
 	Ctx->reqId 		= 1;
-	Ctx->waitId 	= Ctx->mediaSessionId = 0;
+	Ctx->waitId 	= Ctx->waitMedia = Ctx->mediaSessionId = 0;
 	Ctx->sessionId 	= Ctx->transportId = NULL;
 	Ctx->owner 		= owner;
 	Ctx->ssl 		= NULL;

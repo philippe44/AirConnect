@@ -750,6 +750,7 @@ static void *http_thread_func(void *arg) {
 	hairtunes_t *ctx = (hairtunes_t*) arg;
 	int sock = -1;
 	bool http_ready = false;
+	struct timeval timeout = { 0, 0 };
 
 	if (ctx->use_flac && ((flac_samples = malloc(2 * ctx->frame_size * sizeof(FLAC__int32))) == NULL)) {
 		LOG_ERROR("[%p]: Cannot allocate FLAC sample buffer %u", ctx, ctx->frame_size);
@@ -758,7 +759,6 @@ static void *http_thread_func(void *arg) {
 	while (ctx->running) {
 		ssize_t sent;
 		fd_set rfds;
-		struct timeval timeout = {0, 0};
 		int n;
 		bool res = true;
 
@@ -832,13 +832,13 @@ static void *http_thread_func(void *arg) {
 					LOG_WARN("[%p]: HTTP send() unexpected response: %li (data=%i): %s", ctx, (long int) sent, len, strerror(errno));
 				}
 			}
-			
+
 			// packet just sent, don't wait in case we have more so sent (catch-up mode)
 			timeout.tv_usec = 0;
 		} else {
-			
+
 			// nothing to send, so probably can wait a nominal amount, i.e 2/3 of length of a frame
-			timeout.tv_usec = ctx->frame_size*((1000*2*1000)/(44100*3));
+			timeout.tv_usec = (ctx->frame_size*1000000)/44100;
 		}
 	}
 

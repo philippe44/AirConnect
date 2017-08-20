@@ -126,6 +126,9 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 
 /*----------------------------------------------------------------------------*/
 void  raop_delete(struct raop_ctx_s *ctx) {
+
+	if (!ctx) return;
+
 	ctx->running = false;
 
 	hairtunes_end(ctx->ht);
@@ -145,7 +148,7 @@ void  raop_delete(struct raop_ctx_s *ctx) {
 
 	mdns_service_remove(ctx->svr, ctx->svc);
 
-	if (ctx) free(ctx);
+	free(ctx);
 }
 
 

@@ -57,5 +57,7 @@ Parameters of importance
 - name 				: name under which player appear in AirPlay 
 - log_limit <-1 | n> (-1)	: when using log file, limits its size (-1 = no limit)
 
+NB: for using with Sonos, set the latency http parameter to ~2000 (-latency :2000) otherwise you might have choppy sound.
+
 ====================================================================
 Source code available here: https://github.com/philippe44/AirConnect

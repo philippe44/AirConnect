@@ -1,2 +1,5 @@
+0.0.2.3
+ - increase SO_SNDBUF to try to better handle sloppy networks
+ 
 0.0.2.2
  - high CPU usage in http frames handling

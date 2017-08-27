@@ -17,7 +17,7 @@ CFLAGS 		+= -fdata-sections -ffunction-sections
 ifeq ($(OS),Darwin)
 LDFLAGS 	+= -Wl,-dead_strip
 else
-LDFLAGS 	+= -Wl,--gc-sections
+LDFLAGS 	+= -Wl,--gc-sections 
 endif
 
 vpath %.c $(TOOLS):$(COMMON):$(SRC):$(SQUEEZETINY):$(MDNSSD):$(TINYSVCMDNS)

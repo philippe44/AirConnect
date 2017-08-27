@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.0.2.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.0.2.3"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"

@@ -274,6 +274,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, int l
 
 	// create http port and start listening
 	ctx->http_listener = bind_socket(&resp.hport, SOCK_STREAM);
+	i = 128*1024;
+	setsockopt(ctx->http_listener, SOL_SOCKET, SO_SNDBUF, &i, sizeof(i));
 	rc &= ctx->http_listener > 0;
 	rc &= listen(ctx->http_listener, 1) == 0;
 

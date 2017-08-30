@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.0.2.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.0.2.4"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -75,7 +75,8 @@ tMRConfig			glMRConfig = {
 							"",
 							true,
 							true,
-							3,
+							3,      // remove_count
+							true, 	// use_flac
 							0.5,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 							0,		// rtp_latency (0 = use client's request)
@@ -399,8 +400,9 @@ static void *UpdateMRThread(void *args)
 			NFREE(Model);
 
 			if (AddCastDevice(Device, Name, UDN, Group, p->addr, p->port) && !glSaveConfigFile) {
-				Device->Raop = raop_create(glHost, glmDNSServer, Name, "aircast", Device->Config.mac, true,
-											Device->Config.Latency, Device, callback);
+				Device->Raop = raop_create(glHost, glmDNSServer, Name, "aircast", Device->Config.mac,
+						                    Device->Config.UseFlac, Device->Config.Latency,
+											Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->FriendlyName);
 					RemoveCastDevice(Device);

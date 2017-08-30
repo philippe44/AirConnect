@@ -55,6 +55,7 @@ typedef struct sMRConfig
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	int			RemoveCount;
+	bool		UseFlac;
 	double		MediaVolume;
 	u8_t		mac[6];
 	int 		Latency;

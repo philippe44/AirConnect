@@ -1,3 +1,7 @@
+0.0.2.4 
+ - only notify of playback when frame is not silence (all 0) to avoid iOS 10.x spurious play
+ - add wav header so that wav can be used in AirCast as well
+
 0.0.2.3
  - increase SO_SNDBUF to try to better handle sloppy networks
  

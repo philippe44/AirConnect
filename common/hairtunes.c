@@ -73,6 +73,7 @@ static log_level 	*loglevel = &raop_loglevel;
 
 enum { DATA, CONTROL, TIMING };
 
+
 typedef u16_t seq_t;
 typedef struct audio_buffer_entry {   // decoded audio packets
 	int ready;
@@ -114,11 +115,12 @@ typedef struct hairtunes_s {
 	pthread_t http_thread, rtp_thread;
 	FLAC__StreamEncoder *flac_codec;
 	char flac_buffer[MAX_FLAC_BYTES];
+	char *silence_frame;
 	int flac_len;
 	bool flac_ready, flac_header;
 	alac_file *alac_codec;
 	int flush_seqno;
-	bool playing;
+	bool playing, silence;
 	bool use_flac;
 	hairtunes_cb_t callback;
 	void *owner;
@@ -225,6 +227,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, int l
 	if (!ctx) return resp;
 
 	memset(ctx, 0, sizeof(hairtunes_t));
+	memset(ctx->silence_frame, 0, ctx->frame_size*4);
 	ctx->host = host;
 	ctx->rtp_host.sin_family = AF_INET;
 	ctx->rtp_host.sin_addr.s_addr = INADDR_ANY;
@@ -252,6 +255,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, int l
 	while ((arg = strsep(&fmtpstr, " \t")) != NULL) fmtp[i++] = atoi(arg);
 
 	ctx->frame_size = fmtp[1]; // stereo samples
+	ctx->silence_frame = (char*) calloc(ctx->frame_size, 4);
 
 	// alac decoder
 	ctx->alac_codec = init_alac(fmtp);
@@ -319,6 +323,7 @@ void hairtunes_end(hairtunes_t *ctx)
 		FLAC__stream_encoder_delete(ctx->flac_codec);
 	}
 
+	free(ctx->silence_frame);
 	free(ctx);
 }
 
@@ -391,6 +396,7 @@ static void alac_decode(hairtunes_t *ctx, s16_t *dest, char *buf, int len) {
 	assert(outsize == ctx->frame_size*4);
 }
 
+
 /*---------------------------------------------------------------------------*/
 static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, bool first, char *data, int len) {
 	abuf_t *abuf = NULL;
@@ -404,9 +410,9 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 			ctx->ab_read = seqno;
 			ctx->flush_seqno = -1;
 			ctx->playing = true;
+			ctx->silence = true;
 			ctx->synchro.first = false;
 			if (ctx->use_flac) reset_flac(ctx);
-			ctx->callback(ctx->owner, HAIRTUNES_PLAY);
 		} else {
 			pthread_mutex_unlock(&ctx->ab_mutex);
 			return;
@@ -444,6 +450,11 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 #ifdef __RTP_STORE
 		fwrite(abuf->data, FRAME_BYTES, 1, rtpFP);
 #endif
+		if (ctx->silence && memcmp(abuf->data, ctx->silence_frame, ctx->frame_size*4)) {
+			ctx->callback(ctx->owner, HAIRTUNES_PLAY);
+			ctx->silence = false;
+		}
+
 	}
 
 	pthread_mutex_unlock(&ctx->ab_mutex);
@@ -851,7 +862,35 @@ static void *http_thread_func(void *arg) {
 	return NULL;
 }
 
-
+static struct wave_header_s {
+	u8_t 	chunk_id[4];
+	u8_t	chunk_size[4];
+	u8_t	format[4];
+	u8_t	subchunk1_id[4];
+	u8_t	subchunk1_size[4];
+	u8_t	audio_format[2];
+	u8_t	channels[2];
+	u8_t	sample_rate[4];
+	u8_t    byte_rate[4];
+	u8_t	block_align[2];
+	u8_t	bits_per_sample[2];
+	u8_t	subchunk2_id[4];
+	u8_t	subchunk2_size[4];
+} wave_header = {
+		{ 'R', 'I', 'F', 'F' },
+		{ 0x24, 0xff, 0xff, 0xff },
+		{ 'W', 'A', 'V', 'E' },
+		{ 'f','m','t',' ' },
+		{ 16, 0, 0, 0 },
+		{ 1, 0 },
+		{ 2, 0 },
+		{ 0x44, 0xac, 0x00, 0x00  },
+		{ 0x10, 0xb1, 0x02, 0x00 },
+		{ 4, 0 },
+		{ 16, 0 },
+		{ 'd', 'a', 't', 'a' },
+		{ 0x00, 0xff, 0xff, 0xff },
+	};
 /*----------------------------------------------------------------------------*/
 static bool handle_http(hairtunes_t *ctx, int sock)
 {
@@ -867,8 +906,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	kd_add(resp, "Connection", "close");
 
 	if (ctx->use_flac) kd_add(resp, "Content-Type", "audio/flac");
-	else kd_add(resp, "Content-Type", "audio/L16;rate=44100;channels=2");
-
+	else kd_add(resp, "Content-Type", "audio/wav");
 
 	str = http_send(sock, "HTTP/1.0 200 OK", resp);
 
@@ -879,8 +917,8 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	kd_free(resp);
 	kd_free(headers);
 
+	if (!ctx->use_flac) send(sock, (void*) &wave_header, sizeof(wave_header), 0);
+
 	return true;
 }
-
-
 

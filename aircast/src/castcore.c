@@ -321,7 +321,7 @@ bool LaunchReceiver(tCastCtx *Ctx)
 			 }
 			break;
 		default:
-			LOG_INFO("[%p]: unhandled state %d", Ctx->owner);
+			LOG_INFO("[%p]: unhandled state %d", Ctx->owner, Ctx->Status);
 			break;
 	}
 

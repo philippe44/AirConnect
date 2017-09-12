@@ -68,7 +68,6 @@ struct sMR {
 	struct raop_ctx_s *Raop;
 	raop_event_t	RaopState;
 	char UDN			[RESOURCE_LENGTH];
-	char FriendlyName	[RESOURCE_LENGTH];
 	enum eMRstate 	State;
 	bool			ExpectStop;
 	u32_t			Elapsed;

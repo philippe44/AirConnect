@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.0.2.4"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.0.2.5"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -400,11 +400,11 @@ static void *UpdateMRThread(void *args)
 			NFREE(Model);
 
 			if (AddCastDevice(Device, Name, UDN, Group, p->addr, p->port) && !glSaveConfigFile) {
-				Device->Raop = raop_create(glHost, glmDNSServer, Name, "aircast", Device->Config.mac,
-						                    Device->Config.UseFlac, Device->Config.Latency,
+				Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name, "aircast", Device->Config.mac,
+											Device->Config.UseFlac, Device->Config.Latency,
 											Device, callback);
 				if (!Device->Raop) {
-					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->FriendlyName);
+					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 					RemoveCastDevice(Device);
 				}
 			}
@@ -429,7 +429,7 @@ static void *UpdateMRThread(void *args)
 		if (Device->TimeOut && Device->MissingCount) Device->MissingCount--;
 		if (CastIsConnected(Device->CastCtx) || Device->MissingCount) continue;
 
-		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
+		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->Config.Name);
 
 		raop_delete(Device->Raop);
 		RemoveCastDevice(Device);
@@ -546,7 +546,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 	Device->State = STOPPED;
 	Device->ExpectStop = false;
 	Device->Group = group;
-	strcpy(Device->FriendlyName, Name);
+	if (!*Device->Config.Name) strcpy(Device->Config.Name, Name);
 
 	LOG_INFO("[%p]: adding renderer (%s)", Device, Name);
 
@@ -554,7 +554,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 		if (group || SendARP(ip.s_addr, INADDR_ANY, Device->Config.mac, &mac_size)) {
 			u32_t hash = hash32(UDN);
 
-			LOG_ERROR("[%p]: creating MAC %x", Device, Device->FriendlyName, hash);
+			LOG_ERROR("[%p]: creating MAC %x", Device, Device->Config.Name, hash);
 			memcpy(Device->Config.mac + 2, &hash, 4);
 		}
 		memset(Device->Config.mac, 0xcc, 2);

@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.0.2.4"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.0.2.5"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
@@ -687,11 +687,11 @@ static void *UpdateMRThread(void *args)
 			Device = &glMRDevices[i];
 			if (AddMRDevice(Device, UDN, DescDoc, p->Location) && !glSaveConfigFile) {
 				// create a new AirPlay
-				Device->Raop = raop_create(glHost, glmDNSServer, Device->FriendlyName,
+				Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 										   "airupnp", Device->Config.mac, Device->Config.UseFlac,
 										   atoi(Device->Config.Latency), Device, callback);
 				if (!Device->Raop) {
-					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->FriendlyName);
+					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 					DelMRDevice(Device);
 				}
 			}
@@ -717,7 +717,7 @@ static void *UpdateMRThread(void *args)
 		if (Device->TimeOut && Device->MissingCount) Device->MissingCount--;
 		if (Device->Connected || Device->MissingCount) continue;
 
-		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->FriendlyName);
+		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->Config.Name);
 		raop_delete(Device->Raop);
 		DelMRDevice(Device);
 	}
@@ -864,7 +864,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->WaitCookie = Device->StartCookie = NULL;
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
-	strcpy(Device->FriendlyName, friendlyName);
+	if (!*Device->Config.Name) strcpy(Device->Config.Name, friendlyName);
 	strcpy(Device->Manufacturer, manufacturer);
 	QueueInit(&Device->ActionQueue);
 
@@ -878,7 +878,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		if (SendARP(ip, INADDR_ANY, Device->Config.mac, &mac_size)) {
 			u32_t hash = hash32(UDN);
 
-			LOG_ERROR("[%p]: cannot get mac %s, creating fake %x", Device, Device->FriendlyName, hash);
+			LOG_ERROR("[%p]: cannot get mac %s, creating fake %x", Device, Device->Config.Name, hash);
 			memcpy(Device->Config.mac + 2, &hash, 4);
 		}
 		memset(Device->Config.mac, 0xbb, 2);

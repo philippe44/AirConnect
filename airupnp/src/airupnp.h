@@ -76,7 +76,6 @@ struct sMR {
 	tMRConfig Config;
 	char UDN			[RESOURCE_LENGTH];
 	char DescDocURL		[RESOURCE_LENGTH];
-	char FriendlyName	[RESOURCE_LENGTH];
 	char PresURL		[RESOURCE_LENGTH];
 	char Manufacturer	[RESOURCE_LENGTH];
 	enum eMRstate 	State;

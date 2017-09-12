@@ -92,19 +92,11 @@ void SaveConfig(char *name, void *ref, bool full)
 		if (!glMRDevices[i].InUse) continue;
 		else p = &glMRDevices[i];
 
-		// existing device, keep param and update "name" if LMS has requested it
-		if (old_doc && ((dev_node = (IXML_Node*) FindMRConfig(old_doc, p->UDN)) != NULL)) {
-			ixmlDocument_importNode(doc, dev_node, true, &dev_node);
-			ixmlNode_appendChild((IXML_Node*) root, dev_node);
-
-			XMLUpdateNode(doc, dev_node, false, "friendly_name", p->FriendlyName);
-		}
 		// new device, add nodes
-		else {
+		if (!old_doc) {
 			dev_node = XMLAddNode(doc, root, "device", NULL);
 			XMLAddNode(doc, dev_node, "udn", p->UDN);
-			XMLAddNode(doc, dev_node, "name", p->FriendlyName);
-			XMLAddNode(doc, dev_node, "friendly_name", p->FriendlyName);
+			XMLAddNode(doc, dev_node, "name", p->Config.Name);
 			XMLAddNode(doc, dev_node, "mac", "%02x:%02x:%02x:%02x:%02x:%02x", p->Config.mac[0],
 						p->Config.mac[1], p->Config.mac[2], p->Config.mac[3], p->Config.mac[4], p->Config.mac[5]);
 			XMLAddNode(doc, dev_node, "enabled", "%d", (int) p->Config.Enabled);
@@ -146,7 +138,7 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atoi(val);
 	if (!strcmp(name, "use_flac")) Conf->UseFlac = atol(val);
 	if (!strcmp(name, "latency")) strcpy(Conf->Latency, val);
-	if (!strcmp(name, "friendly_name")) strcpy(Conf->Name, val);
+	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];
 		int i;

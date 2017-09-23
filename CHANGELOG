@@ -1,3 +1,9 @@
+0.0.2.6
+ - NULL (empty xml item) was causing crash and default save set <latency> to empty
+ 
+0.0.2.5
+ - <name> in config file was not taken into account
+
 0.0.2.4 
  - only notify of playback when frame is not silence (all 0) to avoid iOS 10.x spurious play
  - add wav header so that wav can be used in AirCast as well

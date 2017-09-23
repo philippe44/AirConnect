@@ -133,6 +133,8 @@ void SaveConfig(char *name, void *ref, bool full)
 /*----------------------------------------------------------------------------*/
 static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 {
+	if (!val) return;
+
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atoi(val);

@@ -717,9 +717,11 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 		ctx->ab_read = ctx->ab_write - 64;
 	}
 
-	// skip frames to if we are running late - this must be done here
-	if (ctx->skip > 0)
-		while (ctx->skip-- && ctx->ab_read != ctx->ab_write) ctx->ab_read++;
+	// skip frames if we are running late and skip could not be done in SYNC
+	while (ctx->skip && ctx->ab_read != ctx->ab_write) {
+		ctx->ab_read++;
+		ctx->skip--;
+	}
 
 	now = gettime_ms();
 	curframe = ctx->audio_buffer + BUFIDX(ctx->ab_read);

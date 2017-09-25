@@ -111,6 +111,7 @@ typedef struct hairtunes_s {
 	abuf_t audio_buffer[BUFFER_FRAMES];
 	int http_listener;
 	seq_t ab_read, ab_write;
+	int skip;
 	pthread_mutex_t ab_mutex;
 	pthread_t http_thread, rtp_thread;
 	FLAC__StreamEncoder *flac_codec;
@@ -408,6 +409,7 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 		   ((ctx->synchro.required && ctx->synchro.first) || !ctx->synchro.required)) {
 			ctx->ab_write = seqno-1;
 			ctx->ab_read = seqno;
+			ctx->skip = 0;
 			ctx->flush_seqno = -1;
 			ctx->playing = true;
 			ctx->silence = true;
@@ -611,10 +613,11 @@ static void *rtp_thread_func(void *arg) {
 					  so we'll overflow frames buffer, need to remove one
 					*/
 					} else if (ctx->timing.gap_sum < -GAP_THRES && ctx->timing.gap_count++ > GAP_COUNT) {
-						LOG_INFO("[%p]: Sending packets too slow %Ld", ctx, ctx->timing.gap_sum);
-						ctx->ab_read++;
+						if (ctx->ab_read != ctx->ab_write) ctx->ab_read++;
+						else ctx->skip++;
 						ctx->timing.gap_sum += GAP_THRES;
 						ctx->timing.gap_adjust += GAP_THRES;
+						LOG_INFO("[%p]: Sending packets too slow %Ld (skip: %d)", ctx, ctx->timing.gap_sum, ctx->skip);
 					}
 
 					if (llabs(ctx->timing.gap_sum) < 8) ctx->timing.gap_count = 0;
@@ -714,6 +717,10 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 		ctx->ab_read = ctx->ab_write - 64;
 	}
 
+	// skip frames to if we are running late - this must be done here
+	if (ctx->skip > 0)
+		while (ctx->skip-- && ctx->ab_read != ctx->ab_write) ctx->ab_read++;
+
 	now = gettime_ms();
 	curframe = ctx->audio_buffer + BUFIDX(ctx->ab_read);
 
@@ -724,7 +731,7 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 	*/
 	playtime = ctx->synchro.time + (((s32_t)(curframe->rtptime - ctx->synchro.rtp))*1000)/44100;
 
-	if (!ctx->playing || !buf_fill || ctx->synchro.status != (RTP_SYNC | NTP_SYNC) || (now < playtime  && !curframe->ready)) {
+	if (!ctx->playing || !buf_fill || ctx->synchro.status != (RTP_SYNC | NTP_SYNC) || (now < playtime && !curframe->ready)) {
 		LOG_SDEBUG("[%p]: waiting (fill:%hu, W:%hu R:%hu) now:%u, playtime:%u, wait:%d", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read, now, playtime, playtime - now);
 		pthread_mutex_unlock(&ctx->ab_mutex);
 		return NULL;

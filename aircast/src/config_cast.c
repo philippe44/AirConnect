@@ -80,7 +80,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "stop_receiver", "%d", (int) glMRConfig.StopReceiver);
 	XMLUpdateNode(doc, common, false, "media_volume", "%0.4lf", glMRConfig.MediaVolume);
-	XMLUpdateNode(doc, common, false, "latency", "%d", (int) glMRConfig.Latency);
+	XMLUpdateNode(doc, common, false, "latency", glMRConfig.Latency);
 	XMLUpdateNode(doc, common, false, "use_flac", "%d", (int) glMRConfig.UseFlac);
 	XMLUpdateNode(doc, common, false, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
 
@@ -131,12 +131,14 @@ void SaveConfig(char *name, void *ref, bool full)
 /*----------------------------------------------------------------------------*/
 static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 {
+	if (!val) return;
+
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "stop_receiver")) Conf->StopReceiver = atol(val);
 	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
 	if (!strcmp(name, "media_volume")) Conf->MediaVolume = atof(val);
 	if (!strcmp(name, "use_flac")) Conf->UseFlac = atol(val);
-	if (!strcmp(name, "latency")) Conf->Latency = atol(val);
+	if (!strcmp(name, "latency")) strcpy(Conf->Latency, val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];

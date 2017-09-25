@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.0.2.6"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.0.2.7"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -79,7 +79,7 @@ tMRConfig			glMRConfig = {
 							true, 	// use_flac
 							0.5,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-							0,		// rtp_latency (0 = use client's request)
+							"",		// rtp/http_latency (0 = use client's request)
 					};
 
 /*----------------------------------------------------------------------------*/
@@ -113,7 +113,7 @@ static char usage[] =
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
-   		   "  -l <rtp>\t\tset RTP latency (ms)\n"
+		   "  -l <[rtp][:http]>\t\tset RTP and HTTP latency (ms)\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|raop|main|util|cast, level: error|warn|info|debug|sdebug\n"
@@ -187,16 +187,19 @@ void callback(void *owner, raop_event_t event, void *param)
 			if (device->RaopState == RAOP_PLAY) {
 				CastStop(device->CastCtx);
 				device->ExpectStop = true;
+				device->PlayWait = false;
 			}
 			device->RaopState = event;
 			break;
 		case RAOP_FLUSH:
 			LOG_INFO("[%p]: Flush", device);
 			CastStop(device->CastCtx);
+			device->PlayWait = false;
 			device->ExpectStop = true;
 			device->RaopState = event;
 			break;
-		case RAOP_PLAY:
+		case RAOP_PLAY: {
+			char *p;
 			LOG_INFO("[%p]: Play", device);
 			if (device->RaopState != RAOP_PLAY) {
 				char *uri;
@@ -207,10 +210,16 @@ void callback(void *owner, raop_event_t event, void *param)
 				CastLoad(device->CastCtx, uri, "audio/flac", NULL);
 				free(uri);
 			}
-			CastPlay(device->CastCtx);
+
+			if ((p = strchr(device->Config.Latency, ':')) != NULL) {
+				device->PlayWait = true;
+				device->PlayTime = gettime_ms() + atoi(p + 1);
+			} else CastPlay(device->CastCtx);
+
 			CastSetDeviceVolume(device->CastCtx, device->Volume, true);
 			device->RaopState = event;
 			break;
+		}
 		case RAOP_VOLUME: {
 			device->Volume = *((double*) param);
 			CastSetDeviceVolume(device->CastCtx, device->Volume, false);
@@ -239,9 +248,14 @@ static void *MRThread(void *args)
 	last = gettime_ms();
 
 	while (p->Running) {
-		data = GetTimedEvent(p->CastCtx, 500);
+		data = GetTimedEvent(p->CastCtx, 250);
 		elapsed = gettime_ms() - last;
 		pthread_mutex_lock(&p->Mutex);
+
+		if (p->PlayWait && last > p->PlayTime) {
+			CastPlay(p->CastCtx);
+			p->PlayWait = false;
+		}
 
 		LOG_SDEBUG("Cast thread timer %d", elapsed);
 
@@ -401,7 +415,7 @@ static void *UpdateMRThread(void *args)
 
 			if (AddCastDevice(Device, Name, UDN, Group, p->addr, p->port) && !glSaveConfigFile) {
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name, "aircast", Device->Config.mac,
-											Device->Config.UseFlac, Device->Config.Latency,
+											Device->Config.UseFlac, atoi(Device->Config.Latency),
 											Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
@@ -738,7 +752,7 @@ bool ParseArgs(int argc, char **argv) {
 			glGracefullShutdown = false;
 			break;
 		case 'l':
-			glMRConfig.Latency = atoi(optarg);
+			strcpy(glMRConfig.Latency, optarg);
 			break;
 #if LINUX || FREEBSD
 		case 'z':

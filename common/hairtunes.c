@@ -724,7 +724,7 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 	*/
 	playtime = ctx->synchro.time + (((s32_t)(curframe->rtptime - ctx->synchro.rtp))*1000)/44100;
 
-	if (!ctx->playing || !buf_fill || ctx->synchro.status != (RTP_SYNC | NTP_SYNC) || now < playtime) {
+	if (!ctx->playing || !buf_fill || ctx->synchro.status != (RTP_SYNC | NTP_SYNC) || (now < playtime  && !curframe->ready)) {
 		LOG_SDEBUG("[%p]: waiting (fill:%hu, W:%hu R:%hu) now:%u, playtime:%u, wait:%d", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read, now, playtime, playtime - now);
 		pthread_mutex_unlock(&ctx->ab_mutex);
 		return NULL;

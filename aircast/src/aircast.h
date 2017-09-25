@@ -58,7 +58,7 @@ typedef struct sMRConfig
 	bool		UseFlac;
 	double		MediaVolume;
 	u8_t		mac[6];
-	int 		Latency;
+	char		Latency[_STR_LEN_];
 } tMRConfig;
 
 struct sMR {
@@ -79,6 +79,8 @@ struct sMR {
 	double			Volume;
 	bool			Group;
 	int				MissingCount;
+	bool			PlayWait;
+	u32_t			PlayTime;
 	bool			Running;
 };
 

@@ -21,7 +21,9 @@ There is a <common> section where parameters found apply to all players, unless 
 --------------------------------------------------------------------
 Parameters of importance
 
-- latency <0 | 500..n> (0)	: buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start). Set the amount of buffering for AirPlay realtime audio. Below 500ms is not recommended. 0 means automatic handling by AirPlay
+- latency <[rtp][:http]> (0:0)	: buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
+	[rtp] 	: set the amount of buffering for AirPlay realtime audio. Below 500ms is not recommended. 0 = use value from AirPlay
+	[http]	: normally, CC players do enough buffering. This can force play request to be delayed by (ms) to force bufffering
 - remove_count < 0 .. n> (3)	: how many times a player must be missing during a search to be removed. 0 disables removal
 - media_volume	<0..1> (0.5)	: in a Chromecast group, applies a scaling factor to all members volume
 - enabled <0|1>			: in common section, let newly discovered players to be enabled by default. In a dedicated section, enables the player

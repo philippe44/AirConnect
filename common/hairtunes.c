@@ -710,17 +710,17 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 
 	pthread_mutex_lock(&ctx->ab_mutex);
 
+	// skip frames if we are running late and skip could not be done in SYNC
+	while (ctx->skip && ctx->ab_read != ctx->ab_write) {
+		ctx->ab_read++;
+		ctx->skip--;
+	}
+
 	buf_fill = ctx->ab_write - ctx->ab_read;
 
 	if (buf_fill >= BUFFER_FRAMES) {
 		LOG_ERROR("[%p]: Buffer overrun %hu", ctx, buf_fill);
 		ctx->ab_read = ctx->ab_write - 64;
-	}
-
-	// skip frames if we are running late and skip could not be done in SYNC
-	while (ctx->skip && ctx->ab_read != ctx->ab_write) {
-		ctx->ab_read++;
-		ctx->skip--;
 	}
 
 	now = gettime_ms();

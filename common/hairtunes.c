@@ -117,6 +117,7 @@ typedef struct hairtunes_s {
 	FLAC__StreamEncoder *flac_codec;
 	char flac_buffer[MAX_FLAC_BYTES];
 	char *silence_frame;
+	int delay, silence_count;
 	int flac_len;
 	bool flac_ready, flac_header;
 	alac_file *alac_codec;
@@ -213,13 +214,13 @@ static alac_file* init_alac(int fmtp[32]) {
 }
 
 /*---------------------------------------------------------------------------*/
-hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, int latency,
+hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, char *latencies,
 								char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
 								void *owner, hairtunes_cb_t callback)
 {
 	int i = 0;
-	char *arg;
+	char *arg, *p;
 	int fmtp[12];
 	bool rc = true;
 	hairtunes_t *ctx = malloc(sizeof(hairtunes_t));
@@ -236,7 +237,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, int l
 	ctx->flush_seqno = -1;
 	ctx->use_flac = flac;
 	ctx->flac_header = false;
-	ctx->latency = latency;
+	ctx->latency = atoi(latencies);
+	if ((p = strchr(latencies, ':')) != NULL) ctx->delay = atoi(p + 1);
 	ctx->callback = callback;
 	ctx->owner = owner;
 	ctx->synchro.required = sync;
@@ -708,6 +710,8 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 	int i;
 	u32_t now, playtime;
 
+	if (ctx->silence_count && ctx->silence_count--)	return (short*) ctx->silence_frame;
+
 	pthread_mutex_lock(&ctx->ab_mutex);
 
 	// skip frames if we are running late and skip could not be done in SYNC
@@ -734,7 +738,7 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 	playtime = ctx->synchro.time + (((s32_t)(curframe->rtptime - ctx->synchro.rtp))*1000)/44100;
 
 	if (!ctx->playing || !buf_fill || ctx->synchro.status != (RTP_SYNC | NTP_SYNC) || (now < playtime && !curframe->ready)) {
-		LOG_SDEBUG("[%p]: waiting (fill:%hu, W:%hu R:%hu) now:%u, playtime:%u, wait:%d", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read, now, playtime, playtime - now);
+		LOG_SDEBUG("[%p]: waiting (fill:%hu, W:%hu R:%hu) now:%u, playtime:%u, wait:%d", ctx, buf_fill, ctx->ab_write, ctx->ab_read, now, playtime, playtime - now);
 		pthread_mutex_unlock(&ctx->ab_mutex);
 		return NULL;
 	}
@@ -748,8 +752,9 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 		if (!ctx->audio_buffer[BUFIDX(ctx->ab_read + i)].ready) rtp_request_resend(ctx, ctx->ab_read + i, ctx->ab_read + i);
 	}
 
+
 	if (!curframe->ready) {
-		LOG_DEBUG("[%p]: created zero frame (fill:%hu,  W:%hu R:%hu)", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read);
+		LOG_INFO("[%p]: created zero frame (fill:%hu,  W:%hu R:%hu)", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read);
 		memset(curframe->data, 0, ctx->frame_size*4);
 	}
 	else {
@@ -795,7 +800,8 @@ static void *http_thread_func(void *arg) {
 			}
 
 			if (sock != -1 && ctx->running) {
-				LOG_INFO("[%p]: got HTTP connection %u", ctx, sock);
+				ctx->silence_count = (ctx->delay * 44100) / (ctx->frame_size * 1000);
+				LOG_INFO("[%p]: got HTTP connection %u (silent frames %d)", ctx, sock, ctx->silence_count);
 			} else continue;
 		}
 

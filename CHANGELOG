@@ -1,3 +1,6 @@
+0.1.0.0
+ - HTTP delay uses silence frames
+ 
 0.0.2.7
  - do not hold RTP frames when they are available! only hold missing one, up to RTP latency
  - add HTTP delay for Chromecast as well

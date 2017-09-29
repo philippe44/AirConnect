@@ -54,7 +54,7 @@ extern char private_key[];
 /*----------------------------------------------------------------------------*/
 raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 						char *model, unsigned char mac[6], bool use_flac,
-						int latency, void *owner, raop_cb_t callback) {
+						char *latencies, void *owner, raop_cb_t callback) {
 	struct raop_ctx_s *ctx = malloc(sizeof(struct raop_ctx_s));
 	struct sockaddr_in addr;
 	socklen_t nlen = sizeof(struct sockaddr);
@@ -79,7 +79,7 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 	ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
 	ctx->callback = callback;
 	ctx->use_flac = use_flac;
-	ctx->latency = latency;
+	ctx->latencies = latencies;
 	ctx->owner = owner;
 	ctx->volume_stamp = gettime_ms() - 1000;
 	S_ADDR(ctx->active_remote.host) = INADDR_ANY;
@@ -360,7 +360,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		if ((p = stristr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
 		if ((p = stristr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
 
-		ht = hairtunes_init(ctx->peer, ctx->use_flac, false, ctx->latency,
+		ht = hairtunes_init(ctx->peer, ctx->use_flac, false, ctx->latencies,
 							ctx->rtsp.aeskey, ctx->rtsp.aesiv,
 							ctx->rtsp.fmtp, cport, tport, ctx, hairtunes_cb);
 
@@ -384,9 +384,9 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 	} else if (!strcmp(method, "RECORD")) {
 
-		if (ctx->latency) {
+		if (atoi(ctx->latencies)) {
 			char latency[6];
-			snprintf(latency, 6, "%u", (ctx->latency * 44100) / 1000);
+			snprintf(latency, 6, "%u", (atoi(ctx->latencies) * 44100) / 1000);
 			kd_add(resp, "Audio-Latency", latency);
 		}
 

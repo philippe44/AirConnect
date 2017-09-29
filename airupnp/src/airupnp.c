@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.0.2.7"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.0.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
@@ -206,7 +206,6 @@ void callback(void *owner, raop_event_t event, void *param)
 			if (device->RaopState == RAOP_PLAY) {
 				AVTStop(device);
 				device->ExpectStop = true;
-				device->PlayWait = false;
 			}
 			device->RaopState = event;
 			NFREE(device->CurrentURI);
@@ -216,12 +215,9 @@ void callback(void *owner, raop_event_t event, void *param)
 			AVTStop(device);
 			device->RaopState = event;
 			device->ExpectStop = true;
-			device->PlayWait = false;
 			NFREE(device->CurrentURI);
 			break;
-		case RAOP_PLAY: {
-			char *p;
-
+		case RAOP_PLAY:
 			if (device->RaopState != RAOP_PLAY) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
@@ -233,18 +229,11 @@ void callback(void *owner, raop_event_t event, void *param)
 				NFREE(device->CurrentURI);
 			}
 
-			// some players (Sonos) can't buffer properly by themselves
-			// this should work with sscanf but glibc does not match if leading is ':' f...
-			if ((p = strchr(device->Config.Latency, ':')) != NULL) {
-				device->PlayWait = true;
-				device->PlayTime = gettime_ms() + atoi(p + 1);
-			}
-			else AVTPlay(device);
+			AVTPlay(device);
 
 			CtrlSetVolume(device, device->Volume, device->seqN++);
 			device->RaopState = event;
 			break;
-		}
 		case RAOP_VOLUME: {
 			device->Volume = *((double*) param) * device->Config.MaxVolume;
 			CtrlSetVolume(device, device->Volume, device->seqN++);
@@ -571,12 +560,6 @@ static void *MRThread(void *args)
 
 		ithread_mutex_lock(&p->Mutex);
 
-		// in case we have a delayed playback
-		if (p->PlayWait && last > p->PlayTime) {
-			AVTPlay(p);
-			p->PlayWait = false;
-		}
-
 		/*
 		should not request any status update if we are stopped, off or waiting
 		for an action to be performed
@@ -689,7 +672,7 @@ static void *UpdateMRThread(void *args)
 				// create a new AirPlay
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 										   "airupnp", Device->Config.mac, Device->Config.UseFlac,
-										   atoi(Device->Config.Latency), Device, callback);
+										   Device->Config.Latency, Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 					DelMRDevice(Device);
@@ -860,7 +843,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->RaopState = RAOP_STOP;
 	Device->State = STOPPED;
 	Device->ExpectStop = false;
-	Device->PlayWait = false;
 	Device->WaitCookie = Device->StartCookie = NULL;
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);

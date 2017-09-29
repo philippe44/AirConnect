@@ -99,8 +99,6 @@ struct sMR {
 	u16_t			ErrorCount;
 	int				MissingCount;
 	bool			TimeOut, Connected;
-	bool			PlayWait;
-	u32_t			PlayTime;
 	bool			Running;
 };
 

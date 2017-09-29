@@ -79,8 +79,6 @@ struct sMR {
 	double			Volume;
 	bool			Group;
 	int				MissingCount;
-	bool			PlayWait;
-	u32_t			PlayTime;
 	bool			Running;
 };
 

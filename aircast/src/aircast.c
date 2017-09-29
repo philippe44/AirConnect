@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.0.2.7"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.0.0"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -187,19 +187,16 @@ void callback(void *owner, raop_event_t event, void *param)
 			if (device->RaopState == RAOP_PLAY) {
 				CastStop(device->CastCtx);
 				device->ExpectStop = true;
-				device->PlayWait = false;
 			}
 			device->RaopState = event;
 			break;
 		case RAOP_FLUSH:
 			LOG_INFO("[%p]: Flush", device);
 			CastStop(device->CastCtx);
-			device->PlayWait = false;
 			device->ExpectStop = true;
 			device->RaopState = event;
 			break;
-		case RAOP_PLAY: {
-			char *p;
+		case RAOP_PLAY:
 			LOG_INFO("[%p]: Play", device);
 			if (device->RaopState != RAOP_PLAY) {
 				char *uri;
@@ -211,15 +208,11 @@ void callback(void *owner, raop_event_t event, void *param)
 				free(uri);
 			}
 
-			if ((p = strchr(device->Config.Latency, ':')) != NULL) {
-				device->PlayWait = true;
-				device->PlayTime = gettime_ms() + atoi(p + 1);
-			} else CastPlay(device->CastCtx);
+			CastPlay(device->CastCtx);
 
 			CastSetDeviceVolume(device->CastCtx, device->Volume, true);
 			device->RaopState = event;
 			break;
-		}
 		case RAOP_VOLUME: {
 			device->Volume = *((double*) param);
 			CastSetDeviceVolume(device->CastCtx, device->Volume, false);
@@ -251,11 +244,6 @@ static void *MRThread(void *args)
 		data = GetTimedEvent(p->CastCtx, 250);
 		elapsed = gettime_ms() - last;
 		pthread_mutex_lock(&p->Mutex);
-
-		if (p->PlayWait && last > p->PlayTime) {
-			CastPlay(p->CastCtx);
-			p->PlayWait = false;
-		}
 
 		LOG_SDEBUG("Cast thread timer %d", elapsed);
 
@@ -415,7 +403,7 @@ static void *UpdateMRThread(void *args)
 
 			if (AddCastDevice(Device, Name, UDN, Group, p->addr, p->port) && !glSaveConfigFile) {
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name, "aircast", Device->Config.mac,
-											Device->Config.UseFlac, atoi(Device->Config.Latency),
+											Device->Config.UseFlac, Device->Config.Latency,
 											Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);

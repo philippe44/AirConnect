@@ -636,7 +636,7 @@ int conn_socket(unsigned short port)
 	int sd;
 
 	sd = socket(AF_INET, SOCK_STREAM, 0);
-	// set_nonblock(ctx->cli_sock);
+
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	addr.sin_port = htons(port);

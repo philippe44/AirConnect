@@ -710,6 +710,7 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 	int i;
 	u32_t now, playtime;
 
+	// send silence if required to create enough buffering
 	if (ctx->silence_count && ctx->silence_count--)	return (short*) ctx->silence_frame;
 
 	pthread_mutex_lock(&ctx->ab_mutex);
@@ -724,7 +725,7 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 
 	if (buf_fill >= BUFFER_FRAMES) {
 		LOG_ERROR("[%p]: Buffer overrun %hu", ctx, buf_fill);
-		ctx->ab_read = ctx->ab_write - 64;
+		ctx->ab_read = ctx->ab_write - (BUFFER_FRAMES - 64);
 	}
 
 	now = gettime_ms();
@@ -756,8 +757,7 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 	if (!curframe->ready) {
 		LOG_INFO("[%p]: created zero frame (fill:%hu,  W:%hu R:%hu)", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read);
 		memset(curframe->data, 0, ctx->frame_size*4);
-	}
-	else {
+	} else {
 		LOG_SDEBUG("[%p]: prepared frame (fill:%hu, W:%hu R:%hu)", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read);
 	}
 
@@ -823,11 +823,9 @@ static void *http_thread_func(void *arg) {
 			http_ready = false;
 		}
 
-		// even if the HTTP session is not established, empty the buffer queue
-		if ((inbuf = buffer_get_frame(ctx)) != NULL) {
+		// wait for session to be ready before sending
+		if (http_ready && (inbuf = buffer_get_frame(ctx)) != NULL) {
 			int len;
-
-			if (!http_ready) continue;
 
 			if (ctx->use_flac && ctx->flac_ready) {
 				// send streaminfo at beginning

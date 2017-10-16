@@ -235,7 +235,7 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 		for (i = 0; i < length; i++) {
 			service = (IXML_Element *)ixmlNodeList_item(serviceList, i);
 			tempServiceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
-			LOG_SDEBUG("serviceType %s", serviceType);
+			LOG_SDEBUG("serviceType %s", tempServiceType);
 
 			// remove version from service type
 			*strrchr(tempServiceType, ':') = '\0';
@@ -244,7 +244,7 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 				*serviceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
 				NFREE(*serviceId);
 				*serviceId = XMLGetFirstElementItem(service, "serviceId");
-				LOG_SDEBUG("Service %s, serviceId: %s", serviceType, serviceId);
+				LOG_SDEBUG("Service %s, serviceId: %s", *serviceType, *serviceId);
 				relcontrolURL = XMLGetFirstElementItem(service, "controlURL");
 				releventURL = XMLGetFirstElementItem(service, "eventSubURL");
 				NFREE(*controlURL);

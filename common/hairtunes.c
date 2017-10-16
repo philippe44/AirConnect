@@ -131,6 +131,7 @@ typedef struct hairtunes_s {
 
 #define BUFIDX(seqno) ((seq_t)(seqno) % BUFFER_FRAMES)
 static void 	init_buffer(abuf_t *audio_buffer, int size);
+static void 	deinit_buffer(abuf_t *audio_buffer, int size);
 static void 	reset_flac(hairtunes_t *ctx);
 static bool 	rtp_request_resend(hairtunes_t *ctx, seq_t first, seq_t last);
 static bool 	rtp_request_timing(hairtunes_t *ctx);
@@ -229,7 +230,6 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, char 
 	if (!ctx) return resp;
 
 	memset(ctx, 0, sizeof(hairtunes_t));
-	memset(ctx->silence_frame, 0, ctx->frame_size*4);
 	ctx->host = host;
 	ctx->rtp_host.sin_family = AF_INET;
 	ctx->rtp_host.sin_addr.s_addr = INADDR_ANY;
@@ -325,10 +325,24 @@ void hairtunes_end(hairtunes_t *ctx)
 		FLAC__stream_encoder_finish(ctx->flac_codec);
 		FLAC__stream_encoder_delete(ctx->flac_codec);
 	}
+	deinit_buffer(ctx->audio_buffer, ctx->frame_size*4);
 
 	free(ctx->silence_frame);
 	free(ctx);
 }
+
+static void flush_stream(hairtunes_t *ctx) {
+	ab_reset(ctx->audio_buffer);
+	ctx->playing = false;
+	ctx->flush_seqno = -1;
+	ctx->synchro.first = false;
+
+	if (ctx->use_flac) {
+		FLAC__stream_encoder_finish(ctx->flac_codec);
+		ctx->flac_ready = false;
+	}
+}
+
 
 /*---------------------------------------------------------------------------*/
 bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpframe)
@@ -342,15 +356,7 @@ bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpfra
 		LOG_ERROR("[%p]: FLUSH ignored as seqno (%hu) <= ab_read (%hu)", ctx, seqno, ctx->ab_read);
 	} else {
 		rc = true;
-		ab_reset(ctx->audio_buffer);
-		ctx->playing = false;
-		ctx->flush_seqno = seqno;
-		ctx->synchro.first = false;
-
-		if (ctx->use_flac) {
-			FLAC__stream_encoder_finish(ctx->flac_codec);
-			ctx->flac_ready = false;
-		}
+		flush_stream(ctx);
 	}
 
 	pthread_mutex_unlock(&ctx->ab_mutex);
@@ -366,6 +372,14 @@ static void init_buffer(abuf_t *audio_buffer, int size) {
 		audio_buffer[i].ready = 0;
 	}
 }
+
+static void deinit_buffer(abuf_t *audio_buffer, int size) {
+	int i;
+	for (i = 0; i < BUFFER_FRAMES; i++) {
+		free(audio_buffer[i].data);
+	}
+}
+
 
 /*---------------------------------------------------------------------------*/
 static void ab_reset(abuf_t *audio_buffer) {
@@ -801,6 +815,9 @@ static void *http_thread_func(void *arg) {
 
 			if (sock != -1 && ctx->running) {
 				ctx->silence_count = (ctx->delay * 44100) / (ctx->frame_size * 1000);
+				pthread_mutex_lock(&ctx->ab_mutex);
+				flush_stream(ctx);
+				pthread_mutex_unlock(&ctx->ab_mutex);
 				LOG_INFO("[%p]: got HTTP connection %u (silent frames %d)", ctx, sock, ctx->silence_count);
 			} else continue;
 		}
@@ -824,7 +841,7 @@ static void *http_thread_func(void *arg) {
 		}
 
 		// wait for session to be ready before sending
-		if (http_ready && (inbuf = buffer_get_frame(ctx)) != NULL) {
+		if (http_ready && ctx->playing && (inbuf = buffer_get_frame(ctx)) != NULL) {
 			int len;
 
 			if (ctx->use_flac && ctx->flac_ready) {
@@ -868,6 +885,9 @@ static void *http_thread_func(void *arg) {
 		}
 	}
 
+	if (sock != -1) {
+		close_socket(sock);
+	}
 	if (ctx->use_flac && flac_samples) free(flac_samples);
 
 	LOG_INFO("[%p]: terminating", ctx);

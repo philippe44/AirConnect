@@ -22,6 +22,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdatomic.h>
 
 #if WIN
 #include <process.h>
@@ -110,7 +111,9 @@ static const struct cSearchedSRV_s
 /*----------------------------------------------------------------------------*/
 static log_level*		loglevel = &main_loglevel;
 pthread_t				glUpdateMRThread;
-static bool				glMainRunning = true;
+static atomic_int			glMainRunning = ATOMIC_VAR_INIT(1);
+static pthread_cond_t			umrt_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t			umrt_mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct in_addr 	glHost;
 static char				glHostName[_STR_LEN_];
 static struct mdnsd*	glmDNSServer = NULL;
@@ -266,8 +269,8 @@ bool ProcessQueue(struct sMR *Device)
 		LOG_ERROR("Error in queued UpnpSendActionAsync -- %d", rc);
 	}
 
-	free(Action);
 	ixmlDocument_free(Action->ActionNode);
+	free(Action);
 
 	return (rc == 0);
 }
@@ -436,13 +439,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			break;
 		}
 		case UPNP_DISCOVERY_SEARCH_TIMEOUT:	{
-			pthread_attr_t attr;
-
-			pthread_attr_init(&attr);
-			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
-			pthread_create(&glUpdateMRThread, &attr, &UpdateMRThread, NULL);
-			pthread_detach(glUpdateMRThread);
-			pthread_attr_destroy(&attr);
+			pthread_cond_signal(&umrt_cond);
 			break;
 		}
 		case UPNP_EVENT_RECEIVED:
@@ -630,7 +627,7 @@ static void *UpdateMRThread(void *args)
 	glMRFoundList = NULL;
 	pthread_mutex_unlock(&glMRFoundMutex);
 
-	if (!glMainRunning) {
+	if (0 == atomic_load(&glMainRunning)) {
 		LOG_DEBUG("Aborting ...", NULL);
 		while (p) {
 			m = p->Next;
@@ -716,13 +713,28 @@ static void *UpdateMRThread(void *args)
 	return NULL;
 }
 
+static void *UpdateMRThreadLoop(void *args)
+{
+	while (true) {
+		pthread_mutex_lock(&umrt_mutex);
+		pthread_cond_wait(&umrt_cond, &umrt_mutex);
+		pthread_mutex_unlock(&umrt_mutex);
+		if (0 == atomic_load(&glMainRunning)) {
+			break;
+		}
+		UpdateMRThread(args);
+	}
+	pthread_exit(NULL);
+}
+
+
 /*----------------------------------------------------------------------------*/
 static void *MainThread(void *args)
 {
 	unsigned last = gettime_ms();
 	int ScanPoll = 0;
 
-	while (glMainRunning) {
+	while (atomic_load(&glMainRunning)) {
 		int i, rc;
 		int elapsed = gettime_ms() - last;
 
@@ -956,6 +968,12 @@ static bool Start(void)
 
 	LOG_INFO("Binding to %s:%d", IP, glPort);
 
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
+	pthread_create(&glUpdateMRThread, &attr, &UpdateMRThreadLoop, NULL);
+	pthread_attr_destroy(&attr);
+
 	rc = UpnpRegisterClient(CallbackEventHandler,
 				&glControlPointHandle, &glControlPointHandle);
 
@@ -986,6 +1004,9 @@ static bool Stop(void)
 {
 	struct sLocList *p, *m;
 
+	pthread_cond_signal(&umrt_cond);
+	pthread_join(glUpdateMRThread, NULL);
+
 	LOG_INFO("flush renderers ...", NULL);
 	FlushMRDevices();
 
@@ -1009,6 +1030,8 @@ static bool Stop(void)
 	// stop broadcasting devices
 	mdnsd_stop(glmDNSServer);
 
+	if (glConfigID) ixmlDocument_free(glConfigID);
+
 	return true;
 }
 
@@ -1016,7 +1039,7 @@ static bool Stop(void)
 static void sighandler(int signum) {
 	int i;
 
-	glMainRunning = false;
+	atomic_store(&glMainRunning, 0);
 
 	if (!glGracefullShutdown) {
 		for (i = 0; i < MAX_RENDERERS; i++) {
@@ -1135,6 +1158,7 @@ int main(int argc, char *argv[])
 	int i;
 	char resp[20] = "";
 
+	signal(SIGPIPE, SIG_IGN);
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);
 #if defined(SIGQUIT)
@@ -1253,8 +1277,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (glConfigID) ixmlDocument_free(glConfigID);
-	glMainRunning = false;
 	LOG_INFO("stopping squeelite devices ...", NULL);
 	LOG_INFO("stopping UPnP devices ...", NULL);
 	Stop();

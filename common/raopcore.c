@@ -84,8 +84,10 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 	ctx->volume_stamp = gettime_ms() - 1000;
 	S_ADDR(ctx->active_remote.host) = INADDR_ANY;
 
-	if (!ctx->sock) {
+	if (ctx->sock == -1) {
 		LOG_ERROR("Cannot create listening socket", NULL);
+		free(txt[0]);
+		free(id);
 		return NULL;
 	}
 
@@ -96,6 +98,8 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 
 	if (bind(ctx->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0 || listen(ctx->sock, 1)) {
 		LOG_ERROR("Cannot bind or listen RTSP listener: %s", strerror(errno));
+		free(txt[0]);
+		free(id);
 		closesocket(ctx->sock);
 		return NULL;
 	}
@@ -141,12 +145,15 @@ void  raop_delete(struct raop_ctx_s *ctx) {
 	closesocket(ctx->sock);
 
 	pthread_join(ctx->thread, NULL);
-	pthread_join(ctx->search_thread, NULL);
+	if (ctx->active_remote.search) {
+		pthread_join(ctx->search_thread, NULL);
+		ctx->active_remote.search = false;
+	}
 
 	NFREE(ctx->rtsp.aeskey);
 	NFREE(ctx->rtsp.aesiv);
 
-	mdns_service_remove(ctx->svr, ctx->svc);
+	mdns_service_destroy(ctx->svc);
 
 	free(ctx);
 }
@@ -213,10 +220,10 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 
 		NFREE(method);
 		NFREE(buf);
-		free(command);
 		kd_free(headers);
 	}
 
+	free(command);
 	closesocket(sock);
 }
 
@@ -258,6 +265,8 @@ static void *rtsp_thread(void *arg) {
 			sock = -1;
 		}
 	}
+
+	if (sock != -1) closesocket(sock);
 
 	return NULL;
 }
@@ -509,7 +518,7 @@ static void* search_remote(void *args) {
 static char *rsa_apply(unsigned char *input, int inlen, int *outlen, int mode)
 {
 	unsigned char *out;
-	static RSA *rsa = NULL;
+	RSA *rsa = NULL;
 	static char super_secret_key[] =
 	"-----BEGIN RSA PRIVATE KEY-----\n"
 	"MIIEpQIBAAKCAQEA59dE8qLieItsH1WgjrcFRKj6eUWqi+bGLOX1HL3U3GhC/j0Qg90u3sG/1CUt\n"
@@ -535,11 +544,9 @@ static char *rsa_apply(unsigned char *input, int inlen, int *outlen, int mode)
 	"2gG0N5hvJpzwwhbhXqFKA4zaaSrw622wDniAK5MlIE0tIAKKP4yxNGjoD2QYjhBGuhvkWKY=\n"
 	"-----END RSA PRIVATE KEY-----";
 
-	if (!rsa) {
-		BIO *bmem = BIO_new_mem_buf(super_secret_key, -1);
-		rsa = PEM_read_bio_RSAPrivateKey(bmem, NULL, NULL, NULL);
-		BIO_free(bmem);
-	}
+	BIO *bmem = BIO_new_mem_buf(super_secret_key, -1);
+	rsa = PEM_read_bio_RSAPrivateKey(bmem, NULL, NULL, NULL);
+	BIO_free(bmem);
 
 	out = malloc(RSA_size(rsa));
 	switch (mode) {
@@ -552,6 +559,7 @@ static char *rsa_apply(unsigned char *input, int inlen, int *outlen, int mode)
 										  RSA_PKCS1_OAEP_PADDING);
 			break;
 	}
+	RSA_free(rsa);
 
 	return (char*) out;
 }

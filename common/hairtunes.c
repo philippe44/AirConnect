@@ -130,7 +130,8 @@ typedef struct hairtunes_s {
 
 
 #define BUFIDX(seqno) ((seq_t)(seqno) % BUFFER_FRAMES)
-static void 	init_buffer(abuf_t *audio_buffer, int size);
+static void 	allocate_buffer(abuf_t *audio_buffer, int size);
+static void 	release_buffer(abuf_t *audio_buffer);
 static void 	reset_flac(hairtunes_t *ctx);
 static bool 	rtp_request_resend(hairtunes_t *ctx, seq_t first, seq_t last);
 static bool 	rtp_request_timing(hairtunes_t *ctx);
@@ -229,7 +230,6 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, char 
 	if (!ctx) return resp;
 
 	memset(ctx, 0, sizeof(hairtunes_t));
-	memset(ctx->silence_frame, 0, ctx->frame_size*4);
 	ctx->host = host;
 	ctx->rtp_host.sin_family = AF_INET;
 	ctx->rtp_host.sin_addr.s_addr = INADDR_ANY;
@@ -271,7 +271,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, char 
 		LOG_INFO("[%p]: Using FLAC", ctx);
 	}
 
-	init_buffer(ctx->audio_buffer, ctx->frame_size*4);
+	allocate_buffer(ctx->audio_buffer, ctx->frame_size*4);
 
 	// create rtp ports
 	for (i = 0; i < 3; i++) {
@@ -326,6 +326,7 @@ void hairtunes_end(hairtunes_t *ctx)
 		FLAC__stream_encoder_delete(ctx->flac_codec);
 	}
 
+	release_buffer(ctx->audio_buffer);
 	free(ctx->silence_frame);
 	free(ctx);
 }
@@ -359,11 +360,19 @@ bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpfra
 }
 
 /*---------------------------------------------------------------------------*/
-static void init_buffer(abuf_t *audio_buffer, int size) {
+static void allocate_buffer(abuf_t *audio_buffer, int size) {
 	int i;
 	for (i = 0; i < BUFFER_FRAMES; i++) {
 		audio_buffer[i].data = malloc(size);
 		audio_buffer[i].ready = 0;
+	}
+}
+
+/*---------------------------------------------------------------------------*/
+static void release_buffer(abuf_t *audio_buffer) {
+	int i;
+	for (i = 0; i < BUFFER_FRAMES; i++) {
+		free(audio_buffer[i].data);
 	}
 }
 
@@ -867,6 +876,8 @@ static void *http_thread_func(void *arg) {
 			timeout.tv_usec = (ctx->frame_size*1000000)/44100;
 		}
 	}
+
+	if (sock == -1) close_socket(sock);
 
 	if (ctx->use_flac && flac_samples) free(flac_samples);
 

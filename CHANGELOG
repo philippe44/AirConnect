@@ -1,3 +1,7 @@
+0.1.0.2
+ - code cleaning
+ - exclusion (-m) parsing was wrong and ";" is not a valid separator
+ 
 0.1.0.0
  - HTTP delay uses silence frames
  

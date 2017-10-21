@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.0.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.0.2"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
@@ -132,7 +132,7 @@ static struct sLocList {
 		   "  -l <[rtp][:http]>\t\tset RTP and HTTP latency (ms)\n"
 		   "  -f <logfile>\t\twrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
-		   "  -m <name1;name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
+		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|raop|main|util|upnp, level: error|warn|info|debug|sdebug\n"
 
 #if LINUX || FREEBSD
@@ -266,8 +266,8 @@ bool ProcessQueue(struct sMR *Device)
 		LOG_ERROR("Error in queued UpnpSendActionAsync -- %d", rc);
 	}
 
-	free(Action);
 	ixmlDocument_free(Action->ActionNode);
+	free(Action);
 
 	return (rc == 0);
 }
@@ -422,7 +422,9 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				break;
 			}
 
-			ithread_mutex_lock(&glMRFoundMutex);
+			if (!glMainRunning) break;
+
+			pthread_mutex_lock(&glMRFoundMutex);
 			p = &glMRFoundList;
 			while (*p) {
 				prev = *p;
@@ -432,11 +434,13 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			(*p)->Location = strdup(d_event->Location);
 			(*p)->Next = NULL;
 			if (prev) prev->Next = *p;
-			ithread_mutex_unlock(&glMRFoundMutex);
+			pthread_mutex_unlock(&glMRFoundMutex);
 			break;
 		}
 		case UPNP_DISCOVERY_SEARCH_TIMEOUT:	{
 			pthread_attr_t attr;
+
+			if (!glMainRunning) break;
 
 			pthread_attr_init(&attr);
 			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
@@ -640,7 +644,7 @@ static void *UpdateMRThread(void *args)
 		return NULL;
 	}
 
-	while (p) {
+	while (p && glMainRunning) {
 		IXML_Document *DescDoc = NULL;
 		char *UDN = NULL, *ModelName = NULL;
 		int rc;
@@ -909,10 +913,13 @@ bool isExcluded(char *Model)
 	char item[_STR_LEN_];
 	char *p = glExcluded;
 
-	while (p && *p && sscanf(p, "%[^;]", item)) {
+	if (!glExcluded) return false;
+
+	do {
+		sscanf(p, "%[^,]", item);
 		if (stristr(Model, item)) return true;
-		p += strlen(item) + 1;
-	}
+		p += strlen(item);
+	} while (*p++);
 
 	return false;
 }
@@ -986,11 +993,14 @@ static bool Stop(void)
 {
 	struct sLocList *p, *m;
 
+	LOG_INFO("terminate search thread ...", NULL);
+	pthread_join(glUpdateMRThread, NULL);
+
 	LOG_INFO("flush renderers ...", NULL);
 	FlushMRDevices();
 
 	LOG_INFO("terminate main thread ...", NULL);
-	ithread_join(glMainThread, NULL);
+	pthread_join(glMainThread, NULL);
 
 	UpnpUnRegisterClient(glControlPointHandle);
 	UpnpFinish();
@@ -998,7 +1008,7 @@ static bool Stop(void)
 	pthread_mutex_lock(&glMRFoundMutex);
 	m = p = glMRFoundList;
 	glMRFoundList = NULL;
-	ithread_mutex_unlock(&glMRFoundMutex);
+	pthread_mutex_unlock(&glMRFoundMutex);
 
 	while (p) {
 		m = p->Next;
@@ -1008,6 +1018,8 @@ static bool Stop(void)
 
 	// stop broadcasting devices
 	mdnsd_stop(glmDNSServer);
+
+	if (glConfigID) ixmlDocument_free(glConfigID);
 
 	return true;
 }
@@ -1143,6 +1155,9 @@ int main(int argc, char *argv[])
 #if defined(SIGHUP)
 	signal(SIGHUP, sighandler);
 #endif
+#if defined(SIGPIPE)
+	signal(SIGPIPE, SIG_IGN);
+#endif
 
 	// first try to find a config file on the command line
 	for (i = 1; i < argc; i++) {
@@ -1253,7 +1268,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (glConfigID) ixmlDocument_free(glConfigID);
 	glMainRunning = false;
 	LOG_INFO("stopping squeelite devices ...", NULL);
 	LOG_INFO("stopping UPnP devices ...", NULL);

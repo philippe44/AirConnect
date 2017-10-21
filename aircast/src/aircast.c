@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.1.0.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.0.2"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -369,7 +369,7 @@ static void *UpdateMRThread(void *args)
 
 	query_mDNS(gl_mDNSId, "_googlecast._tcp.local", &DiscDevices, glScanTimeout);
 
-	for (i = 0; i < DiscDevices.count; i++) {
+	for (i = 0; i < DiscDevices.count && glMainRunning; i++) {
 		char *UDN = NULL, *Name = NULL;
 		int j;
 		struct mDNSItem_s *p = &DiscDevices.items[i];
@@ -645,11 +645,14 @@ static bool Start(void)
 
 static bool Stop(void)
 {
-	LOG_DEBUG("flush renderers ...", NULL);
-	FlushCastDevices();
-
 	// this forces an ongoing search to end
 	close_mDNS(gl_mDNSId);
+
+	LOG_DEBUG("terminate update thread ...", NULL);
+	pthread_join(glUpdateMRThread, NULL);
+
+	LOG_DEBUG("flush renderers ...", NULL);
+	FlushCastDevices();
 
 	// stop broadcasting devices
 	mdnsd_stop(glmDNSServer);
@@ -661,6 +664,8 @@ static bool Stop(void)
 	EndSSL();
 
 	NFREE(glHostName);
+
+	if (glConfigID) ixmlDocument_free(glConfigID);
 
 #if WIN
 	winsock_close();
@@ -905,7 +910,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (glConfigID) ixmlDocument_free(glConfigID);
 	glMainRunning = false;
 	LOG_INFO("stopping Cast devices ...", NULL);
 	Stop();

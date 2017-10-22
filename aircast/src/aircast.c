@@ -363,12 +363,6 @@ static void *UpdateMRThread(void *args)
 	LOG_DEBUG("Begin Cast devices update", NULL);
 	TimeStamp = gettime_ms();
 
-	if (!glMainRunning) {
-		LOG_DEBUG("Aborting ...", NULL);
-		glDiscoveryRunning = false;
-		return NULL;
-	}
-
 	query_mDNS(gl_mDNSId, &gl_mDNSQuery, "_googlecast._tcp.local", &DiscDevices, glScanTimeout);
 
 	for (i = 0; i < DiscDevices.count && glMainRunning; i++) {
@@ -463,7 +457,7 @@ static void *MainThread(void *args)
 
 		// reset timeout and re-scan devices
 		ScanPoll += elapsed;
-		if (glScanInterval && ScanPoll > glScanInterval*1000) {
+		if (glScanInterval && ScanPoll > glScanInterval*1000 && !glDiscoveryRunning) {
 			pthread_attr_t attr;
 			ScanPoll = 0;
 

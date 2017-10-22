@@ -1,3 +1,9 @@
+0.1.0.4
+ - flac_ready boolean was un-necessary
+ - wait for playing (RTP) before sending silent frames
+ - was sending a few raw frames at the beginning when using flac
+ - functions renaming for better consistency
+ 
 0.1.0.3
  - pthread_join of remote search could be called twice
  - update renderer thread cleaned for better exit

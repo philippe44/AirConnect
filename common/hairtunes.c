@@ -119,7 +119,7 @@ typedef struct hairtunes_s {
 	char *silence_frame;
 	int delay, silence_count;
 	int flac_len;
-	bool flac_ready, flac_header;
+	bool flac_header;
 	alac_file *alac_codec;
 	int flush_seqno;
 	bool playing, silence;
@@ -130,26 +130,23 @@ typedef struct hairtunes_s {
 
 
 #define BUFIDX(seqno) ((seq_t)(seqno) % BUFFER_FRAMES)
-static void 	allocate_buffer(abuf_t *audio_buffer, int size);
-static void 	release_buffer(abuf_t *audio_buffer);
-static void 	reset_flac(hairtunes_t *ctx);
+static void 	buffer_alloc(abuf_t *audio_buffer, int size);
+static void 	buffer_release(abuf_t *audio_buffer);
+static void 	buffer_reset(abuf_t *audio_buffer);
+static void 	flac_init(hairtunes_t *ctx);
 static bool 	rtp_request_resend(hairtunes_t *ctx, seq_t first, seq_t last);
 static bool 	rtp_request_timing(hairtunes_t *ctx);
 static void*	rtp_thread_func(void *arg);
 static void*	http_thread_func(void *arg);
 static bool 	handle_http(hairtunes_t *ctx, int sock);
-static void 	ab_reset(abuf_t *audio_buffer);
 static int	  	seq_order(seq_t a, seq_t b);
 static FLAC__StreamEncoderWriteStatus 	flac_write_callback(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void *client_data);
 
 /*---------------------------------------------------------------------------*/
-static void reset_flac(hairtunes_t *ctx) {
+static void flac_init(hairtunes_t *ctx) {
 	bool ok = true;
 
-	if (ctx->flac_ready) return;
-
 	ctx->flac_len = 0;
-	ctx->flac_ready = true;
 	ctx->flac_header = true;
 
 	ok &= FLAC__stream_encoder_set_verify(ctx->flac_codec, false);
@@ -182,7 +179,7 @@ static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEnco
 
 
 /*---------------------------------------------------------------------------*/
-static alac_file* init_alac(int fmtp[32]) {
+static alac_file* alac_init(int fmtp[32]) {
 	alac_file *alac;
 	int sample_size = fmtp[3];
 
@@ -261,7 +258,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, char 
 	ctx->silence_frame = (char*) calloc(ctx->frame_size, 4);
 
 	// alac decoder
-	ctx->alac_codec = init_alac(fmtp);
+	ctx->alac_codec = alac_init(fmtp);
 	rc &= ctx->alac_codec != NULL;
 
 	// flac encoder
@@ -271,7 +268,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, char 
 		LOG_INFO("[%p]: Using FLAC", ctx);
 	}
 
-	allocate_buffer(ctx->audio_buffer, ctx->frame_size*4);
+	buffer_alloc(ctx->audio_buffer, ctx->frame_size*4);
 
 	// create rtp ports
 	for (i = 0; i < 3; i++) {
@@ -326,7 +323,7 @@ void hairtunes_end(hairtunes_t *ctx)
 		FLAC__stream_encoder_delete(ctx->flac_codec);
 	}
 
-	release_buffer(ctx->audio_buffer);
+	buffer_release(ctx->audio_buffer);
 	free(ctx->silence_frame);
 	free(ctx);
 }
@@ -334,7 +331,7 @@ void hairtunes_end(hairtunes_t *ctx)
 /*---------------------------------------------------------------------------*/
 bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpframe)
 {
-	bool rc;
+	bool rc = true;
 
 	pthread_mutex_lock(&ctx->ab_mutex);
 
@@ -342,15 +339,13 @@ bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpfra
 		rc = false;
 		LOG_ERROR("[%p]: FLUSH ignored as seqno (%hu) <= ab_read (%hu)", ctx, seqno, ctx->ab_read);
 	} else {
-		rc = true;
-		ab_reset(ctx->audio_buffer);
+		buffer_reset(ctx->audio_buffer);
 		ctx->playing = false;
 		ctx->flush_seqno = seqno;
 		ctx->synchro.first = false;
 
 		if (ctx->use_flac) {
 			FLAC__stream_encoder_finish(ctx->flac_codec);
-			ctx->flac_ready = false;
 		}
 	}
 
@@ -360,7 +355,7 @@ bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpfra
 }
 
 /*---------------------------------------------------------------------------*/
-static void allocate_buffer(abuf_t *audio_buffer, int size) {
+static void buffer_alloc(abuf_t *audio_buffer, int size) {
 	int i;
 	for (i = 0; i < BUFFER_FRAMES; i++) {
 		audio_buffer[i].data = malloc(size);
@@ -369,7 +364,7 @@ static void allocate_buffer(abuf_t *audio_buffer, int size) {
 }
 
 /*---------------------------------------------------------------------------*/
-static void release_buffer(abuf_t *audio_buffer) {
+static void buffer_release(abuf_t *audio_buffer) {
 	int i;
 	for (i = 0; i < BUFFER_FRAMES; i++) {
 		free(audio_buffer[i].data);
@@ -377,7 +372,7 @@ static void release_buffer(abuf_t *audio_buffer) {
 }
 
 /*---------------------------------------------------------------------------*/
-static void ab_reset(abuf_t *audio_buffer) {
+static void buffer_reset(abuf_t *audio_buffer) {
 	int i;
 	for (i = 0; i < BUFFER_FRAMES; i++) audio_buffer[i].ready = 0;
 }
@@ -425,7 +420,7 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 			ctx->playing = true;
 			ctx->silence = true;
 			ctx->synchro.first = false;
-			if (ctx->use_flac) reset_flac(ctx);
+			if (ctx->use_flac) flac_init(ctx);
 		} else {
 			pthread_mutex_unlock(&ctx->ab_mutex);
 			return;
@@ -719,6 +714,9 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 	int i;
 	u32_t now, playtime;
 
+	// no real need for mutex here
+	if (!ctx->playing) return NULL;
+
 	// send silence if required to create enough buffering
 	if (ctx->silence_count && ctx->silence_count--)	return (short*) ctx->silence_frame;
 
@@ -836,7 +834,7 @@ static void *http_thread_func(void *arg) {
 		if (http_ready && (inbuf = buffer_get_frame(ctx)) != NULL) {
 			int len;
 
-			if (ctx->use_flac && ctx->flac_ready) {
+			if (ctx->use_flac) {
 				// send streaminfo at beginning
 				if (ctx->flac_header && ctx->flac_len) {
 					send(sock, (void*) ctx->flac_buffer, ctx->flac_len, 0);

@@ -105,7 +105,7 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 #pragma GCC diagnostic ignored "-Wunused-result"
 	asprintf(&(txt[0]), "am=%s", model);
 #pragma GCC diagnostic pop
-	id = malloc(strlen(name) + 12 + 1 + 1);
+	id = malloc(strlen(name) + 12 + 1 + 1);
 
 	memcpy(ctx->mac, mac, 6);
 	for (i = 0; i < 6; i++) sprintf(id + i*2, "%02X", mac[i]);
@@ -144,11 +144,15 @@ void  raop_delete(struct raop_ctx_s *ctx) {
 	closesocket(ctx->sock);
 
 	pthread_join(ctx->thread, NULL);
-	ctx->active_remote.search = false;
-	pthread_join(ctx->search_thread, NULL);
+
+	if (ctx->active_remote.search) {
+		ctx->active_remote.search = false;
+		pthread_join(ctx->search_thread, NULL);
+	}
 
 	NFREE(ctx->rtsp.aeskey);
 	NFREE(ctx->rtsp.aesiv);
+	NFREE(ctx->rtsp.fmtp);
 
 	mdns_service_remove(ctx->svr, ctx->svc);
 
@@ -380,7 +384,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 #pragma GCC diagnostic ignored "-Wunused-result"
 			asprintf(&transport, "RTP/AVP/UDP;unicast;mode=record;control_port=%u;timing_port=%u;server_port=%u", ht.cport, ht.tport, ht.aport);
 #pragma GCC diagnostic pop
-			LOG_INFO("[%p]: http=(%hu) audio=(%hu:%hu), timing=(%hu:%hu), control=(%hu:%hu)", ctx, ht.hport, 0, ht.aport, tport, ht.tport, cport, ht.cport);
+			LOG_DEBUG("[%p]: http=(%hu) audio=(%hu:%hu), timing=(%hu:%hu), control=(%hu:%hu)", ctx, ht.hport, 0, ht.aport, tport, ht.tport, cport, ht.cport);
 			kd_add(resp, "Transport", transport);
 			kd_add(resp, "Session", "DEADBEEF");
 			free(transport);
@@ -485,18 +489,19 @@ static void* search_remote(void *args) {
 	DiscoveredList DiscDevices;
 	int mDNSId;
 	int i;
+	bool done = false;
 
 	mDNSId = init_mDNS(false, ctx->host);
 
-	while (ctx->active_remote.search) {
-		query_mDNS(mDNSId, "_dacp._tcp.local", &DiscDevices, 5);
+	while (ctx->active_remote.search && !done) {
+		query_mDNS(mDNSId, NULL, "_dacp._tcp.local", &DiscDevices, 5);
 
 		// see if we have found an active remote for our ID
 		for (i = 0; i < DiscDevices.count; i++) {
 			if (stristr(DiscDevices.items[i].name, ctx->active_remote.DACPid)) {
 				ctx->active_remote.host = DiscDevices.items[i].addr;
 				ctx->active_remote.port = DiscDevices.items[i].port;
-				ctx->active_remote.search = false;
+				done = true;
 				LOG_INFO("[%p]: found ActiveRemote for %s at %s:%u", ctx, ctx->active_remote.DACPid,
 								inet_ntoa(ctx->active_remote.host), ctx->active_remote.port);
 				break;
@@ -506,7 +511,7 @@ static void* search_remote(void *args) {
 		free_discovered_list(&DiscDevices);
 	}
 
-	close_mDNS(mDNSId);
+	close_mDNS(mDNSId, NULL);
 
 	return NULL;
 }

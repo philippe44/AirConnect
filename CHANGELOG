@@ -1,3 +1,8 @@
+0.1.0.3
+ - pthread_join of remote search could be called twice
+ - update renderer thread cleaned for better exit
+ - memory leaks correction
+ 
 0.1.0.2
  - code cleaning
  - exclusion (-m) parsing was wrong and ";" is not a valid separator

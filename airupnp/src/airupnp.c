@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.0.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.0.3"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
@@ -84,11 +84,9 @@ unsigned int 		glPort;
 UpnpClient_Handle 	glControlPointHandle;
 void				*glConfigID = NULL;
 char				glConfigName[_STR_LEN_] = "./config.xml";
-static bool			glDiscovery = false;
 u32_t				glScanInterval = SCAN_INTERVAL;
 u32_t				glScanTimeout = SCAN_TIMEOUT;
 struct sMR			glMRDevices[MAX_RENDERERS];
-pthread_mutex_t		glMRFoundMutex;
 
 /*----------------------------------------------------------------------------*/
 /* consts or pseudo-const*/
@@ -111,6 +109,7 @@ static const struct cSearchedSRV_s
 static log_level*		loglevel = &main_loglevel;
 pthread_t				glUpdateMRThread;
 static bool				glMainRunning = true;
+static enum	{DISCOVERY_STOPPED, DISCOVERY_PENDING, DISCOVERY_UPDATING} glDiscoveryRunning = DISCOVERY_STOPPED;
 static struct in_addr 	glHost;
 static char				glHostName[_STR_LEN_];
 static struct mdnsd*	glmDNSServer = NULL;
@@ -422,9 +421,8 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				break;
 			}
 
-			if (!glMainRunning) break;
+			if (!glMainRunning || glDiscoveryRunning == DISCOVERY_UPDATING) break;
 
-			pthread_mutex_lock(&glMRFoundMutex);
 			p = &glMRFoundList;
 			while (*p) {
 				prev = *p;
@@ -434,13 +432,15 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			(*p)->Location = strdup(d_event->Location);
 			(*p)->Next = NULL;
 			if (prev) prev->Next = *p;
-			pthread_mutex_unlock(&glMRFoundMutex);
+
 			break;
 		}
 		case UPNP_DISCOVERY_SEARCH_TIMEOUT:	{
 			pthread_attr_t attr;
 
-			if (!glMainRunning) break;
+			if (!glMainRunning || glDiscoveryRunning == DISCOVERY_STOPPED) break;
+
+			glDiscoveryRunning = DISCOVERY_UPDATING;
 
 			pthread_attr_init(&attr);
 			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
@@ -562,7 +562,7 @@ static void *MRThread(void *args)
 		p->StatePoll += elapsed;
 		p->TrackPoll += elapsed;
 
-		ithread_mutex_lock(&p->Mutex);
+		pthread_mutex_lock(&p->Mutex);
 
 		/*
 		should not request any status update if we are stopped, off or waiting
@@ -621,28 +621,14 @@ static bool RefreshTO(char *UDN)
 /*----------------------------------------------------------------------------*/
 static void *UpdateMRThread(void *args)
 {
-	struct sLocList *p, *m;
+	struct sLocList *p;
 	struct sMR *Device = NULL;
 	int i, TimeStamp;
 
 	LOG_DEBUG("Begin UPnP devices update", NULL);
 	TimeStamp = gettime_ms();
 
-	// first add any newly found uPNP renderer
-	pthread_mutex_lock(&glMRFoundMutex);
-	m = p = glMRFoundList;
-	glMRFoundList = NULL;
-	pthread_mutex_unlock(&glMRFoundMutex);
-
-	if (!glMainRunning) {
-		LOG_DEBUG("Aborting ...", NULL);
-		while (p) {
-			m = p->Next;
-			free(p->Location); free(p);
-			p = m;
-		}
-		return NULL;
-	}
+	p = glMRFoundList;
 
 	while (p && glMainRunning) {
 		IXML_Document *DescDoc = NULL;
@@ -690,12 +676,12 @@ static void *UpdateMRThread(void *args)
 	}
 
 	// free the list of discovered location URL's
-	p = m;
-	while (p) {
-		m = p->Next;
-		free(p->Location); free(p);
-		p = m;
+	while (glMRFoundList) {
+		p = glMRFoundList->Next;
+		free(glMRFoundList->Location); free(glMRFoundList);
+		glMRFoundList = p;
 	}
+	glMRFoundList = NULL;
 
 	// then walk through the list of devices to remove missing ones
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -709,11 +695,12 @@ static void *UpdateMRThread(void *args)
 		DelMRDevice(Device);
 	}
 
-	glDiscovery = true;
 	if (glAutoSaveConfigFile && !glSaveConfigFile) {
 		LOG_DEBUG("Updating configuration %s", glConfigName);
 		SaveConfig(glConfigName, glConfigID, false);
 	}
+
+	glDiscoveryRunning = DISCOVERY_STOPPED;
 
 	LOG_DEBUG("End UPnP devices update %d", gettime_ms() - TimeStamp);
 
@@ -735,10 +722,8 @@ static void *MainThread(void *args)
 		if (glScanInterval && ScanPoll > glScanInterval*1000) {
 			ScanPoll = 0;
 
-			for (i = 0; i < MAX_RENDERERS; i++) {
-				glMRDevices[i].TimeOut = true;
-				glDiscovery = false;
-			}
+			glDiscoveryRunning = DISCOVERY_PENDING;
+			for (i = 0; i < MAX_RENDERERS; i++) glMRDevices[i].TimeOut = true;
 
 			// launch a new search for Media Render
 			rc = UpnpSearchAsync(glControlPointHandle, glScanTimeout, MEDIA_RENDERER, NULL);
@@ -782,7 +767,7 @@ int uPNPSearchMediaRenderer(void)
 	int rc;
 
 	/* search for (Media Render and wait 15s */
-	glDiscovery = false;
+	glDiscoveryRunning = DISCOVERY_PENDING;
 	rc = UpnpSearchAsync(glControlPointHandle, SCAN_TIMEOUT, MEDIA_RENDERER, NULL);
 
 	if (UPNP_E_SUCCESS != rc) {
@@ -938,7 +923,6 @@ static bool Start(void)
 		if (glScanTimeout > glScanInterval - SCAN_TIMEOUT) glScanTimeout = glScanInterval - SCAN_TIMEOUT;
 	}
 
-	pthread_mutex_init(&glMRFoundMutex, 0);
 	memset(&glMRDevices, 0, sizeof(glMRDevices));
 
 	UpnpSetLogLevel(UPNP_ALL);
@@ -991,10 +975,10 @@ static bool Start(void)
 /*----------------------------------------------------------------------------*/
 static bool Stop(void)
 {
-	struct sLocList *p, *m;
+	struct sLocList *p;
 
 	LOG_INFO("terminate search thread ...", NULL);
-	pthread_join(glUpdateMRThread, NULL);
+	while (glDiscoveryRunning == DISCOVERY_UPDATING) usleep(50000);
 
 	LOG_INFO("flush renderers ...", NULL);
 	FlushMRDevices();
@@ -1005,15 +989,10 @@ static bool Stop(void)
 	UpnpUnRegisterClient(glControlPointHandle);
 	UpnpFinish();
 
-	pthread_mutex_lock(&glMRFoundMutex);
-	m = p = glMRFoundList;
-	glMRFoundList = NULL;
-	pthread_mutex_unlock(&glMRFoundMutex);
-
-	while (p) {
-		m = p->Next;
-		free(p->Location); free(p);
-		p = m;
+	while (glMRFoundList) {
+		p = glMRFoundList->Next;
+		free(glMRFoundList->Location); free(glMRFoundList);
+		glMRFoundList = p;
 	}
 
 	// stop broadcasting devices
@@ -1215,7 +1194,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (glSaveConfigFile) {
-		while (!glDiscovery) sleep(1);
+		while (glDiscoveryRunning != DISCOVERY_STOPPED) sleep(1);
 		SaveConfig(glSaveConfigFile, glConfigID, true);
 	}
 

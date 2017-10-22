@@ -152,6 +152,7 @@ static void reset_flac(hairtunes_t *ctx) {
 	ctx->flac_ready = true;
 	ctx->flac_header = true;
 
+	FLAC__stream_encoder_finish(ctx->flac_codec);
 	ok &= FLAC__stream_encoder_set_verify(ctx->flac_codec, false);
 	ok &= FLAC__stream_encoder_set_compression_level(ctx->flac_codec, 5);
 	ok &= FLAC__stream_encoder_set_channels(ctx->flac_codec, 2);
@@ -347,11 +348,6 @@ bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpfra
 		ctx->playing = false;
 		ctx->flush_seqno = seqno;
 		ctx->synchro.first = false;
-
-		if (ctx->use_flac) {
-			FLAC__stream_encoder_finish(ctx->flac_codec);
-			ctx->flac_ready = false;
-		}
 	}
 
 	pthread_mutex_unlock(&ctx->ab_mutex);
@@ -425,7 +421,6 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 			ctx->playing = true;
 			ctx->silence = true;
 			ctx->synchro.first = false;
-			if (ctx->use_flac) reset_flac(ctx);
 		} else {
 			pthread_mutex_unlock(&ctx->ab_mutex);
 			return;
@@ -810,6 +805,11 @@ static void *http_thread_func(void *arg) {
 
 			if (sock != -1 && ctx->running) {
 				ctx->silence_count = (ctx->delay * 44100) / (ctx->frame_size * 1000);
+				// Make sure we always start with a flac header on new connections.
+				if (ctx->use_flac)  {
+					ctx->flac_ready = false;
+					reset_flac(ctx);
+				}
 				LOG_INFO("[%p]: got HTTP connection %u (silent frames %d)", ctx, sock, ctx->silence_count);
 			} else continue;
 		}

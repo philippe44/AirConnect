@@ -877,7 +877,7 @@ static void *http_thread_func(void *arg) {
 		}
 	}
 
-	if (sock == -1) close_socket(sock);
+	if (sock != -1) close_socket(sock);
 
 	if (ctx->use_flac && flac_samples) free(flac_samples);
 

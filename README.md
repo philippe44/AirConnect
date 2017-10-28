@@ -31,7 +31,18 @@ Parameters of importance of config file
 
 =============================================
 
-latency parameters detailed explanation
+latency parameters detailed explanation:
+
+These bridges receive realtime "synchronous" audio from the AirPlay controler in the format of RTP frames and forward it to the Chromecast/UPnP/Sonos player in HTTP "asynchronous" audio. The AirPlay clients "push" the audio using RTP and the Chromecast/UPnP/Sonos players "pull" the audio using an HTTP GET request. 
+
+A player using HTTP to get its audio expects to receive immediately a large portion of audio as the response to its GET and this creates a large enough buffer to handle any network congestion. The rest of the audio transmission is regulated by the player using TCP flow control. But when the source if an AirPlay RTP device, there is no such large portion of audio available in advance to be sent to the Player, as the audio comes in real time. Every 8ms, a RTP frame is received and is immediately forwarded as the HTTP body. If the CC/UPnP/Sonos players starts to play immediately the 1st received frame, expecting an initial burst to follow, then any network congestion delaying RTP audio will starve the player and create shuttering. 
+
+The [http] parameter allow a certain amount of silence frames to be sent to the Chromecast/UPnP/Sonos player, in a burst at the beginning. Then, while this "artificial" silence is being played, it's possible to build a buffer of RTP frames that will then hide network delays that might happen in further RTP frame transmission
+
+But RTP frames are sent using UDP, which means there is no guarantee of delivery, so frames migh be lost from time to time (happens often on WiFi networks). To allow detection of lost frames, they are numbered sequentially (1,2 ... n) so every time two receives frames are not consecutives, the missing ones can be asked again by the AirPlay receiver. 
+
+
+
 
 =============================================
 

@@ -19,15 +19,15 @@ Common information:
 Parameters of importance (config file)
 
 - latency <[rtp][:http]> (0:0)	: buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
-	[rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay
-	[http]	: ms of buffering silence for HTTP audio (not needed normaly, except for Sonos)
+	* [rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay
+	* [http]	: ms of buffering silence for HTTP audio (not needed normaly, except for Sonos)
 - remove_count < 0 .. n> (3)	: how many times a player must be missing during a search to be removed. 0 disables removal
 - enabled <0|1>			: in common section, enables new discovered players by default. In a dedicated section, enables the player
 - name 				: name under which player appear in AirPlay 
 - log_limit <-1 | n> (-1)	: when using log file, limits its size (-1 = no limit)
 - media_volume	<0..1> (0.5)	: in a Chromecast group, applies a scaling factor to all members volume
 
-<h2>latency parameters detailed explanation:</h2>
+## latency parameters detailed explanation:
 
 These bridges receive realtime "synchronous" audio from the AirPlay controler in the format of RTP frames and forward it to the Chromecast/UPnP/Sonos player in an HTTP "asynchronous" continuous audio binary format (notion of frames does not exist on that side). In other words, the AirPlay clients "push" the audio using RTP and the Chromecast/UPnP/Sonos players "pull" the audio using an HTTP GET request. 
 
@@ -43,7 +43,7 @@ For example, if received RTP frames are numbered 1,2,3,6, this bridge will forwa
 
 NB: [rtp] and [http] could have been merged into a single [latency] parameter which would have set the max RTP frames holding time as well as the duration of the initial additional silence (delay), but because some UPnP players and all Chromecast devices do properly their own buffering of HTTP audio (i.e. they wait until they have received a certain amount of audio before starting to play), then adding silence would have introduced an extra un-necessary delay in playback. 
 
-<h2>recompilation</h2>
+## recompilation
 
 if you want to recompile, you'll need
 

@@ -19,8 +19,8 @@ Common information:
 Parameters of importance (config file)
 
 - latency <[rtp][:http]> (0:0)	: buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
-	[rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay
-	[http]	: ms of buffering silence for HTTP audio (not needed normaly, except for Sonos)
+	<ul><li>[rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay</li>
+	<li>[http]	: ms of buffering silence for HTTP audio (not needed normaly, except for Sonos)<li></ul>
 - remove_count < 0 .. n> (3)	: how many times a player must be missing during a search to be removed. 0 disables removal
 - enabled <0|1>			: in common section, enables new discovered players by default. In a dedicated section, enables the player
 - name 				: name under which player appear in AirPlay 

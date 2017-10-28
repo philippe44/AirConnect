@@ -16,7 +16,7 @@ Common information:
 - A config file (default config.xml) can be created for advanced tweaking (a reference version can be generated using -i command line)
 - Chromecast groups are supported
 
-Parameters of importance of config file
+Parameters of importance (config file)
 
 - latency <[rtp][:http]> (0:0)	: buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
 	[rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay

@@ -43,7 +43,7 @@ For example, if received RTP frames are numbered 1,2,3,6, this bridge will forwa
 
 NB: [rtp] and [http] could have been merged into a single [latency] parameter which would have set the max RTP frames holding time as well as the duration of the initial additional silence (delay), but because some UPnP players and all Chromecast devices do properly their own buffering of HTTP audio (i.e. they wait until they have received a certain amount of audio before starting to play), then adding silence would have introduced an extra un-necessary delay in playback. 
 
-<h2>recompilation>
+<h2>recompilation</h2>
 
 if you want to recompile, you'll need
 

@@ -1,3 +1,6 @@
+0.1.1.0
+ - support wav and pcm codecs
+ 
 0.1.0.5
   - rare race condition in UPnP search timeout/result
 

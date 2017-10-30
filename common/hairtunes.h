@@ -7,10 +7,11 @@ typedef struct {
 } hairtunes_resp_t;
 
 typedef enum { HAIRTUNES_PLAY } hairtunes_event_t;
+typedef enum { CODEC_FLAC = 0, CODEC_PCM = 1, CODEC_WAV = 2} codec_t;
 
 typedef	void		(*hairtunes_cb_t)(void *owner, hairtunes_event_t event);
 
-hairtunes_resp_t 	hairtunes_init(struct in_addr host, bool flac, bool sync, char *latencies,
+hairtunes_resp_t 	hairtunes_init(struct in_addr host, codec_t codec, bool sync, char *latencies,
 							char *aeskey, char *aesiv, char *fmtpstr, short unsigned pCtrlPort,
 							short unsigned pTimingPort, void *owner, hairtunes_cb_t callback);
 void			 	hairtunes_end(struct hairtunes_s *ctx);

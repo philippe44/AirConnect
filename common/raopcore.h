@@ -26,38 +26,9 @@
 
 typedef enum { RAOP_STREAM, RAOP_PLAY, RAOP_FLUSH, RAOP_PAUSE, RAOP_STOP, RAOP_VOLUME } raop_event_t ;
 typedef void (*raop_cb_t)(void *owner, raop_event_t event, void *param);
-typedef struct raop_ctx_s {
-	struct mdns_service *svc;
-	struct mdnsd *svr;
-	struct in_addr host;	// IP of bridge
-	short unsigned port;    // RTSP port for AirPlay
-	int sock;               // socket of the above
-	short unsigned hport; 	// HTTP port of audio server where CC can "GET" audio
-	struct in_addr peer;	// IP of the iDevice (airplay sender)
-	char *latencies;
-	bool running;
-	bool use_flac;
-	pthread_t thread, search_thread;
-	unsigned char mac[6];
-	unsigned int volume_stamp;
-	struct {
-		char *aesiv, *aeskey;
-		char *fmtp;
-	} rtsp;
-	struct hairtunes_s *ht;
-	raop_cb_t	callback;
-	struct {
-		char			DACPid[32], id[32];
-		struct in_addr	host;
-		u16_t			port;
-		bool 			search;
-	} active_remote;
-	void *owner;
-} raop_ctx_t;
 
-
-raop_ctx_t*   raop_create(struct in_addr host, struct mdnsd *svr, char *name,
-						  char *model, unsigned char mac[6], bool use_flac,
+struct raop_ctx_s*   raop_create(struct in_addr host, struct mdnsd *svr, char *name,
+						  char *model, unsigned char mac[6], char *codec,
 						  char *latencies, void *owner, raop_cb_t callback);
 void  		  raop_delete(struct raop_ctx_s *ctx);
 void		  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param);

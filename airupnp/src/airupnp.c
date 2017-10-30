@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.0.4"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.1.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
@@ -70,7 +70,7 @@ tMRConfig			glMRConfig = {
 							false,		// SendCoverArt
 							100,		// MaxVolume
 							1,			// UPnPRemoveCount
-							true,	    // UseFlac
+							"flac",	    // Codec
 							"",			// RTP:HTTP Latency (0 = use AirPlay requested)
 							{0, 0, 0, 0, 0, 0 } // MAC
 					};
@@ -114,6 +114,7 @@ static struct in_addr 	glHost;
 static char				glHostName[_STR_LEN_];
 static struct mdnsd*	glmDNSServer = NULL;
 static char*			glExcluded = NULL;
+static pthread_mutex_t	glEventMutex;
 static struct sLocList {
 	char 			*Location;
 	struct sLocList *Next;
@@ -222,7 +223,7 @@ void callback(void *owner, raop_event_t event, void *param)
 #pragma GCC diagnostic ignored "-Wunused-result"
 				asprintf(&device->CurrentURI, "http://%s:%u/stream.%s", inet_ntoa(glHost),
 								*((short unsigned*) param),
-								(device->Config.UseFlac) ? "flc" : "pcm");
+								device->Config.Codec);
 #pragma GCC diagnostic pop
 				AVTSetURI(device);
 				NFREE(device->CurrentURI);
@@ -413,7 +414,6 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		break;
 		case UPNP_DISCOVERY_SEARCH_RESULT: {
 			struct Upnp_Discovery *d_event = (struct Upnp_Discovery *) Event;
-			struct sLocList **p, *prev = NULL;
 
 			LOG_DEBUG("Answer to uPNP search %d", d_event->Location);
 			if (d_event->ErrCode != UPNP_E_SUCCESS) {
@@ -421,17 +421,24 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				break;
 			}
 
-			if (!glMainRunning || glDiscoveryRunning == DISCOVERY_UPDATING) break;
+			// this must *not* bet interrupted by the SEARCH_TIMEOUT event
+			pthread_mutex_lock(&glEventMutex);
 
-			p = &glMRFoundList;
-			while (*p) {
-				prev = *p;
-				p = &((*p)->Next);
+			if (glMainRunning && glDiscoveryRunning != DISCOVERY_UPDATING) {
+				struct sLocList **p, *prev = NULL;
+
+				p = &glMRFoundList;
+				while (*p) {
+					prev = *p;
+					p = &((*p)->Next);
+				}
+				(*p) = (struct sLocList*) malloc(sizeof (struct sLocList));
+				(*p)->Location = strdup(d_event->Location);
+				(*p)->Next = NULL;
+				if (prev) prev->Next = *p;
 			}
-			(*p) = (struct sLocList*) malloc(sizeof (struct sLocList));
-			(*p)->Location = strdup(d_event->Location);
-			(*p)->Next = NULL;
-			if (prev) prev->Next = *p;
+
+			pthread_mutex_unlock(&glEventMutex);
 
 			break;
 		}
@@ -440,7 +447,10 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			if (!glMainRunning) break;
 
+			// in case we are interrupting SEARCH_RESULT
+			pthread_mutex_lock(&glEventMutex);
 			glDiscoveryRunning = DISCOVERY_UPDATING;
+			pthread_mutex_unlock(&glEventMutex);
 
 			pthread_attr_init(&attr);
 			pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);
@@ -634,13 +644,12 @@ static void *UpdateMRThread(void *args)
 		IXML_Document *DescDoc = NULL;
 		char *UDN = NULL, *ModelName = NULL;
 		int rc;
-		void *n = p->Next;
 
 		rc = UpnpDownloadXmlDoc(p->Location, &DescDoc);
 		if (rc != UPNP_E_SUCCESS) {
 			LOG_DEBUG("Error obtaining description %s -- error = %d\n", p->Location, rc);
 			if (DescDoc) ixmlDocument_free(DescDoc);
-			p = n;
+			p = p->Next;
 			continue;
 		}
 
@@ -661,7 +670,7 @@ static void *UpdateMRThread(void *args)
 			if (AddMRDevice(Device, UDN, DescDoc, p->Location) && !glSaveConfigFile) {
 				// create a new AirPlay
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
-										   "airupnp", Device->Config.mac, Device->Config.UseFlac,
+										   "airupnp", Device->Config.mac, Device->Config.Codec,
 										   Device->Config.Latency, Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
@@ -672,7 +681,7 @@ static void *UpdateMRThread(void *args)
 
 		if (DescDoc) ixmlDocument_free(DescDoc);
 		NFREE(UDN);	NFREE(ModelName);
-		p = n;
+		p = p->Next;
 	}
 
 	// free the list of discovered location URL's
@@ -681,7 +690,6 @@ static void *UpdateMRThread(void *args)
 		free(glMRFoundList->Location); free(glMRFoundList);
 		glMRFoundList = p;
 	}
-	glMRFoundList = NULL;
 
 	// then walk through the list of devices to remove missing ones
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -839,10 +847,12 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	strcpy(Device->Manufacturer, manufacturer);
 	QueueInit(&Device->ActionQueue);
 
-	if (Device->Config.UseFlac)
-		Device->ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
-	else
+	if (!strcasecmp(Device->Config.Codec, "pcm"))
 		Device->ProtoInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
+	else if (!strcasecmp(Device->Config.Codec, "wav"))
+		Device->ProtoInfo = "http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
+	else
+		Device->ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
 
 	ip = ExtractIP(location);
 	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", mac_size)) {
@@ -962,7 +972,8 @@ static bool Start(void)
 		return false;
 	}
 
-  	/* start the main thread */
+	/* start the main thread */
+	pthread_mutex_init(&glEventMutex, 0);
 	pthread_create(&glMainThread, NULL, &MainThread, NULL);
 
 	mdnsd_set_hostname(glmDNSServer, hostname, glHost);
@@ -985,6 +996,7 @@ static bool Stop(void)
 
 	LOG_INFO("terminate main thread ...", NULL);
 	pthread_join(glMainThread, NULL);
+	pthread_mutex_destroy(&glEventMutex);
 
 	UpnpUnRegisterClient(glControlPointHandle);
 	UpnpFinish();

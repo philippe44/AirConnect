@@ -65,7 +65,7 @@ struct sService {
 	bool		SendCoverArt;
 	int			MaxVolume;
 	int			RemoveCount;
-	bool		UseFlac;
+	char		Codec[_STR_LEN_];
 	char		Latency[_STR_LEN_];
 	u8_t		mac[6];
 } tMRConfig;

@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.1.0.4"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.1.0"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -76,7 +76,7 @@ tMRConfig			glMRConfig = {
 							true,
 							true,
 							3,      // remove_count
-							true, 	// use_flac
+							"flac",	// use_flac
 							0.5,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 							"",		// rtp/http_latency (0 = use client's request)
@@ -205,7 +205,7 @@ void callback(void *owner, raop_event_t event, void *param)
 #pragma GCC diagnostic ignored "-Wunused-result"
 				asprintf(&uri, "http://%s:%u/stream", inet_ntoa(glHost), *((short unsigned*) param));
 #pragma GCC diagnostic pop
-				CastLoad(device->CastCtx, uri, "audio/flac", NULL);
+				CastLoad(device->CastCtx, uri, !strcasecmp(device->Config.Codec, "flac") ? "audio/flac" : "audio/wav", NULL);
 				free(uri);
 			}
 
@@ -399,8 +399,8 @@ static void *UpdateMRThread(void *args)
 
 			if (AddCastDevice(Device, Name, UDN, Group, p->addr, p->port) && !glSaveConfigFile) {
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name, "aircast", Device->Config.mac,
-											Device->Config.UseFlac, Device->Config.Latency,
-											Device, callback);
+											!strcasecmp(Device->Config.Codec, "flac") ? "flac" : "wav",
+											Device->Config.Latency,	Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 					RemoveCastDevice(Device);

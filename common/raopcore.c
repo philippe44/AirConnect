@@ -37,6 +37,35 @@
 #include "hairtunes.h"
 #include "log_util.h"
 
+typedef struct raop_ctx_s {
+	struct mdns_service *svc;
+	struct mdnsd *svr;
+	struct in_addr host;	// IP of bridge
+	short unsigned port;    // RTSP port for AirPlay
+	int sock;               // socket of the above
+	short unsigned hport; 	// HTTP port of audio server where CC can "GET" audio
+	struct in_addr peer;	// IP of the iDevice (airplay sender)
+	char *latencies;
+	bool running;
+	codec_t codec;
+	pthread_t thread, search_thread;
+	unsigned char mac[6];
+	unsigned int volume_stamp;
+	struct {
+		char *aesiv, *aeskey;
+		char *fmtp;
+	} rtsp;
+	struct hairtunes_s *ht;
+	raop_cb_t	callback;
+	struct {
+		char			DACPid[32], id[32];
+		struct in_addr	host;
+		u16_t			port;
+		bool 			search;
+	} active_remote;
+	void *owner;
+} raop_ctx_t;
+
 extern log_level	raop_loglevel;
 static log_level 	*loglevel = &raop_loglevel;
 
@@ -52,8 +81,8 @@ extern char private_key[];
 enum { RSA_MODE_KEY, RSA_MODE_AUTH };
 
 /*----------------------------------------------------------------------------*/
-raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
-						char *model, unsigned char mac[6], bool use_flac,
+struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
+						char *model, unsigned char mac[6], char *codec,
 						char *latencies, void *owner, raop_cb_t callback) {
 	struct raop_ctx_s *ctx = malloc(sizeof(struct raop_ctx_s));
 	struct sockaddr_in addr;
@@ -72,11 +101,13 @@ raop_ctx_t *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 
 	ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
 	ctx->callback = callback;
-	ctx->use_flac = use_flac;
 	ctx->latencies = latencies;
 	ctx->owner = owner;
 	ctx->volume_stamp = gettime_ms() - 1000;
 	S_ADDR(ctx->active_remote.host) = INADDR_ANY;
+	if (!strcasecmp(codec, "pcm")) ctx->codec = CODEC_PCM;
+	else if (!strcasecmp(codec, "wav")) ctx->codec = CODEC_WAV;
+	else ctx->codec = CODEC_FLAC;
 
 	if (ctx->sock == -1) {
 		LOG_ERROR("Cannot create listening socket", NULL);
@@ -371,7 +402,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		if ((p = stristr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
 		if ((p = stristr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
 
-		ht = hairtunes_init(ctx->peer, ctx->use_flac, false, ctx->latencies,
+		ht = hairtunes_init(ctx->peer, ctx->codec, false, ctx->latencies,
 							ctx->rtsp.aeskey, ctx->rtsp.aesiv,
 							ctx->rtsp.fmtp, cport, tport, ctx, hairtunes_cb);
 

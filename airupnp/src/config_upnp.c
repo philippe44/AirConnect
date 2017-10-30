@@ -82,7 +82,7 @@ void SaveConfig(char *name, void *ref, bool full)
 
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "max_volume", "%d", glMRConfig.MaxVolume);
-	XMLUpdateNode(doc, common, false, "use_flac", "%d", (int) glMRConfig.UseFlac);
+	XMLUpdateNode(doc, common, false, "codec", glMRConfig.Codec);
 	XMLUpdateNode(doc, common, false, "latency", glMRConfig.Latency);
 	XMLUpdateNode(doc, common, false, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
 
@@ -138,7 +138,8 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atoi(val);
-	if (!strcmp(name, "use_flac")) Conf->UseFlac = atol(val);
+	if (!strcmp(name, "use_flac")) strcpy(Conf->Codec, "flac");  // temporary
+	if (!strcmp(name, "codec")) strcpy(Conf->Codec, val);
 	if (!strcmp(name, "latency")) strcpy(Conf->Latency, val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "mac"))  {

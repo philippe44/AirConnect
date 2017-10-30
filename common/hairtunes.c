@@ -72,7 +72,7 @@ static log_level 	*loglevel = &raop_loglevel;
 #define NTP_SYNC	(0x02)
 
 enum { DATA, CONTROL, TIMING };
-
+static char *mime_types[] = { "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav" };
 
 typedef u16_t seq_t;
 typedef struct audio_buffer_entry {   // decoded audio packets
@@ -123,7 +123,7 @@ typedef struct hairtunes_s {
 	alac_file *alac_codec;
 	int flush_seqno;
 	bool playing, silence;
-	bool use_flac;
+	codec_t codec;
 	hairtunes_cb_t callback;
 	void *owner;
 } hairtunes_t;
@@ -212,7 +212,7 @@ static alac_file* alac_init(int fmtp[32]) {
 }
 
 /*---------------------------------------------------------------------------*/
-hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, char *latencies,
+hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, char *latencies,
 								char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
 								void *owner, hairtunes_cb_t callback)
@@ -232,7 +232,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, char 
 	ctx->rtp_host.sin_addr.s_addr = INADDR_ANY;
 	pthread_mutex_init(&ctx->ab_mutex, 0);
 	ctx->flush_seqno = -1;
-	ctx->use_flac = flac;
+	ctx->codec = codec;
 	ctx->flac_header = false;
 	ctx->latency = atoi(latencies);
 	if ((p = strchr(latencies, ':')) != NULL) ctx->delay = atoi(p + 1);
@@ -262,7 +262,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, bool flac, bool sync, char 
 	rc &= ctx->alac_codec != NULL;
 
 	// flac encoder
-	if (ctx->use_flac) {
+	if (ctx->codec == CODEC_FLAC) {
 		ctx->flac_codec = FLAC__stream_encoder_new();
 		rc &= ctx->flac_codec != NULL;
 		LOG_INFO("[%p]: Using FLAC", ctx);
@@ -344,7 +344,7 @@ bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpfra
 		ctx->flush_seqno = seqno;
 		ctx->synchro.first = false;
 
-		if (ctx->use_flac) {
+		if (ctx->codec == CODEC_FLAC) {
 			FLAC__stream_encoder_finish(ctx->flac_codec);
 		}
 	}
@@ -420,7 +420,7 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 			ctx->playing = true;
 			ctx->silence = true;
 			ctx->synchro.first = false;
-			if (ctx->use_flac) flac_init(ctx);
+			if (ctx->codec == CODEC_FLAC) flac_init(ctx);
 		} else {
 			pthread_mutex_unlock(&ctx->ab_mutex);
 			return;
@@ -786,7 +786,7 @@ static void *http_thread_func(void *arg) {
 	bool http_ready = false;
 	struct timeval timeout = { 0, 0 };
 
-	if (ctx->use_flac && ((flac_samples = malloc(2 * ctx->frame_size * sizeof(FLAC__int32))) == NULL)) {
+	if (ctx->codec == CODEC_FLAC && ((flac_samples = malloc(2 * ctx->frame_size * sizeof(FLAC__int32))) == NULL)) {
 		LOG_ERROR("[%p]: Cannot allocate FLAC sample buffer %u", ctx, ctx->frame_size);
 	}
 
@@ -834,7 +834,7 @@ static void *http_thread_func(void *arg) {
 		if (http_ready && (inbuf = buffer_get_frame(ctx)) != NULL) {
 			int len;
 
-			if (ctx->use_flac) {
+			if (ctx->codec == CODEC_FLAC) {
 				// send streaminfo at beginning
 				if (ctx->flac_header && ctx->flac_len) {
 					send(sock, (void*) ctx->flac_buffer, ctx->flac_len, 0);
@@ -848,7 +848,13 @@ static void *http_thread_func(void *arg) {
 				inbuf = (void*) ctx->flac_buffer;
 				len = ctx->flac_len;
 				ctx->flac_len = 0;
-			} else len = ctx->frame_size*4;
+			} else {
+				if (ctx->codec == CODEC_PCM) {
+					short *p = inbuf;
+					for (len = ctx->frame_size*2; len > 0; len--,p++) *p = (u8_t) *p << 8 | (u8_t) (*p >> 8);
+				}
+				len = ctx->frame_size*4;
+			}
 
 			if (len) {
 				u32_t gap = gettime_ms();
@@ -877,7 +883,7 @@ static void *http_thread_func(void *arg) {
 
 	if (sock != -1) close_socket(sock);
 
-	if (ctx->use_flac && flac_samples) free(flac_samples);
+	if (ctx->codec == CODEC_FLAC && flac_samples) free(flac_samples);
 
 	LOG_INFO("[%p]: terminating", ctx);
 
@@ -927,8 +933,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	kd_add(resp, "Server", "HairTunes");
 	kd_add(resp, "Connection", "close");
 
-	if (ctx->use_flac) kd_add(resp, "Content-Type", "audio/flac");
-	else kd_add(resp, "Content-Type", "audio/wav");
+	kd_add(resp, "Content-Type", mime_types[ctx->codec]);
 
 	str = http_send(sock, "HTTP/1.0 200 OK", resp);
 
@@ -939,7 +944,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	kd_free(resp);
 	kd_free(headers);
 
-	if (!ctx->use_flac) send(sock, (void*) &wave_header, sizeof(wave_header), 0);
+	if (ctx->codec == CODEC_WAV) send(sock, (void*) &wave_header, sizeof(wave_header), 0);
 
 	return true;
 }

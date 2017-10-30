@@ -26,7 +26,7 @@ Parameters of importance (config file)
 - enabled <0|1>			: in common section, enables new discovered players by default. In a dedicated section, enables the player
 - name 				: name under which player appear in AirPlay 
 - log_limit <-1 | n> (-1)	: when using log file, limits its size (-1 = no limit)
-- codec (flac | wav | pcm)	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP)
+- codec <flac | wav | pcm>	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP)
 - media_volume	<0..1> (0.5)	: in a Chromecast group, applies a scaling factor to all members volume
 
 ## latency parameters detailed explanation:

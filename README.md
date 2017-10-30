@@ -7,7 +7,8 @@ Use these applications to add AirPlay capabilities to Chromecast and UPnP player
 Common information:
 - Simply launch the application and after ~30s, Players (Chromecast or UPnP/Sonos) will appear in your AirPlay list (iOS devices, iTunes, AirFoil ...)
 - Works for Windows, Linux (x86, x64, ARM) and MacOS 
-- Volume changes made in other control applications are synchronized with AirPlay client
+- Volume changes made in native control applications are synchronized with AirPlay client
+- Pause, Stop, Next, Prev using native control application are sent to AirPlay client - once paused, "native" play will not work
 - Re-scan for new / lost players happens every 30s
 - When started in interfactive mode (w/o -Z or -z option) a few commands can be typed at the prompt
 	- exit

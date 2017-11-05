@@ -19,7 +19,7 @@ Common information:
 	- exit
 	- save [name] : save the current configuration in <name>
 	- <strong>Use -h for command line details</strong>
-- Under non-Windows OS, do not daemonize (&) the executable w/o blocking interactive mode (-Z). Best is to use -z
+- Under non-Windows OS, do not daemonize (&) the executable w/o disabling interactive mode (-Z). Best is to use -z
 
 <strong>for Sonos players, set latency by adding "-l 1000:2000" on the command line</strong>
 

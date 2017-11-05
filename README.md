@@ -63,10 +63,10 @@ https://github.com/philippe44/mDNS-SD
 
 https://github.com/philippe44/TinySVCmDNS
 
-http://www.sourceware.org/pthreads-win32/
-
 https://github.com/macosforge/alac
 
 https://github.com/mrjimenez/pupnp (I'm using 1.6.19)
 
-https://ftp.osuosl.org/pub/xiph/releases/flac/
+https://xiph.org/flac/
+
+http://www.sourceware.org/pthreads-win32/

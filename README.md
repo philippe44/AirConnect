@@ -4,10 +4,12 @@
 
 Use these applications to add AirPlay capabilities to Chromecast and UPnP players. 
 
-Go in the bin/ sub-directory of this repository and download the version that matches your OS (e.g. airupnp-osx-multi for using UPnP/Sonos on MacOS). For Windows, download all the .dll as well. Store the <executable> (e.g. airupnp-osx-multi) in any directory and on non-Windows machines, go where the executable is stored and using a command line window, do a "chmod +x <executable>". After that, double click the <executable> or launch it by typing "./<executable>" in the same command line window (never type the ""). After ~30s you should see lots of log on the screen and using on of your iOS/Mac/iTunes/Airfoil ... client, try to play something on newly available AirPlay device. If it works type "exit" which terminates the executable and then relaunch it with -z (for non-Windows) so that it can run in background and you can close the command line window. You can also start it automatically using any startup script (still use -z). Nothing else should be required, no library or anything to install.
+Go in the bin/ sub-directory of this repository and download the version that matches your OS (e.g. airupnp-osx-multi for using UPnP/Sonos on MacOS). For Windows, download all the .dll as well. 
+<p>Store the <executable> (e.g. airupnp-osx-multi) in any directory and on non-Windows machines, go where the executable is stored and using a command line window, do a "chmod +x <executable>". After that, double click the <executable> or launch it by typing "./<executable>" in the same command line window (never type the "").</p>
+<p>After ~30s you should see lots of log on the screen and using on of your iOS/Mac/iTunes/Airfoil ... client, try to play something on newly available AirPlay device.</p>
+<p>If it works type "exit" which terminates the executable and then relaunch it with -z (for non-Windows) so that it can run in background and you can close the command line window. You can also start it automatically using any startup script (still use -z).</p> <p>Nothing else should be required, no library or anything to install.</p>
 
 Common information:
-- Simply launch the application and after ~30s, Players (Chromecast or UPnP/Sonos) will appear in your AirPlay list (iOS devices, iTunes, AirFoil ...)
 - Works for Windows, Linux (x86, x64, ARM) and MacOS 
 - Volume changes made in native control applications are synchronized with AirPlay client
 - Pause, Stop, Next, Prev using native control application are sent to AirPlay client - once paused, "native" play will not work
@@ -15,13 +17,13 @@ Common information:
 - When started in interfactive mode (w/o -Z or -z option) a few commands can be typed at the prompt
 	- exit
 	- save [name] : save the current configuration in <name>
-- Use -h for command line details	
+	- <strong>Use -h for command line details</strong>
 - A config file (default config.xml) can be created for advanced tweaking (a reference version can be generated using -i command line)
 - Chromecast groups are supported
 	
 <strong>for Sonos players, set latency by adding "-l 1000:2000" on the command line</strong>
 
-Use -h on the command line to get a list of options. Here are the main parameters that can be adjusted as well in the config file
+Here are the main parameters that can be adjusted as well in the config file
 
 - latency <[rtp][:http]> (0:0)	: buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
 	* [rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay

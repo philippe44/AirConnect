@@ -1,6 +1,5 @@
-# AirCast: Send audio to Chromecast using AirPlay
-
 # AirUPnP: Send audio to UPnP/Sonos players using AirPlay
+# AirCast: Send audio to Chromecast using AirPlay
 
 Use these applications to add AirPlay capabilities to Chromecast and UPnP players. 
 

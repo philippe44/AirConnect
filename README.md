@@ -13,13 +13,14 @@ Common information:
 - Volume changes made in native control applications are synchronized with AirPlay client
 - Pause, Stop, Next, Prev using native control application are sent to AirPlay client - once paused, "native" play will not work
 - Re-scan for new / lost players happens every 30s
-- When started in interfactive mode (w/o -Z or -z option) a few commands can be typed at the prompt
+- A config file (default config.xml) can be created for advanced tweaking (a reference version can be generated using -i command line)
+- Chromecast groups are supported
+- When started in interactive mode (w/o -Z or -z option) a few commands can be typed at the prompt
 	- exit
 	- save [name] : save the current configuration in <name>
 	- <strong>Use -h for command line details</strong>
-- A config file (default config.xml) can be created for advanced tweaking (a reference version can be generated using -i command line)
-- Chromecast groups are supported
-	
+- Under non-Windows OS, do not daemonize (&) the executable w/o blocking interactive mode (-Z). Best is to use -z
+
 <strong>for Sonos players, set latency by adding "-l 1000:2000" on the command line</strong>
 
 Here are the main parameters that can be adjusted as well in the config file

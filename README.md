@@ -7,7 +7,7 @@ Use these applications to add AirPlay capabilities to Chromecast and UPnP player
 <p>Go in the bin/ sub-directory of this repository and download the version that matches your OS (e.g. airupnp-osx-multi for using UPnP/Sonos on MacOS). For Windows, download all the .dll as well.</p>
 <p>Store the [executable] (e.g. airupnp-osx-multi) in any directory and on non-Windows machines, go where the executable is stored and using a command line window, do a "chmod +x [executable]". After that, double click the [executable] or launch it by typing "./[executable]" in the same command line window (never type the "" or the []).</p>
 <p>After ~30s you should see lots of log on the screen and using on of your iOS/Mac/iTunes/Airfoil ... client, try to play something on newly available AirPlay device.</p>
-<p>If it works type "exit" which terminates the executable and then relaunch it with -z (for non-Windows) so that it can run in background and you can close the command line window. You can also start it automatically using any startup script (still use -z).</p> <p>Nothing else should be required, no library or anything to install.</p>
+<p>If it works type "exit" which terminates the executable and then relaunch it with -z (for non-Windows) so that it can run in background and you can close the command line window. You can also start it automatically using any startup script.</p> <p>Nothing else should be required, no library or anything to install.</p>
 
 Common information:
 - Volume changes made in native control applications are synchronized with AirPlay client

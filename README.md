@@ -33,7 +33,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 <strong>Use `-h` for command line details</strong>
 - When started in interactive mode (w/o -Z or -z option) a few commands can be typed at the prompt
 	- `exit`
-	- `save [name]` : save the current configuration in <name>
+	- `save [name]` : save the current configuration in file named [name]
 - Volume changes made in native control applications are synchronized with AirPlay client
 - Pause, Stop, Next, Prev using native control application are sent to AirPlay client - once paused, "native" play will not work
 - Re-scan for new / lost players happens every 30s

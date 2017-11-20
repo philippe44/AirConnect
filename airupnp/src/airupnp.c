@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.1.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.2.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
@@ -66,7 +66,7 @@ tMRConfig			glMRConfig = {
 							"-3",      	// StreamLength
 							true,		// Enabled
 							"",      	// Name
-							false,		// SendMetaData
+							true,		// SendMetaData
 							false,		// SendCoverArt
 							100,		// MaxVolume
 							1,			// UPnPRemoveCount
@@ -846,6 +846,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	if (!*Device->Config.Name) strcpy(Device->Config.Name, friendlyName);
 	strcpy(Device->Manufacturer, manufacturer);
 	QueueInit(&Device->ActionQueue);
+	Device->MetaData.title = strdup("Streaming from AirUPnP");
+	if (stristr(manufacturer, "Sonos")) Device->MetaData.duration = 1;
 
 	if (!strcasecmp(Device->Config.Codec, "pcm"))
 		Device->ProtoInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";

@@ -248,7 +248,7 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 		buf = http_send(sock, method, headers);
 		len = recv(sock, resp, 512, 0);
 		if (len > 0) resp[len-1] = '\0';
-		LOG_INFO("[%p]: sending airplay remote\n%sand received\n%s", ctx, buf, resp);
+		LOG_INFO("[%p]: sending airplay remote\n%s and received\n%s", ctx, buf, resp);
 
 		NFREE(method);
 		NFREE(buf);

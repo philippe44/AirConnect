@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.1.1.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.2.0"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -72,9 +72,7 @@ log_level	cast_loglevel = lINFO;
 tMRConfig			glMRConfig = {
 							true,	// enabled
 							false,	// stop_receiver
-							"",
-							true,
-							true,
+							"",		// name
 							3,      // remove_count
 							"flac",	// use_flac
 							0.5,	// media volume (0..1)
@@ -197,7 +195,10 @@ void callback(void *owner, raop_event_t event, void *param)
 			device->ExpectStop = true;
 			device->RaopState = event;
 			break;
-		case RAOP_PLAY:
+		case RAOP_PLAY: {
+			metadata_t MetaData = { "", "", "Streaming from AirCast",
+									"", "", NULL, 0, 0, 0 };
+
 			LOG_INFO("[%p]: Play", device);
 			if (device->RaopState != RAOP_PLAY) {
 				char *uri;
@@ -205,7 +206,7 @@ void callback(void *owner, raop_event_t event, void *param)
 #pragma GCC diagnostic ignored "-Wunused-result"
 				asprintf(&uri, "http://%s:%u/stream", inet_ntoa(glHost), *((short unsigned*) param));
 #pragma GCC diagnostic pop
-				CastLoad(device->CastCtx, uri, !strcasecmp(device->Config.Codec, "flac") ? "audio/flac" : "audio/wav", NULL);
+				CastLoad(device->CastCtx, uri, !strcasecmp(device->Config.Codec, "flac") ? "audio/flac" : "audio/wav", &MetaData);
 				free(uri);
 			}
 
@@ -214,6 +215,7 @@ void callback(void *owner, raop_event_t event, void *param)
 			CastSetDeviceVolume(device->CastCtx, device->Volume, true);
 			device->RaopState = event;
 			break;
+		}
 		case RAOP_VOLUME: {
 			device->Volume = *((double*) param);
 			CastSetDeviceVolume(device->CastCtx, device->Volume, false);
@@ -544,7 +546,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 	Device->Group = group;
 	if (!*Device->Config.Name) strcpy(Device->Config.Name, Name);
 
-	LOG_INFO("[%p]: adding renderer (%s)", Device, Name);
+	LOG_INFO("[%p]: adding renderer (%s)", Device, Name);
 
 	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", mac_size)) {
 		if (group || SendARP(ip.s_addr, INADDR_ANY, Device->Config.mac, &mac_size)) {

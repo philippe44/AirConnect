@@ -52,8 +52,6 @@ typedef struct sMRConfig
 	bool		Enabled;
 	bool		StopReceiver;
 	char		Name[_STR_LEN_];
-	bool		SendMetaData;
-	bool		SendCoverArt;
 	int			RemoveCount;
 	char		Codec[_STR_LEN_];
 	double		MediaVolume;

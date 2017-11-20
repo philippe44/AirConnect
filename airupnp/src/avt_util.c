@@ -358,7 +358,7 @@ int GetProtocolInfo(struct sMR *Device, void *Cookie)
 			XMLAddNode(doc, node, "upnp:channelName", MetaData->artist);
 			XMLAddNode(doc, node, "upnp:channelNr", "%d", MetaData->track);
 		}
-		
+
 		XMLAddNode(doc, node, "upnp:class", "object.item.audioItem.audioBroadcast");
 		node = XMLAddNode(doc, node, "res", URI);
 	}

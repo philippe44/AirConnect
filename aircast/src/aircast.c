@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.1.2.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.2.1"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -196,7 +196,7 @@ void callback(void *owner, raop_event_t event, void *param)
 			device->RaopState = event;
 			break;
 		case RAOP_PLAY: {
-			metadata_t MetaData = { "", "", "Streaming from AirCast",
+			metadata_t MetaData = { "", "", "Streaming from AirConnect",
 									"", "", NULL, 0, 0, 0 };
 
 			LOG_INFO("[%p]: Play", device);

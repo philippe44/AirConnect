@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.2.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.2.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
@@ -556,8 +556,6 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 /*----------------------------------------------------------------------------*/
 #define TRACK_POLL  (1000)
 #define STATE_POLL  (500)
-#define VOLUME_POLL (10000)
-#define METADATA_POLL (10000)
 #define MAX_ACTION_ERRORS (5)
 static void *MRThread(void *args)
 {
@@ -846,7 +844,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	if (!*Device->Config.Name) strcpy(Device->Config.Name, friendlyName);
 	strcpy(Device->Manufacturer, manufacturer);
 	QueueInit(&Device->ActionQueue);
-	Device->MetaData.title = strdup("Streaming from AirUPnP");
+	Device->MetaData.title = strdup("Streaming from AirConnect");
 	if (stristr(manufacturer, "Sonos")) Device->MetaData.duration = 1;
 
 	if (!strcasecmp(Device->Config.Codec, "pcm"))
@@ -941,8 +939,7 @@ static bool Start(void)
 
 	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", IP, &glPort);
 
-	if (*IP) rc = UpnpInit(IP, glPort);
-	else rc = UpnpInit(NULL, glPort);
+	rc = UpnpInit(*IP ? IP : NULL, glPort);
 
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("UPnP init failed: %d\n", rc);

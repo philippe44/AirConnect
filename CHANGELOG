@@ -1,5 +1,9 @@
+0.1.2.1
+ - title changed to "Streaming from AirConnect"
+ - code cleaning
+ 
 0.1.2.0
- - Send minimum metadata
+ - send minimum metadata
  - (aircast) remove unused config items 
  
 0.1.1.0

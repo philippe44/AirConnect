@@ -16,8 +16,9 @@ AirConnect can run on any machine that has access to your local network (Windows
 3. Store the [executable] (e.g. `airupnp-osx-multi`) in any directory. 
 
 4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x [executable]`. (Example: `chmod +x airupnp-osx-multi`)
-	
 
+Some Debian Stretch distributions (e.g. Raspian) only provide openssl1.0.2, but 1.0.0 is needed. Download the version for Jessie using `wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u7_armhf.deb` then install it with `sudo dpkg -i libssl1.0.0_1t-1+deb8u7_armhf.deb`
+	
 ## Running
 
 Double click the [executable] or launch it by typing `./[executable]` in the same command line window. 

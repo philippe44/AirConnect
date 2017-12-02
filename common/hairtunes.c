@@ -98,6 +98,7 @@ typedef struct hairtunes_s {
 		int sock;
 	} rtp_sockets[3]; 					 // data, control, timing
 	struct timing_s {
+		bool drift;
 		u64_t local, remote;
 		u32_t count, gap_count;
 		s64_t gap_sum, gap_adjust;
@@ -212,8 +213,8 @@ static alac_file* alac_init(int fmtp[32]) {
 }
 
 /*---------------------------------------------------------------------------*/
-hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, char *latencies,
-								char *aeskey, char *aesiv, char *fmtpstr,
+hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, bool drift,
+								char *latencies, char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
 								void *owner, hairtunes_cb_t callback)
 {
@@ -239,6 +240,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, c
 	ctx->callback = callback;
 	ctx->owner = owner;
 	ctx->synchro.required = sync;
+	ctx->timing.drift = drift;
 
 #ifdef __RTP_STORE
 	ctx->rtpFP = fopen(rtpFile, "wb");
@@ -580,10 +582,6 @@ static void *rtp_thread_func(void *arg) {
 				s64_t delta = 0;
 				u32_t reference   = ntohl(*(u32_t*)(pktp+12)); // only low 32 bits in our case
 				u64_t remote 	  =(((u64_t) ntohl(*(u32_t*)(pktp+16))) << 32) + ntohl(*(u32_t*)(pktp+20));
-				/*
-				u64_t remote_sent = remote_sent = (((u64_t) ntohl(*(u32_t*)(pktp+24))) << 32) + ntohl(*(u32_t*)(pktp+28));
-				u32_t now 		  = gettime_ms();
-				*/
 
 				/*
 				 This expected time is more than it should be due to the
@@ -597,7 +595,7 @@ static void *rtp_thread_func(void *arg) {
 				ctx->timing.local = reference;
 				ctx->timing.count++;
 
-				if (ctx->synchro.status & NTP_SYNC) {
+				if (!ctx->timing.drift && (ctx->synchro.status & NTP_SYNC)) {
 					delta = NTP2MS((s64_t) expected - (s64_t) ctx->timing.remote);
 					ctx->timing.gap_sum += delta;
 

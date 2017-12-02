@@ -48,6 +48,7 @@ typedef struct raop_ctx_s {
 	char *latencies;
 	bool running;
 	codec_t codec;
+	bool drift;
 	pthread_t thread, search_thread;
 	unsigned char mac[6];
 	unsigned int volume_stamp;
@@ -82,7 +83,7 @@ extern char private_key[];
 
 /*----------------------------------------------------------------------------*/
 struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
-						char *model, unsigned char mac[6], char *codec,
+						char *model, unsigned char mac[6], char *codec, bool drift,
 						char *latencies, void *owner, raop_cb_t callback) {
 	struct raop_ctx_s *ctx = malloc(sizeof(struct raop_ctx_s));
 	struct sockaddr_in addr;
@@ -108,6 +109,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	if (!strcasecmp(codec, "pcm")) ctx->codec = CODEC_PCM;
 	else if (!strcasecmp(codec, "wav")) ctx->codec = CODEC_WAV;
 	else ctx->codec = CODEC_FLAC;
+	ctx->drift = drift;
 
 	if (ctx->sock == -1) {
 		LOG_ERROR("Cannot create listening socket", NULL);
@@ -402,7 +404,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		if ((p = stristr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
 		if ((p = stristr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
 
-		ht = hairtunes_init(ctx->peer, ctx->codec, false, ctx->latencies,
+		ht = hairtunes_init(ctx->peer, ctx->codec, false, ctx->drift, ctx->latencies,
 							ctx->rtsp.aeskey, ctx->rtsp.aesiv,
 							ctx->rtsp.fmtp, cport, tport, ctx, hairtunes_cb);
 

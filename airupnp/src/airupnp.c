@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.2.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.3.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
@@ -56,6 +56,7 @@ static char			*glPidFile = NULL;
 static char			*glSaveConfigFile = NULL;
 bool				glAutoSaveConfigFile = false;
 bool				glGracefullShutdown = true;
+bool				glDrift = false;
 
 log_level	main_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
@@ -130,6 +131,7 @@ static struct sLocList {
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
 		   "  -l <[rtp][:http]>\t\tset RTP and HTTP latency (ms)\n"
+   		   "  -r \t\tlet timing reference drift (no click)\n"
 		   "  -f <logfile>\t\twrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
@@ -669,7 +671,7 @@ static void *UpdateMRThread(void *args)
 				// create a new AirPlay
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 										   "airupnp", Device->Config.mac, Device->Config.Codec,
-										   Device->Config.Latency, Device, callback);
+										   glDrift, Device->Config.Latency, Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 					DelMRDevice(Device);
@@ -1053,7 +1055,7 @@ bool ParseArgs(int argc, char **argv) {
 		if (strstr("bxdpifml", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZIk", opt)) {
+		} else if (strstr("tzZIkr", opt)) {
 			optarg = NULL;
 			optind += 1;
 		}
@@ -1083,6 +1085,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'k':
 			glGracefullShutdown = false;
+			break;
+		case 'r':
+			glDrift = true;
 			break;
 		case 'm':
 			glExcluded = optarg;

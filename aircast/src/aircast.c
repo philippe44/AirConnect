@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.1.2.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.3.0"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -63,6 +63,7 @@ static bool			glDiscoveryRunning = false;
 u32_t				glScanInterval = SCAN_INTERVAL;
 u32_t				glScanTimeout = SCAN_TIMEOUT;
 struct mdnsd*		glmDNSServer = NULL;
+bool 				glDrift = false;
 
 log_level	main_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
@@ -113,6 +114,7 @@ static char usage[] =
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
 		   "  -l <[rtp][:http]>\t\tset RTP and HTTP latency (ms)\n"
+		   "  -r \t\tlet timing reference drift (no click)\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|raop|main|util|cast, level: error|warn|info|debug|sdebug\n"
@@ -402,7 +404,7 @@ static void *UpdateMRThread(void *args)
 			if (AddCastDevice(Device, Name, UDN, Group, p->addr, p->port) && !glSaveConfigFile) {
 				Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name, "aircast", Device->Config.mac,
 											!strcasecmp(Device->Config.Codec, "flac") ? "flac" : "wav",
-											Device->Config.Latency,	Device, callback);
+											glDrift, Device->Config.Latency,	Device, callback);
 				if (!Device->Raop) {
 					LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 					RemoveCastDevice(Device);
@@ -709,7 +711,7 @@ bool ParseArgs(int argc, char **argv) {
 		if (strstr("bxdpifl", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZIk", opt)) {
+		} else if (strstr("tzZIkr", opt)) {
 			optarg = NULL;
 			optind += 1;
 		}
@@ -739,6 +741,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'k':
 			glGracefullShutdown = false;
+			break;
+		case 'r':
+			glDrift = true;
 			break;
 		case 'l':
 			strcpy(glMRConfig.Latency, optarg);

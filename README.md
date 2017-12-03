@@ -57,7 +57,29 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `codec <flac | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP)
 - `media_volume	<0..1>` 	: (default 0.5) in a Chromecast group, applies a scaling factor to all members volume
 
-[1] Hint: To identify your Sonos players, pick an identified IP address, and visit the Sonos status page in your browser, like `http://192.168.1.126:1400/status/topology`. Click `Zone Players` and you will see the identifiers for your players in the `UUID` column. 
+[1] Hint: To identify your Sonos players, pick an identified IP address, and visit the Sonos status page in your browser, like `http://192.168.1.126:1400/status/topology`. Click `Zone Players` and you will see the identifiers for your players in the `UUID` column.
+
+## Start automatically (crude example, I'm not a systemd expert)
+
+1. Create a file in /etc/systemd/system , e.g. airupnp.service with the following content (assuming the airupnp binary is in /var/lib/airconnect)
+
+[Unit]  
+Description=AirUPnP bridge  
+After=network-online.target  
+Wants=network-online.target  
+
+[Service]  
+Type=forking  
+ExecStart=/var/lib/airconnect/airupnp-arm -m squeezebox -l 1000:2000 -z -f /var/log/airupnp.log -x /var/lib/airconnect/config-upnp.xml  
+Restart=always  
+RestartSec=30  
+
+[Install]  
+WantedBy=multi-user.target   
+
+2. Enable service `systemctl enable airupnp.service`
+
+3. Reboot
 
 ## Latency parameters explained:
 
@@ -74,28 +96,6 @@ Normally, the bridge forwards immediately every RTP frame using HTTP and again, 
 For example, if received RTP frames are numbered 1,2,3,6, this bridge will forward (once decoded and transformed into raw audio) 1,2,3 immediately using HTTP but when it receives 6, it will re-ask fror 4 and 5 to be resent and hold 6 while waiting (if 6 was transmitted immediately, the Chromecast/UPnP/Sonos will play 1,2,3,6 ... not nice). The [rtp] parameter says for how long frame 6 shall be held before adding two silence frames for 4 and 5 and send sending 4,5,6. Obviously, if this delay is larger than the buffer in the Chromecast/UPnP/Sonos player, playback will stop by lack of audio. Note that [rtp] does not delay playback start.
 
 NB: [rtp] and [http] could have been merged into a single [latency] parameter which would have set the max RTP frames holding time as well as the duration of the initial additional silence (delay), but because some UPnP players and all Chromecast devices do properly their own buffering of HTTP audio (i.e. they wait until they have received a certain amount of audio before starting to play), then adding silence would have introduced an extra un-necessary delay in playback. 
-
-## Start automatically (crude example, I'm not a systemd expert)
-
-1. Create a file in /etc/systemd/system , e.g. airupnp.service with the following content (assuming the airupnp binary is in /var/lib/airconnect)
-
-[Unit]
-Description=AirUPnP bridge
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=forking
-ExecStart=/var/lib/airconnect/airupnp-arm -m squeezebox -l 1000:2000 -z -f /var/log/airupnp.log -x /var/lib/airconnect/config-upnp.xml
-Restart=always
-RestartSec=30
-
-[Install]
-WantedBy=multi-user.target 
-
-2. Enable service `systemctl enable airupnp.service
-
-3. Reboot
 
 ## Compiling from source
 

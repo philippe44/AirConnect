@@ -61,7 +61,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 ## Start automatically (crude example, I'm not a systemd expert)
 
-1. Create a file in /etc/systemd/system , e.g. airupnp.service with the following content (assuming the airupnp binary is in /var/lib/airconnect)
+1. Create a file in `/etc/systemd/system`, e.g. `airupnp.service` with the following content (assuming the airupnp binary is in `/var/lib/airconnect`)
 
 	[Unit]  
 	Description=AirUPnP bridge  

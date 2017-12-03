@@ -63,19 +63,19 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 1. Create a file in /etc/systemd/system , e.g. airupnp.service with the following content (assuming the airupnp binary is in /var/lib/airconnect)
 
-[Unit]  
-Description=AirUPnP bridge  
-After=network-online.target  
-Wants=network-online.target  
+	[Unit]  
+	Description=AirUPnP bridge  
+	After=network-online.target  
+	Wants=network-online.target  
 
-[Service]  
-Type=forking  
-ExecStart=/var/lib/airconnect/airupnp-arm -m squeezebox -l 1000:2000 -z -f /var/log/airupnp.log -x /var/lib/airconnect/config-upnp.xml  
-Restart=always  
-RestartSec=30  
+	[Service]  
+	Type=forking  
+	ExecStart=/var/lib/airconnect/airupnp-arm -m squeezebox -l 1000:2000 -z -f /var/log/airupnp.log -x /var/lib/airconnect/config-upnp.xml  
+	Restart=always  
+	RestartSec=30  
 
-[Install]  
-WantedBy=multi-user.target   
+	[Install]  
+	WantedBy=multi-user.target   
 
 2. Enable service `systemctl enable airupnp.service`
 

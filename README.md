@@ -75,6 +75,28 @@ For example, if received RTP frames are numbered 1,2,3,6, this bridge will forwa
 
 NB: [rtp] and [http] could have been merged into a single [latency] parameter which would have set the max RTP frames holding time as well as the duration of the initial additional silence (delay), but because some UPnP players and all Chromecast devices do properly their own buffering of HTTP audio (i.e. they wait until they have received a certain amount of audio before starting to play), then adding silence would have introduced an extra un-necessary delay in playback. 
 
+## Start automatically (crude example, I'm not a systemd expert)
+
+1. Create a file in /etc/systemd/system , e.g. airupnp.service with the following content (assuming the airupnp binary is in /var/lib/airconnect)
+
+[Unit]
+Description=AirUPnP bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+ExecStart=/var/lib/airconnect/airupnp-arm -m squeezebox -l 1000:2000 -z -f /var/log/airupnp.log -x /var/lib/airconnect/config-upnp.xml
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target 
+
+2. Enable service `systemctl enable airupnp.service
+
+3. Reboot
+
 ## Compiling from source
 
 If you want to recompile, you'll need:

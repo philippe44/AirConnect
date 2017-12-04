@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.3.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.3.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
@@ -1205,8 +1205,8 @@ int main(int argc, char *argv[])
 	}
 
 	if (!Start()) {
-		LOG_ERROR("Cannot start UPnP", NULL);
-		strcpy(resp, "exit");
+		LOG_ERROR("Cannot start", NULL);
+		exit(1);
 	}
 
 	if (glSaveConfigFile) {

@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.1.3.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.3.1"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -854,7 +854,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!Start()) strcpy(resp, "exit");
+	if (!Start()) {
+		LOG_ERROR("Cannot start", NULL);
+		exit(1);
+	}
 
 	if (glSaveConfigFile) {
 		while (glDiscoveryRunning) sleep(1);

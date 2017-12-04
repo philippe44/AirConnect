@@ -59,7 +59,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 [1] Hint: To identify your Sonos players, pick an identified IP address, and visit the Sonos status page in your browser, like `http://192.168.1.126:1400/status/topology`. Click `Zone Players` and you will see the identifiers for your players in the `UUID` column.
 
-## Start automatically (crude example, I'm not a systemd expert)
+## Start automatically in Linux (crude example, I'm not a systemd expert)
 
 1. Create a file in `/etc/systemd/system`, e.g. `airupnp.service` with the following content (assuming the airupnp binary is in `/var/lib/airconnect`)
 
@@ -70,7 +70,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 	[Service]  
 	Type=forking  
-	ExecStart=/var/lib/airconnect/airupnp-arm -m squeezebox -l 1000:2000 -z -f /var/log/airupnp.log -x /var/lib/airconnect/config-upnp.xml  
+	ExecStart=/var/lib/airconnect/airupnp-arm -m squeezebox -l 1000:2000 -z -f /var/log/airupnp.log   
 	Restart=on-failure  
 	RestartSec=30  
 

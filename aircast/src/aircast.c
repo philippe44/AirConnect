@@ -684,11 +684,11 @@ static void sighandler(int signum) {
 			if (p->InUse && p->State == PLAYING) CastStop(p->CastCtx);
 		}
 		LOG_INFO("forced exit", NULL);
-		exit(EXIT_SUCCESS);
+		exit(0);
 	}
 
 	Stop();
-	exit(EXIT_SUCCESS);
+	exit(0);
 }
 
 

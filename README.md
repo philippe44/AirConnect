@@ -71,7 +71,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 	[Service]  
 	Type=forking  
 	ExecStart=/var/lib/airconnect/airupnp-arm -m squeezebox -l 1000:2000 -z -f /var/log/airupnp.log -x /var/lib/airconnect/config-upnp.xml  
-	Restart=always  
+	Restart=on-failure
 	RestartSec=30  
 
 	[Install]  

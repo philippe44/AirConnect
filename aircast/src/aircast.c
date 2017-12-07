@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.1.3.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.3.2"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -860,7 +860,8 @@ int main(int argc, char *argv[])
 	}
 
 	if (glSaveConfigFile) {
-		while (glDiscoveryRunning) sleep(1);
+		// sleep first to make sure main thread has started
+		do { sleep(1); } while (glDiscoveryRunning) ;
 		SaveConfig(glSaveConfigFile, glConfigID, true);
 	}
 

@@ -93,7 +93,7 @@ void SaveConfig(char *name, void *ref, bool full)
 		else p = &glMRDevices[i];
 
 		// new device, add nodes
-		if (!old_doc) {
+		if (!old_doc || !FindMRConfig(old_doc, p->UDN)) {
 			dev_node = XMLAddNode(doc, root, "device", NULL);
 			XMLAddNode(doc, dev_node, "udn", p->UDN);
 			XMLAddNode(doc, dev_node, "name", p->Config.Name);

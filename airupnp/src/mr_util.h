@@ -25,6 +25,7 @@
 
 void 			FlushMRDevices(void);
 void 			DelMRDevice(struct sMR *p);
+bool 			isMaster(char *UDN, struct sService *Service);
 
 struct sMR* 	SID2Device(Upnp_SID Sid);
 struct sMR* 	CURL2Device(char *CtrlURL);

@@ -37,11 +37,12 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.3.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.4.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
 #define	CONNECTION_MGR 	"urn:schemas-upnp-org:service:ConnectionManager"
+#define TOPOLOGY		"urn:schemas-upnp-org:service:ZoneGroupTopology"
 
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
@@ -101,7 +102,8 @@ static const struct cSearchedSRV_s
  u32_t  TimeOut;
 } cSearchedSRV[NB_SRV] = {	{AV_TRANSPORT, AVT_SRV_IDX, 0},
 						{RENDERING_CTRL, REND_SRV_IDX, 30},
-						{CONNECTION_MGR, CNX_MGR_IDX, 0}
+						{CONNECTION_MGR, CNX_MGR_IDX, 0},
+						{TOPOLOGY, TOPOLOGY_IDX, 0},
 				   };
 
 /*----------------------------------------------------------------------------*/
@@ -181,7 +183,8 @@ static char license[] =
 		   "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n\n"
 	;
 
-/*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
 /* prototypes */
 /*----------------------------------------------------------------------------*/
 static 	void*	MRThread(void *args);
@@ -417,7 +420,7 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		case UPNP_DISCOVERY_SEARCH_RESULT: {
 			struct Upnp_Discovery *d_event = (struct Upnp_Discovery *) Event;
 
-			LOG_DEBUG("Answer to uPNP search %d", d_event->Location);
+			LOG_DEBUG("Answer to uPNP search %s", d_event->Location);
 			if (d_event->ErrCode != UPNP_E_SUCCESS) {
 				LOG_SDEBUG("Error in Discovery Callback -- %d", d_event->ErrCode);
 				break;
@@ -618,10 +621,18 @@ static bool RefreshTO(char *UDN)
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].UDN, UDN)) {
 			pthread_mutex_lock(&glMRDevices[i].Mutex);
+
 			glMRDevices[i].TimeOut = false;
 			glMRDevices[i].MissingCount = glMRDevices[i].Config.RemoveCount;
 			glMRDevices[i].ErrorCount = 0;
+
+			if ( !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX]) ) {
+				glMRDevices[i].MissingCount = 0;
+				glMRDevices[i].Connected = false;
+			}
+
 			pthread_mutex_unlock(&glMRDevices[i].Mutex);
+
 			return true;
 		}
 	}
@@ -793,10 +804,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	char *friendlyName = NULL;
 	char *URLBase = NULL;
 	char *presURL = NULL;
-	char *ServiceId = NULL;
-	char *ServiceType = NULL;
-	char *EventURL = NULL;
-	char *ControlURL = NULL;
 	char *manufacturer = NULL;
 	int i;
 	pthread_attr_t attr;
@@ -826,9 +833,44 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	}
 	else strcpy(Device->PresURL, "");
 
+	NFREE(deviceType);
+	NFREE(URLBase);
+	NFREE(presURL);
+
+	/* find the different services */
+	for (i = 0; i < NB_SRV; i++) {
+		char *ServiceId = NULL, *ServiceType = NULL;
+		char *EventURL = NULL, *ControlURL = NULL;
+
+		strcpy(Device->Service[i].Id, "");
+		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceType, &ServiceId, &EventURL, &ControlURL)) {
+			struct sService *s = &Device->Service[cSearchedSRV[i].idx];
+			LOG_SDEBUG("\tservice [%s] %s %s, %s, %s", cSearchedSRV[i].name, ServiceType, ServiceId, EventURL, ControlURL);
+
+			strncpy(s->Id, ServiceId, RESOURCE_LENGTH-1);
+			strncpy(s->ControlURL, ControlURL, RESOURCE_LENGTH-1);
+			strncpy(s->EventURL, EventURL, RESOURCE_LENGTH - 1);
+			strncpy(s->Type, ServiceType, RESOURCE_LENGTH - 1);
+			if ((s->TimeOut = cSearchedSRV[i].TimeOut) != 0)
+				UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
+		}
+
+		NFREE(ServiceId);
+		NFREE(ServiceType);
+		NFREE(EventURL);
+		NFREE(ControlURL);
+	}
+
+	if ( !isMaster(UDN, &Device->Service[TOPOLOGY_IDX]) ) {
+		LOG_INFO("[%p] skipping Sonos slave %s", Device, friendlyName);
+		NFREE(manufacturer);
+		NFREE(friendlyName);
+		return false;
+	}
+
 	LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
 
-	ithread_mutex_init(&Device->Mutex, 0);
+	pthread_mutex_init(&Device->Mutex, 0);
 	Device->Magic = MAGIC;
 	Device->TimeOut = false;
 	Device->Connected = true;
@@ -869,31 +911,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	MakeMacUnique(Device);
 
-	/* find the different services */
-	for (i = 0; i < NB_SRV; i++) {
-		strcpy(Device->Service[i].Id, "");
-		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceType, &ServiceId, &EventURL, &ControlURL)) {
-			struct sService *s = &Device->Service[cSearchedSRV[i].idx];
-			LOG_SDEBUG("\tservice [%s] %s %s, %s, %s", cSearchedSRV[i].name, ServiceType, ServiceId, EventURL, ControlURL);
-
-			strncpy(s->Id, ServiceId, RESOURCE_LENGTH-1);
-			strncpy(s->ControlURL, ControlURL, RESOURCE_LENGTH-1);
-			strncpy(s->EventURL, EventURL, RESOURCE_LENGTH - 1);
-			strncpy(s->Type, ServiceType, RESOURCE_LENGTH - 1);
-			if ((s->TimeOut = cSearchedSRV[i].TimeOut) != 0)
-				UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
-		}
-		NFREE(ServiceId);
-		NFREE(ServiceType);
-		NFREE(EventURL);
-		NFREE(ControlURL);
-	}
-
-	NFREE(deviceType);
-	NFREE(friendlyName);
-	NFREE(URLBase);
-	NFREE(presURL);
 	NFREE(manufacturer);
+	NFREE(friendlyName);
 
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN + 32*1024);

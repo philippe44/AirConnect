@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.1.3.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.4.0"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :

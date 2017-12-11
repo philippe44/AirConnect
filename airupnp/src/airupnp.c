@@ -39,10 +39,11 @@
 
 #define VERSION "v0.1.4.0"" ("__DATE__" @ "__TIME__")"
 
-#define	AV_TRANSPORT 	"urn:schemas-upnp-org:service:AVTransport"
-#define	RENDERING_CTRL 	"urn:schemas-upnp-org:service:RenderingControl"
-#define	CONNECTION_MGR 	"urn:schemas-upnp-org:service:ConnectionManager"
-#define TOPOLOGY		"urn:schemas-upnp-org:service:ZoneGroupTopology"
+#define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
+#define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
+#define	CONNECTION_MGR 			"urn:schemas-upnp-org:service:ConnectionManager"
+#define TOPOLOGY				"urn:schemas-upnp-org:service:ZoneGroupTopology"
+#define GROUP_RENDERING_CTRL	"urn:schemas-upnp-org:service:GroupRenderingControl"
 
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
@@ -104,6 +105,7 @@ static const struct cSearchedSRV_s
 						{RENDERING_CTRL, REND_SRV_IDX, 30},
 						{CONNECTION_MGR, CNX_MGR_IDX, 0},
 						{TOPOLOGY, TOPOLOGY_IDX, 0},
+						{GROUP_RENDERING_CTRL, GRP_REND_SRV_IDX, 0},
 				   };
 
 /*----------------------------------------------------------------------------*/

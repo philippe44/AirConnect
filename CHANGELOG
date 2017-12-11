@@ -1,6 +1,7 @@
 0.1.4.0
  - (airupnp) detect Sonos groups and do not add slaves
-  
+ - (airupnp) add Sonos groups volume
+ 
 0.1.3.2
  - discovery and exit (-i) could abort without searching on aircast
  - new devices were not added to existing file when using -I

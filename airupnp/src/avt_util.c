@@ -239,16 +239,26 @@ bool AVTStop(struct sMR *Device)
 int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
-	struct sService *Service = &Device->Service[REND_SRV_IDX];
+	struct sService *Service;
+	char params[8], *cmd;
 	int rc;
-	char params[8];
+
+	if (*Device->Service[GRP_REND_SRV_IDX].ControlURL) {
+		Service = &Device->Service[GRP_REND_SRV_IDX];
+		cmd = "SetGroupVolume";
+	} else {
+		Service = &Device->Service[REND_SRV_IDX];
+		cmd = "SetVolume";
+	}
 
 	LOG_INFO("uPNP volume %d for %s (cookie %p)", Volume, Service->ControlURL, Cookie);
-	ActionNode =  UpnpMakeAction("SetVolume", Service->Type, 0, NULL);
-	UpnpAddToAction(&ActionNode, "SetVolume", Service->Type, "InstanceID", "0");
-	UpnpAddToAction(&ActionNode, "SetVolume", Service->Type, "Channel", "Master");
+
+	ActionNode =  UpnpMakeAction(cmd, Service->Type, 0, NULL);
+	UpnpAddToAction(&ActionNode, cmd, Service->Type, "InstanceID", "0");
+	if (!*Device->Service[GRP_REND_SRV_IDX].ControlURL)
+		UpnpAddToAction(&ActionNode, cmd, Service->Type, "Channel", "Master");
 	sprintf(params, "%d", (int) Volume);
-	UpnpAddToAction(&ActionNode, "SetVolume", Service->Type, "DesiredVolume", params);
+	UpnpAddToAction(&ActionNode, cmd, Service->Type, "DesiredVolume", params);
 
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
 							 ActionNode, CallbackActionHandler, Cookie);

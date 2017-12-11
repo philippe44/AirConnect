@@ -300,6 +300,33 @@ int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie)
 
 
 /*----------------------------------------------------------------------------*/
+int GetGroupVolume(struct sMR *Device)
+{
+	IXML_Document *ActionNode, *Response = NULL;
+	struct sService *Service = &Device->Service[GRP_REND_SRV_IDX];
+	char *Item;
+	int Volume = -1;
+
+	if (!*Service->ControlURL) return Volume;
+
+	ActionNode = UpnpMakeAction("GetGroupVolume", Service->Type, 0, NULL);
+	UpnpAddToAction(&ActionNode, "GetGroupVolume", Service->Type, "InstanceID", "0");
+	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
+								 NULL, ActionNode, &Response);
+
+	Item = XMLGetFirstDocumentItem(Response, "CurrentVolume");
+	if (Response) ixmlDocument_free(Response);
+
+	if (Item) {
+		Volume = atoi(Item);
+		free(Item);
+	}
+
+	return Volume;
+}
+
+
+/*----------------------------------------------------------------------------*/
 int GetProtocolInfo(struct sMR *Device, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;

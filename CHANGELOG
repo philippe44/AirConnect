@@ -1,3 +1,6 @@
+0.1.4.1
+ - misc Sonos group cleaning
+ 
 0.1.4.0
  - (airupnp) detect Sonos groups and do not add slaves
  - (airupnp) add Sonos groups volume

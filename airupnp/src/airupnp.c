@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.4.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.4.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -308,7 +308,10 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 	// Feedback volume to LMS if authorized
 	r = XMLGetChangeItem(VarDoc, "Volume", "channel", "Master", "val");
 	if (r) {
-		double Volume = atof(r);
+		double Volume;
+		int GroupVolume = GetGroupVolume(Device);
+
+		Volume = (GroupVolume > 0) ? GroupVolume : atof(r);
 
 		if ((int) Volume != Device->Volume) {
 			LOG_INFO("[%p]: UPnP Volume local change %d", Device, (int) Volume);
@@ -628,7 +631,8 @@ static bool RefreshTO(char *UDN)
 			glMRDevices[i].MissingCount = glMRDevices[i].Config.RemoveCount;
 			glMRDevices[i].ErrorCount = 0;
 
-			if ( !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX]) ) {
+			// do not remove a group device that is currently playing
+			if ( glMRDevices[i].RaopState != RAOP_PLAY && !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX]) ) {
 				glMRDevices[i].MissingCount = 0;
 				glMRDevices[i].Connected = false;
 			}

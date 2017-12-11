@@ -62,6 +62,7 @@ void SaveConfig(char *name, void *ref, bool full)
 
 			device = ixmlNodeList_item(list, i);
 			ixmlNode_removeChild(root, device, &device);
+			ixmlNode_free(device);
 		}
 		if (list) ixmlNodeList_free(list);
 		common = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) root, "common");

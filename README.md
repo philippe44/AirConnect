@@ -81,7 +81,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 3. Reboot
 
-To start or stop manually the service, typing `sudo service airupnp start|stop` in a command line window
+To start or stop manually the service, type `sudo service airupnp start|stop` in a command line window
 
 ## Latency parameters explained:
 

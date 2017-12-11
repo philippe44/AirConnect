@@ -81,6 +81,8 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 3. Reboot
 
+To start or stop manually the service, typing `sudo service airupnp start|stop` in a command line window
+
 ## Latency parameters explained:
 
 These bridges receive realtime "synchronous" audio from the AirPlay controler in the format of RTP frames and forward it to the Chromecast/UPnP/Sonos player in an HTTP "asynchronous" continuous audio binary format (notion of frames does not exist on that side). In other words, the AirPlay clients "push" the audio using RTP and the Chromecast/UPnP/Sonos players "pull" the audio using an HTTP GET request. 

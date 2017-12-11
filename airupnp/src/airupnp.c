@@ -862,7 +862,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	}
 
 	if ( !isMaster(UDN, &Device->Service[TOPOLOGY_IDX]) ) {
-		LOG_INFO("[%p] skipping Sonos slave %s", Device, friendlyName);
+		LOG_DEBUG("[%p] skipping Sonos slave %s", Device, friendlyName);
 		NFREE(manufacturer);
 		NFREE(friendlyName);
 		return false;

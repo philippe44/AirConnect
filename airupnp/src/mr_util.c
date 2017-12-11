@@ -35,7 +35,7 @@ static IXML_Node*	_getAttributeNode(IXML_Node *node, char *SearchAttr);
 
 
 /*----------------------------------------------------------------------------*/
-bool isMaster(char *UDN, struct sService *Service)
+bool isMaster(char *UDN, struct sService *Service, char **Name)
 {
 	IXML_Document *ActionNode = NULL, *Response;
 	char *Body;
@@ -53,7 +53,6 @@ bool isMaster(char *UDN, struct sService *Service)
 	Response = ixmlParseBuffer(Body);
 	NFREE(Body);
 
-	/* if member but not coordinator, eliminate */
 	if (Response) {
 		char myUUID[RESOURCE_LENGTH] = "";
 		IXML_NodeList *GroupList = ixmlDocument_getElementsByTagName(Response, "ZoneGroup");
@@ -61,12 +60,30 @@ bool isMaster(char *UDN, struct sService *Service)
 
 		sscanf(UDN, "uuid:%s", myUUID);
 
-		// get the UUID and see if it's member of a zone and not the coordinator
+		// list all ZoneGroups
 		for (i = 0; GroupList && i < (int) ixmlNodeList_length(GroupList); i++) {
 			IXML_Node *Group = ixmlNodeList_item(GroupList, i);
 			const char *Coordinator = ixmlElement_getAttribute((IXML_Element*) Group, "Coordinator");
 
-			if (!strcasecmp(myUUID, Coordinator)) Master = true;
+			// are we the coordinator of that Zone
+			if (!strcasecmp(myUUID, Coordinator)) {
+				IXML_NodeList *MemberList = ixmlDocument_getElementsByTagName((IXML_Document*) Group, "ZoneGroupMember");
+				int j;
+
+				// list all ZoneMembers to find ZoneName
+				for (j = 0; Name && j < (int) ixmlNodeList_length(MemberList); j++) {
+					IXML_Node *Member = ixmlNodeList_item(MemberList, j);
+					const char *UUID = ixmlElement_getAttribute((IXML_Element*) Member, "UUID");
+
+					if (!strcasecmp(myUUID, UUID)) {
+						NFREE(*Name);
+						*Name = strdup(ixmlElement_getAttribute((IXML_Element*) Member, "ZoneName"));
+					}
+				}
+
+				Master = true;
+				ixmlNodeList_free(GroupList);
+			}
 		}
 
 		ixmlNodeList_free(GroupList);

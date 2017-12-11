@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.4.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.4.3"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -632,7 +632,7 @@ static bool RefreshTO(char *UDN)
 			glMRDevices[i].ErrorCount = 0;
 
 			// do not remove a group device that is currently playing
-			if ( glMRDevices[i].RaopState != RAOP_PLAY && !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX]) ) {
+			if ( glMRDevices[i].RaopState != RAOP_PLAY && !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX], NULL) ) {
 				glMRDevices[i].MissingCount = 0;
 				glMRDevices[i].Connected = false;
 			}
@@ -867,7 +867,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(ControlURL);
 	}
 
-	if ( !isMaster(UDN, &Device->Service[TOPOLOGY_IDX]) ) {
+	if ( !isMaster(UDN, &Device->Service[TOPOLOGY_IDX], &friendlyName) ) {
 		LOG_DEBUG("[%p] skipping Sonos slave %s", Device, friendlyName);
 		NFREE(manufacturer);
 		NFREE(friendlyName);

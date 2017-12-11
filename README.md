@@ -83,6 +83,12 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 To start or stop manually the service, type `sudo service airupnp start|stop` in a command line window
 
+## Sonos hints
+
+Mostly, the upnp version is used with Sonos players. When a Sonos group is created, only the master of that group will appear as an AirPlay player and others will be removed if they were already detected. If the group is later split, then individual players will re-appear. Each detection cycle takes ~30s (can be tweaked in the config file).
+
+Volume is set for the whole group, but the same level applies to all members, If you need to change individual volumes, you need to use a Sonos native controller. Note that these will be overridden if the group volume is changed later from and iXXX device.
+
 ## Latency parameters explained:
 
 These bridges receive realtime "synchronous" audio from the AirPlay controler in the format of RTP frames and forward it to the Chromecast/UPnP/Sonos player in an HTTP "asynchronous" continuous audio binary format (notion of frames does not exist on that side). In other words, the AirPlay clients "push" the audio using RTP and the Chromecast/UPnP/Sonos players "pull" the audio using an HTTP GET request. 

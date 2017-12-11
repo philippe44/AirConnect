@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.4.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.4.2"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -868,7 +868,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	}
 
 	if ( !isMaster(UDN, &Device->Service[TOPOLOGY_IDX]) ) {
-		LOG_DEBUG("[%p] skipping Sonos slave %s", Device, friendlyName);
+		LOG_INFO("[%p] skipping Sonos slave %s", Device, friendlyName);
 		NFREE(manufacturer);
 		NFREE(friendlyName);
 		return false;

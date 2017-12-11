@@ -38,8 +38,8 @@ static IXML_Node*	_getAttributeNode(IXML_Node *node, char *SearchAttr);
 bool isMaster(char *UDN, struct sService *Service)
 {
 	IXML_Document *ActionNode = NULL, *Response;
-	char *Coordinator = NULL;
-	bool Master = true;
+	char *Body;
+	bool Master = false;
 
 	if (!*Service->ControlURL) return true;
 
@@ -47,37 +47,29 @@ bool isMaster(char *UDN, struct sService *Service)
 	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
 								 NULL, ActionNode, &Response);
 
-	Coordinator = XMLGetFirstDocumentItem(Response, "ZoneGroupState");
+	Body = XMLGetFirstDocumentItem(Response, "ZoneGroupState");
 	if (Response) ixmlDocument_free(Response);
 
-	Response = ixmlParseBuffer(Coordinator);
-	NFREE(Coordinator);
+	Response = ixmlParseBuffer(Body);
+	NFREE(Body);
 
 	/* if member but not coordinator, eliminate */
 	if (Response) {
 		char myUUID[RESOURCE_LENGTH] = "";
-		IXML_NodeList *nodeList = ixmlDocument_getElementsByTagName(Response, "ZoneGroupMember");
+		IXML_NodeList *GroupList = ixmlDocument_getElementsByTagName(Response, "ZoneGroup");
+		int i;
 
-		// find all ZoneMembers entries
-		if (nodeList) {
-			int i;
-			const char *UUID, *Coordinator;
+		sscanf(UDN, "uuid:%s", myUUID);
 
-			sscanf(UDN, "uuid:%s", myUUID);
+		// get the UUID and see if it's member of a zone and not the coordinator
+		for (i = 0; GroupList && i < (int) ixmlNodeList_length(GroupList); i++) {
+			IXML_Node *Group = ixmlNodeList_item(GroupList, i);
+			const char *Coordinator = ixmlElement_getAttribute((IXML_Element*) Group, "Coordinator");
 
-			// get the UUID and see if it's member of a zone and not the coordinator
-			for (i = 0; i < (int) ixmlNodeList_length(nodeList) && Master; i++) {
-				IXML_Node *Parent, *Node = ixmlNodeList_item(nodeList, i);
-
-				UUID = ixmlElement_getAttribute((IXML_Element*) Node, "UUID");
-				Parent = ixmlNode_getParentNode(Node);
-				Coordinator = ixmlElement_getAttribute((IXML_Element*) Parent, "Coordinator");
-				if (!strcasecmp(UUID, myUUID) && strcasecmp(UUID, Coordinator)) Master = false;
-			}
-
-			ixmlNodeList_free(nodeList);
+			if (!strcasecmp(myUUID, Coordinator)) Master = true;
 		}
 
+		ixmlNodeList_free(GroupList);
 		ixmlDocument_free(Response);
 	}
 

@@ -305,7 +305,7 @@ void HandleStateEvent(struct Upnp_Event *Event, void *Cookie)
 	if (!LastChange) return;
 	NFREE(LastChange);
 
-	// Feedback volume to LMS if authorized
+	// Feedback volume to AirPlay controller
 	r = XMLGetChangeItem(VarDoc, "Volume", "channel", "Master", "val");
 	if (r) {
 		double Volume;
@@ -635,12 +635,13 @@ static bool RefreshTO(char *UDN)
 			// remove a group device that is not currently playing
 			if ( glMRDevices[i].RaopState != RAOP_PLAY && !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX], NULL) ) {
 				glMRDevices[i].Eventing = EVT_BYEBYE;
-			} else {
-				// try to renew subscription if failed
-				for (j = 0; j < NB_SRV; j++) {
-					struct sService *s = &glMRDevices[i].Service[j];
-					if (s->TimeOut)
-						UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
+			}
+
+			// try to renew subscription if failed
+			for (j = 0; glMRDevices[i].Eventing == EVT_FAILED && j < NB_SRV; j++) {
+				struct sService *s = &glMRDevices[i].Service[j];
+				if (s->TimeOut && UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID) != UPNP_E_SUCCESS) {
+					LOG_INFO("[%p] service re-subscribe success", glMRDevices + i);
 				}
 			}
 

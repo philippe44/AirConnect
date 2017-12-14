@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.4.4"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.5.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -899,7 +899,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->WaitCookie = Device->StartCookie = NULL;
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
-	if (!*Device->Config.Name) strcpy(Device->Config.Name, friendlyName);
+	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", friendlyName);
 	strcpy(Device->Manufacturer, manufacturer);
 	QueueInit(&Device->ActionQueue);
 	Device->MetaData.title = strdup("Streaming from AirConnect");

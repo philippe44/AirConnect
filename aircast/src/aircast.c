@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.1.4.4"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.5.0"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -546,7 +546,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 	Device->State = STOPPED;
 	Device->ExpectStop = false;
 	Device->Group = group;
-	if (!*Device->Config.Name) strcpy(Device->Config.Name, Name);
+	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", Name);
 
 	LOG_INFO("[%p]: adding renderer (%s)", Device, Name);
 

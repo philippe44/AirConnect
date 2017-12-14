@@ -1,3 +1,6 @@
+0.1.5.0
+ - add "+" after default name to identify AirConnect players
+ 
 0.1.4.4
  - always remove players on BYEBYE message
  

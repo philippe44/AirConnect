@@ -1,3 +1,6 @@
+0.1.4.4
+ - always remove players on BYEBYE message
+ 
 0.1.4.3
  - (airupnp) default name is zone name for Sonos device
 

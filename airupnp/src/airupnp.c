@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.4.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.4.4"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -483,9 +483,8 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			ithread_mutex_lock(&p->Mutex);
 
-			if (!*d_event->ServiceType && p->Connected) {
-				p->Connected = false;
-				p->MissingCount = 0;
+			if (!*d_event->ServiceType) {
+				p->Eventing = EVT_BYEBYE;
 				LOG_INFO("[%p]: Player BYE-BYE", p);
 			}
 
@@ -496,11 +495,11 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 		case UPNP_EVENT_AUTORENEWAL_FAILED: {
 			struct Upnp_Event_Subscribe *d_Event = (struct Upnp_Event_Subscribe *)Event;
 			struct sMR *p = SID2Device(d_Event->Sid);
-			int i, ret = UPNP_E_INVALID_SID;
+			int i, ret = UPNP_E_SUCCESS;
 
 			if (!p) break;
 
-			ithread_mutex_lock(&p->Mutex);
+			pthread_mutex_lock(&p->Mutex);
 
 			if (!p->InUse) break;
 
@@ -515,12 +514,12 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			if (ret != UPNP_E_SUCCESS) {
 				LOG_WARN("[%p]: Auto-renewal failed, cannot re-subscribe", p);
-				p->Connected = false;
+				p->Eventing = EVT_FAILED;
 			} else {
 				LOG_WARN("[%p]: Auto-renewal failed, re-subscribe success", p);
 			}
 
-			ithread_mutex_unlock(&p->Mutex);
+			pthread_mutex_unlock(&p->Mutex);
 
 			break;
 		}
@@ -625,16 +624,24 @@ static bool RefreshTO(char *UDN)
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		if (glMRDevices[i].InUse && !strcmp(glMRDevices[i].UDN, UDN)) {
+			int j;
+
 			pthread_mutex_lock(&glMRDevices[i].Mutex);
 
 			glMRDevices[i].TimeOut = false;
 			glMRDevices[i].MissingCount = glMRDevices[i].Config.RemoveCount;
 			glMRDevices[i].ErrorCount = 0;
 
-			// do not remove a group device that is currently playing
+			// remove a group device that is not currently playing
 			if ( glMRDevices[i].RaopState != RAOP_PLAY && !isMaster(UDN, &glMRDevices[i].Service[TOPOLOGY_IDX], NULL) ) {
-				glMRDevices[i].MissingCount = 0;
-				glMRDevices[i].Connected = false;
+				glMRDevices[i].Eventing = EVT_BYEBYE;
+			} else {
+				// try to renew subscription if failed
+				for (j = 0; j < NB_SRV; j++) {
+					struct sService *s = &glMRDevices[i].Service[j];
+					if (s->TimeOut)
+						UpnpSubscribe(glControlPointHandle, s->EventURL, &s->TimeOut, s->SID);
+				}
 			}
 
 			pthread_mutex_unlock(&glMRDevices[i].Mutex);
@@ -711,9 +718,9 @@ static void *UpdateMRThread(void *args)
 	// then walk through the list of devices to remove missing ones
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		Device = &glMRDevices[i];
-		if (!Device->InUse || !Device->Config.RemoveCount) continue;
+		if (!Device->InUse) continue;
 		if (Device->TimeOut && Device->MissingCount) Device->MissingCount--;
-		if (Device->Connected || Device->MissingCount) continue;
+		if (Device->Eventing != EVT_BYEBYE && (Device->MissingCount || !Device->Config.RemoveCount)) continue;
 
 		LOG_INFO("[%p]: removing renderer (%s)", Device, Device->Config.Name);
 		raop_delete(Device->Raop);
@@ -879,7 +886,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	pthread_mutex_init(&Device->Mutex, 0);
 	Device->Magic = MAGIC;
 	Device->TimeOut = false;
-	Device->Connected = true;
+	Device->Eventing = EVT_ACTIVE;
 	Device->MissingCount = Device->Config.RemoveCount;
 	Device->Muted = true;	//assume device is muted
 	Device->ErrorCount = 0;

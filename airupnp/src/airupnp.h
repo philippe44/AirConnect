@@ -98,7 +98,8 @@ struct sMR {
 	bool			Muted;
 	u16_t			ErrorCount;
 	int				MissingCount;
-	bool			TimeOut, Connected;
+	bool			TimeOut;
+	enum 			{EVT_ACTIVE, EVT_FAILED, EVT_BYEBYE} Eventing;
 	bool			Running;
 };
 

@@ -40,7 +40,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Re-scan for new / lost players happens every 30s
 - A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i <config file name>` command line)
 - Chromecast groups are supported
-- Under non-Windows OS, do not daemonize (&) the executable w/o disabling interactive mode (`-Z`). Best is to use `-z`
+- Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`). On Linux, best is to use `-z` 
 - A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements, but that might cause overrun or underrun on long playbacks
 
 ## Config file parameters 

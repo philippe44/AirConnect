@@ -322,6 +322,8 @@ int GetGroupVolume(struct sMR *Device)
 		free(Item);
 	}
 
+	if (ActionNode) ixmlDocument_free(ActionNode);
+
 	return Volume;
 }
 

@@ -46,6 +46,7 @@ bool isMaster(char *UDN, struct sService *Service, char **Name)
 	ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
 	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
 								 NULL, ActionNode, &Response);
+
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	Body = XMLGetFirstDocumentItem(Response, "ZoneGroupState");

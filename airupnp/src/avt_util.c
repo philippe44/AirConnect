@@ -225,11 +225,11 @@ bool AVTStop(struct sMR *Device)
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type,
 							 NULL, ActionNode, CallbackActionHandler, Device->WaitCookie);
 
+	ixmlDocument_free(ActionNode);
+
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
 	}
-
-	ixmlDocument_free(ActionNode);
 
 	return (rc == 0);
 }
@@ -263,11 +263,11 @@ int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
 							 ActionNode, CallbackActionHandler, Cookie);
 
+ 	if (ActionNode) ixmlDocument_free(ActionNode);
+
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
 	}
-
-	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	return rc;
 }
@@ -289,11 +289,11 @@ int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie)
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
 							 ActionNode, CallbackActionHandler, Cookie);
 
+	if (ActionNode) ixmlDocument_free(ActionNode);
+
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
 	}
-
-	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	return rc;
 }
@@ -314,6 +314,8 @@ int GetGroupVolume(struct sMR *Device)
 	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
 								 NULL, ActionNode, &Response);
 
+	if (ActionNode) ixmlDocument_free(ActionNode);
+
 	Item = XMLGetFirstDocumentItem(Response, "CurrentVolume");
 	if (Response) ixmlDocument_free(Response);
 
@@ -322,32 +324,32 @@ int GetGroupVolume(struct sMR *Device)
 		free(Item);
 	}
 
-	if (ActionNode) ixmlDocument_free(ActionNode);
-
 	return Volume;
 }
 
 
 /*----------------------------------------------------------------------------*/
-int GetProtocolInfo(struct sMR *Device, void *Cookie)
+char *GetProtocolInfo(struct sMR *Device)
 {
-	IXML_Document *ActionNode = NULL;
+	IXML_Document *ActionNode, *Response = NULL;
 	struct sService *Service = &Device->Service[CNX_MGR_IDX];
-	int rc;
+	char *ProtocolInfo = NULL;
 
-	LOG_DEBUG("uPNP %s GetProtocolInfo (cookie %p)", Service->ControlURL, Cookie);
+	LOG_DEBUG("uPNP %s GetProtocolInfo", Service->ControlURL);
 	ActionNode =  UpnpMakeAction("GetProtocolInfo", Service->Type, 0, NULL);
 
-	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
-							 ActionNode, CallbackEventHandler, Cookie);
-
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
-	}
+	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
+							 ActionNode, &Response);
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
-	return rc;
+	if (Response) {
+		ProtocolInfo = XMLGetFirstDocumentItem(Response, "Sink");
+		ixmlDocument_free(Response);
+		LOG_DEBUG("[%p]: ProtocolInfo %s", Device, ProtocolInfo);
+	}
+
+	return ProtocolInfo;
 }
 
 

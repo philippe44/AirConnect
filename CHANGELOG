@@ -1,3 +1,6 @@
+0.1.5.1
+ - memory leak correction in isMatsre & GetGroupVolume (@codepeon)
+ 
 0.1.5.0
  - add "+" after default name to identify AirConnect players
  

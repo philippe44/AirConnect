@@ -21,6 +21,7 @@
 #ifndef __AVT_UTIL_H
 #define __AVT_UTIL_H
 
+#include "ixml.h"
 #include "log_util.h"
 
 struct sMRConfig;
@@ -47,7 +48,7 @@ void	AVTActionFlush(tQueue *Queue);
 int 	CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie);
 int 	CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie);
 int 	GetGroupVolume(struct sMR *Device);
-int 	GetProtocolInfo(struct sMR *Device, void *Cookie);
+char*	GetProtocolInfo(struct sMR *Device);
 
 #endif
 

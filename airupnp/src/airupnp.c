@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.5.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.5.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -349,7 +349,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 				// discard everything else except waiting action
 				if (Cookie != p->WaitCookie) break;
 
-				ithread_mutex_lock(&p->Mutex);
+				pthread_mutex_lock(&p->Mutex);
 
 				p->StartCookie = p->WaitCookie;
 				ProcessQueue(p);
@@ -366,7 +366,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 					p->State = UNKNOWN;
 				}
 
-				ithread_mutex_unlock(&p->Mutex);
+				pthread_mutex_unlock(&p->Mutex);
 				break;
 			}
 
@@ -401,8 +401,7 @@ int CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (Action->ErrCode != UPNP_E_SUCCESS) {
 				p->ErrorCount++;
 				LOG_ERROR("Error in action callback -- %d (cookie %p)",	Action->ErrCode, Cookie);
-			}
-			else p->ErrorCount = 0;
+			} else p->ErrorCount = 0;
 			break;
 		}
 		default:
@@ -481,14 +480,14 @@ int CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			if (!p) break;
 
-			ithread_mutex_lock(&p->Mutex);
+			pthread_mutex_lock(&p->Mutex);
 
 			if (!*d_event->ServiceType) {
 				p->Eventing = EVT_BYEBYE;
 				LOG_INFO("[%p]: Player BYE-BYE", p);
 			}
 
-			ithread_mutex_unlock(&p->Mutex);
+			pthread_mutex_unlock(&p->Mutex);
 
 			break;
 		}

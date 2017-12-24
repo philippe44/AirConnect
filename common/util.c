@@ -273,7 +273,7 @@ void get_mac(u8_t mac[]) {
 
 
 /*----------------------------------------------------------------------------*/
-#if LINUX || FREEBSD
+#if LINUX
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size) {
 	int                 s;
 	struct arpreq       areq;
@@ -351,6 +351,12 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size)
 
 	free(buf);
 	return (found_entry);
+}
+#elif !WIN
+int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size)
+{
+	LOG_ERROR("No SendARP build for this platform", NULL);
+	return 1;
 }
 #endif
 

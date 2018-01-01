@@ -269,7 +269,7 @@ static void *rtsp_thread(void *arg) {
 
 	while (ctx->running) {
 		fd_set rfds;
-		struct timeval timeout = {0, 50*1000};
+		struct timeval timeout = {0, 100*1000};
 		int n;
 		bool res = false;
 
@@ -277,8 +277,15 @@ static void *rtsp_thread(void *arg) {
 			struct sockaddr_in peer;
 			socklen_t addrlen = sizeof(struct sockaddr_in);
 
-			sock = accept(ctx->sock, (struct sockaddr*) &peer, &addrlen);
-			ctx->peer.s_addr = peer.sin_addr.s_addr;
+			FD_ZERO(&rfds);
+			FD_SET(ctx->sock, &rfds);
+
+			n = select(ctx->sock + 1, &rfds, NULL, NULL, &timeout);
+
+			if (n > 0) {
+				sock = accept(ctx->sock, (struct sockaddr*) &peer, &addrlen);
+				ctx->peer.s_addr = peer.sin_addr.s_addr;
+            }
 
 			if (sock != -1 && ctx->running) {
 				LOG_INFO("got RTSP connection %u", sock);

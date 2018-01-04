@@ -1,5 +1,8 @@
+0.1.5.3
+ - compile flag to store streams
+ 
 0.1.5.2
- - FreeBSD does not exit and accept() even when socket shutdown properly, need to use select()
+ - FreeBSD does not exit accept() even when socket shutdown properly, need to use select()
  
 0.1.5.1
  - memory leak correction in isMatsre & GetGroupVolume (@codepeon)

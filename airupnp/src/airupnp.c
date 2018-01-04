@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.5.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.6.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -72,7 +72,7 @@ tMRConfig			glMRConfig = {
 							true,		// SendMetaData
 							false,		// SendCoverArt
 							100,		// MaxVolume
-							1,			// UPnPRemoveCount
+							3,			// UPnPRemoveCount
 							"flac",	    // Codec
 							"",			// RTP:HTTP Latency (0 = use AirPlay requested)
 							{0, 0, 0, 0, 0, 0 } // MAC

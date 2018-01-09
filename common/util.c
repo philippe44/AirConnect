@@ -28,6 +28,9 @@
 #include <net/if_arp.h>
 #include <netdb.h>
 #include <ctype.h>
+#if SUNOS
+#include <sys/sockio.h>
+#endif
 #if FREEBSD
 #include <ifaddrs.h>
 #include <net/if_dl.h>
@@ -360,7 +363,7 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size)
 }
 #endif
 
-#if LINUX || OSX || BSD
+#if LINUX || OSX || BSD || SUNOS
 bool get_interface(struct in_addr *addr)
 {
 	struct ifreq *ifreq;
@@ -488,7 +491,7 @@ in_addr_t get_localhost(char **name)
 	freeifaddrs(ifap);
 
 	return INADDR_ANY;
-#elif defined(linux)
+#elif defined(linux) || defined(sun)
 	char szBuffer[MAX_INTERFACES * sizeof (struct ifreq)];
 	struct ifconf ifConf;
 	struct ifreq ifReq;

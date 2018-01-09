@@ -10,14 +10,14 @@ VALGRIND	= $(BASE)/valgrind
 UPNP 		= $(BASE)/libupnp/1.6.19
 JANSSON		= $(BASE)/jansson
 
-DEFINES 	= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DNDEBUG -D_GNU_SOURCE -D_USE_XML_
+DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DNDEBUG -D_GNU_SOURCE -D_USE_XML_
 
 CFLAGS 		+= -fdata-sections -ffunction-sections 
 
 ifeq ($(OS),Darwin)
 LDFLAGS 	+= -Wl,-dead_strip
-else
-LDFLAGS 	+= -Wl,--gc-sections 
+else ifneq ($(OS), SunOS)
+LDFLAGS 	+= -Wl,--gc-sections
 endif
 
 vpath %.c $(TOOLS):$(COMMON):$(SRC):$(SQUEEZETINY):$(MDNSSD):$(TINYSVCMDNS)

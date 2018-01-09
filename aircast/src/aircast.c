@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.1.5.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.6.1"" ("__DATE__" @ "__TIME__")"
 
 /*
 TODO :
@@ -47,7 +47,7 @@ TODO :
 /* globals initialized */
 /*----------------------------------------------------------------------------*/
 
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 bool				glDaemonize = false;
 #endif
 bool				glInteractive = true;
@@ -846,7 +846,7 @@ int main(int argc, char *argv[])
 		FILE *pid_file;
 		pid_file = fopen(glPidFile, "wb");
 		if (pid_file) {
-			fprintf(pid_file, "%d", getpid());
+			fprintf(pid_file, "%d", (int) getpid());
 			fclose(pid_file);
 		}
 		else {
@@ -867,7 +867,7 @@ int main(int argc, char *argv[])
 
 	while (strcmp(resp, "exit") && !glSaveConfigFile) {
 
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 		if (!glDaemonize && glInteractive)
 			i = scanf("%s", resp);
 		else

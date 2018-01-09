@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.1.6.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.1.6.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -48,7 +48,7 @@
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
 /*----------------------------------------------------------------------------*/
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 bool				glDaemonize = false;
 #endif
 bool				glInteractive = true;
@@ -1232,7 +1232,7 @@ int main(int argc, char *argv[])
 			fclose(pid_file);
 		}
 		else {
-			LOG_ERROR("Cannot open PID file %s", glPidFile);
+			LOG_ERROR("Cannot open PID file %s", (int) glPidFile);
 		}
 	}
 
@@ -1248,7 +1248,7 @@ int main(int argc, char *argv[])
 
 	while (strcmp(resp, "exit") && !glSaveConfigFile) {
 
-#if LINUX || FREEBSD
+#if LINUX || FREEBSD || SUNOS
 		if (!glDaemonize && glInteractive)
 			i = scanf("%s", resp);
 		else

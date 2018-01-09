@@ -1,0 +1,10 @@
+DEFINES =-D_POSIX_PTHREAD_EXTENSIONS -D__EXTENSIONS__
+CC	= gcc
+CFLAGS  = -Wall -fPIC -O2 $(OPTS) $(INCLUDE) $(DEFINES)
+LDFLAGS = -s -lpthread -lssl -lcrypto -ldl -lm -lrt -lsocket -lnsl -lz -L.
+
+OBJ		= bin/i86pc-solaris
+EXECUTABLE 	= ../bin/aircast-i86pc-solaris
+
+include Makefile
+

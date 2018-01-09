@@ -1,3 +1,7 @@
+0.1.6.1
+ - add Solaris i86pc build
+ - change some mdns options
+ 
 0.1.5.3
  - compile flag to store streams
  

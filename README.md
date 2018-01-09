@@ -87,7 +87,7 @@ To start or stop manually the service, type `sudo service airupnp start|stop` in
 
 The upnp version is often used with Sonos players. When a Sonos group is created, only the master of that group will appear as an AirPlay player and others will be removed if they were already detected. If the group is later split, then individual players will re-appear. Each detection cycle takes ~30s (can be tweaked in the config file).
 
-Volume is set for the whole group, but the same level applies to all members. If you need to change individual volumes, you need to use a Sonos native controller. Note that these will be overridden if the group volume is changed later from and iXXX device.
+Volume is set for the whole group, but the same level applies to all members. If you need to change individual volumes, you need to use a Sonos native controller. Note that these will be overridden if the group volume is changed later from an iXXX device.
 
 ## Latency parameters explained:
 

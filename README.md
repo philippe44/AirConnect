@@ -1,5 +1,5 @@
 # [UPDATE]: version 0.2.0.0 is out 
-It brings immediate player addition/supression, which also means that the issues relaedt to players missing after a while should be fixed. There are a lot of other changes, so it might be unstable for a bit - I need feedback :-) !
+It brings immediate player addition/suppression, which also means that the issues related to players missing after a while should be fixed. There are a lot of other changes, so it might be unstable for a bit - I need feedback :-) !
 
 # AirConnect: Send audio to UPnP/Sonos/Chromecast players using AirPlay
 

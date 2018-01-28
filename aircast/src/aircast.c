@@ -232,14 +232,13 @@ void callback(void *owner, raop_event_t event, void *param)
 static void *MRThread(void *args)
 {
 	int elapsed;
-	unsigned last;
+	unsigned last = gettime_ms();
 	struct sMR *p = (struct sMR*) args;
 	json_t *data;
-	double Volume = -1;
-
-	last = gettime_ms();
 
 	while (p->Running) {
+		double Volume = -1;
+
 		// context is valid until this thread ends, no deletion issue
 		data = GetTimedEvent(p->CastCtx, 250);
 		elapsed = gettime_ms() - last;
@@ -292,12 +291,14 @@ static void *MRThread(void *args)
 			}
 
 			// now apply the volume change if any
-			if (Volume != -1 && fabs(Volume - p->Volume) >= 0.01)
-			{
+			if (Volume != -1 && fabs(Volume - p->Volume) >= 0.01) {
 				LOG_INFO("[%p]: Volume local change %0.4lf", p, Volume);
 				raop_notify(p->Raop, RAOP_VOLUME, &Volume);
 				Volume = -1;
 			}
+
+			// always set volume done
+			Volume = -1;
 
 			// Cast devices has closed the connection
 			if (type && !strcasecmp(type, "CLOSE")) {

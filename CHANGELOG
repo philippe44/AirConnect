@@ -9,6 +9,7 @@
  - HTTP headers w/o : should not crash kbd_free
  - use closesocket under Windows, not close!
  - (aircast) SSL context is not deleted at every disconnect to avoid memory leaks
+ - (aircast) wrong volume local change when mute was set
  
 0.1.6.1
  - add Solaris i86pc build

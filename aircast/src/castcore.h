@@ -26,7 +26,6 @@
 #include <stdio.h>
 
 #include "aircast.h"
-#include "castcore.h"
 
 #include "openssl/crypto.h"
 #include "openssl/x509.h"

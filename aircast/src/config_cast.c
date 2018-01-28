@@ -73,8 +73,6 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, root, false, "main_log",level2debug(main_loglevel));
 	XMLUpdateNode(doc, root, false, "cast_log",level2debug(cast_loglevel));
 	XMLUpdateNode(doc, root, false, "util_log",level2debug(util_loglevel));
-	XMLUpdateNode(doc, root, false, "scan_interval", "%d", (u32_t) glScanInterval);
-	XMLUpdateNode(doc, root, false, "scan_timeout", "%d", (u32_t) glScanTimeout);
 	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
 
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
@@ -82,12 +80,11 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "media_volume", "%0.4lf", glMRConfig.MediaVolume);
 	XMLUpdateNode(doc, common, false, "latency", glMRConfig.Latency);
 	XMLUpdateNode(doc, common, false, "codec", glMRConfig.Codec);
-	XMLUpdateNode(doc, common, false, "remove_count", "%d", (u32_t) glMRConfig.RemoveCount);
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		IXML_Node *dev_node;
 
-		if (!glMRDevices[i].InUse) continue;
+		if (!glMRDevices[i].Running) continue;
 		else p = &glMRDevices[i];
 
 		// new device, add nodes
@@ -135,7 +132,6 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "stop_receiver")) Conf->StopReceiver = atol(val);
-	if (!strcmp(name, "remove_count"))Conf->RemoveCount = atol(val);
 	if (!strcmp(name, "media_volume")) Conf->MediaVolume = atof(val);
 	if (!strcmp(name, "use_flac")) strcpy(Conf->Codec, "flac");  // temporary
 	if (!strcmp(name, "codec")) strcpy(Conf->Codec, val);
@@ -158,8 +154,6 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "main_log")) main_loglevel = debug2level(val);
 	if (!strcmp(name, "cast_log")) cast_loglevel = debug2level(val);
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
-	if (!strcmp(name, "scan_interval")) glScanInterval = atol(val);
-	if (!strcmp(name, "scan_timeout")) glScanTimeout = atol(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
  }
 

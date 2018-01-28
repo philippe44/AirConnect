@@ -1,4 +1,4 @@
-                   /*
+/*
  *  Squeeze2upnp - LMS to uPNP gateway
  *
  *	(c) Philippe 2015-2017, philippe_44@outlook.com
@@ -23,22 +23,26 @@
 
 #include "airupnp.h"
 
-void 			FlushMRDevices(void);
-void 			DelMRDevice(struct sMR *p);
-bool 			isMaster(char *UDN, struct sService *Service, char **Name);
+void 		FlushMRDevices(void);
+void 		DelMRDevice(struct sMR *p);
+bool 		isMaster(char *UDN, struct sService *Service, char **Name);
+bool		CheckAndLock(struct sMR *Device);
 
-struct sMR* 	SID2Device(Upnp_SID Sid);
-struct sMR* 	CURL2Device(char *CtrlURL);
-struct sMR* 	UDN2Device(char *SID);
+struct sMR*  SID2Device(Upnp_SID Sid);
+struct sMR*  CURL2Device(char *CtrlURL);
+struct sMR*  PURL2Device(char *URL);
+struct sMR*  UDN2Device(char *SID);
 
-void 			MakeMacUnique(struct sMR *Device);
-in_addr_t 		ExtractIP(const char *URL);
+struct sService* EventURL2Service(char *URL, struct sService *s);
 
-int 	   	XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
+void 		 MakeMacUnique(struct sMR *Device);
+in_addr_t 	 ExtractIP(const char *URL);
+
+int 	   	 XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 							const char *serviceTypeBase, char **serviceId,
 							char **serviceType, char **eventURL, char **controlURL);
-char 	   	*XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr);
+char 	   	 *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr);
 
-char*			uPNPEvent2String(Upnp_EventType S);
+char*		 uPNPEvent2String(Upnp_EventType S);
 
 #endif

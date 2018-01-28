@@ -147,32 +147,55 @@ int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-void QueueInit(tQueue *queue)
+void QueueInit(tQueue *queue, bool mutex, void (*cleanup)(void*))
 {
-	queue->item = NULL;
+	queue->cleanup = cleanup;
+	queue->list.item = NULL;
+	if (mutex) {
+		queue->mutex = malloc(sizeof(pthread_mutex_t));
+		pthread_mutex_init(queue->mutex, NULL);
+	}
+	else queue->mutex = NULL;
 }
 
 /*----------------------------------------------------------------------------*/
 void QueueInsert(tQueue *queue, void *item)
 {
-	while (queue->item)	queue = queue->next;
-	queue->item = item;
-	queue->next = malloc(sizeof(tQueue));
-	queue->next->item = NULL;
+	struct sQueue_e *list;
+
+	if (queue->mutex) pthread_mutex_lock(queue->mutex);
+	list = &queue->list;
+
+	while (list->item) list = list->next;
+	list->item = item;
+	list->next = malloc(sizeof(struct sQueue_e));
+	list->next->item = NULL;
+
+	if (queue->mutex) pthread_mutex_unlock(queue->mutex);
 }
 
 
 /*----------------------------------------------------------------------------*/
 void *QueueExtract(tQueue *queue)
 {
-	void *item = queue->item;
-	tQueue *next = queue->next;
+	void *item;
+	struct sQueue_e *list;
+
+	if (queue->mutex) pthread_mutex_lock(queue->mutex);
+
+	list = &queue->list;
+	item = list->item;
 
 	if (item) {
-		queue->item = next->item;
-		if (next->item) queue->next = next->next;
+		struct sQueue_e *next = list->next;
+		if (next->item) {
+			list->item = next->item;
+			list->next = next->next;
+		} else list->item = NULL;
 		NFREE(next);
 	}
+
+	if (queue->mutex) pthread_mutex_unlock(queue->mutex);
 
 	return item;
 }
@@ -181,19 +204,110 @@ void *QueueExtract(tQueue *queue)
 /*----------------------------------------------------------------------------*/
 void QueueFlush(tQueue *queue)
 {
-	void *item = queue->item;
-	tQueue *next = queue->next;
+	struct sQueue_e *list;
 
-	queue->item = NULL;
+	if (queue->mutex) pthread_mutex_lock(queue->mutex);
 
-	while (item) {
-		next = queue->next;
-		item = next->item;
-		if (next->item) queue->next = next->next;
+	list = &queue->list;
+
+	while (list->item) {
+		struct sQueue_e *next = list->next;
+		if (queue->cleanup)	(*(queue->cleanup))(list->item);
+		list = list->next;
 		NFREE(next);
+	}
+
+	if (queue->mutex) {
+		pthread_mutex_unlock(queue->mutex);
+		pthread_mutex_destroy(queue->mutex);
+		free(queue->mutex);
 	}
 }
 
+
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* LIST management															  */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*/
+list_t *push_item(list_t *item, list_t **list) {
+  if (*list) item->next = *list;
+  else item->next = NULL;
+
+  *list = item;
+
+  return item;
+}
+
+
+/*---------------------------------------------------------------------------*/
+list_t *add_tail_item(list_t *item, list_t **list) {
+  if (*list) {
+	struct list_s *p = *list;
+	while (p->next) p = p->next;
+	item->next = p->next;
+	p->next = item;
+  } else {
+	item->next = NULL;
+	*list = item;
+  }
+
+  return item;
+}
+
+
+/*---------------------------------------------------------------------------*/
+list_t *add_ordered_item(list_t *item, list_t **list, int (*compare)(void *a, void *b)) {
+  if (*list) {
+	struct list_s *p = *list;
+	while (p->next && compare(p->next, item) <= 0) p = p->next;
+	item->next = p->next;
+	p->next = item;
+  } else {
+	item->next = NULL;
+	*list = item;
+  }
+
+  return item;
+}
+
+
+/*---------------------------------------------------------------------------*/
+list_t *pop_item(list_t **list) {
+  if (*list) {
+	list_t *item = *list;
+	*list = item->next;
+	return item;
+  } else return NULL;
+}
+
+
+/*---------------------------------------------------------------------------*/
+list_t *remove_item(list_t *item, list_t **list) {
+  if (item != *list) {
+	struct list_s *p = *list;
+	while (p && p->next != item) p = p->next;
+	if (p) p->next = item->next;
+	item->next = NULL;
+  } else *list = (*list)->next;
+
+  return item;
+}
+
+
+/*---------------------------------------------------------------------------*/
+void clear_list(list_t **list, void (*free_func)(void *)) {
+  if (!*list) return;
+  while (*list) {
+	struct list_s *next = (*list)->next;
+	if (free_func) (*free_func)(*list);
+	else free(*list);
+	*list = next;
+  }
+  *list = NULL;
+}
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */
@@ -585,7 +699,7 @@ void winsock_close(void) {
 
 
 /*----------------------------------------------------------------------------*/
-int close_socket(int sd)
+int shutdown_socket(int sd)
 {
 	if (sd <= 0) return -1;
 
@@ -597,7 +711,7 @@ int close_socket(int sd)
 
 	LOG_DEBUG("closed socket %d", sd);
 
-	return close(sd);
+	return closesocket(sd);
 }
 
 
@@ -736,7 +850,12 @@ char *next_param(char *src, char c) {
 }
 
 /*----------------------------------------------------------------------------*/
-// clock
+/* 																			  */
+/* clock																 	  */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
 u32_t gettime_ms(void) {
 #if WIN
 	return GetTickCount();
@@ -750,6 +869,20 @@ u32_t gettime_ms(void) {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+#endif
+}
+
+
+/*----------------------------------------------------------------------------*/
+u64_t gettime_ms64(void) {
+#if WIN
+	FILETIME ft;
+	GetSystemTimeAsFileTime(&ft);
+	return (((u64_t) ft.dwHighDateTime) << 32 | ft.dwLowDateTime) / 10000;
+#else
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return (u64_t) (tv.tv_sec + 0x83AA7E80) * 1000 + tv.tv_usec / 1000;
 #endif
 }
 
@@ -884,7 +1017,7 @@ char *rtrim(char *s)
 /*---------------------------------------------------------------------------*/
 char *trim(char *s)
 {
-    return rtrim(ltrim(s));
+	return rtrim(ltrim(s));
 }
 
 
@@ -917,9 +1050,12 @@ bool http_parse(int sock, char *method, key_data_t *rkd, char **body, int *len)
 	rkd[0].key = NULL;
 
 	while (read_line(sock, line, sizeof(line), timeout) > 0) {
-		if (i && line[0] == ' ') {
-			for(j = 0; j < strlen(line); j++) if (line[j] != ' ') break;
-			rkd[i].data = strdup(line + j);
+
+		// line folding should be deprecated
+		if (i && rkd[i].key && (line[0] == ' ' || line[0] == '\t')) {
+			for(j = 0; j < strlen(line); j++) if (line[j] != ' ' && line[j] != '\t') break;
+			rkd[i].data = realloc(rkd[i].data, strlen(rkd[i].data) + strlen(line + j) + 1);
+			strcat(rkd[i].data, line + j);
 			continue;
 		}
 
@@ -938,6 +1074,7 @@ bool http_parse(int sock, char *method, key_data_t *rkd, char **body, int *len)
 		if (!strcasecmp(rkd[i].key, "Content-Length")) *len = atol(rkd[i].data);
 
 		i++;
+		rkd[i].key = NULL;
 	}
 
 	if (*len) {
@@ -956,8 +1093,6 @@ bool http_parse(int sock, char *method, key_data_t *rkd, char **body, int *len)
 			LOG_ERROR("content length receive error %d %d", *len, size);
 		}
 	}
-
-	rkd[i].key = NULL;
 
 	return true;
 }
@@ -1188,6 +1323,34 @@ char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item)
 			LOG_WARN("ixmlNodeList_item(nodeList, 0) returned NULL", NULL);
 	} else
 		LOG_SDEBUG("Error finding %s in XML Node", item);
+
+	if (nodeList) ixmlNodeList_free(nodeList);
+
+	return ret;
+}
+
+
+/*----------------------------------------------------------------------------*/
+bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s)
+{
+	IXML_NodeList *nodeList = NULL;
+	IXML_Node *textNode = NULL;
+	IXML_Node *tmpNode = NULL;
+	int i;
+	bool ret = false;
+
+	nodeList = ixmlDocument_getElementsByTagName(doc, (char *)item);
+
+	for (i = 0; nodeList && i < (int) ixmlNodeList_length(nodeList); i++) {
+		tmpNode = ixmlNodeList_item(nodeList, i);
+		if (!tmpNode) continue;
+		textNode = ixmlNode_getFirstChild(tmpNode);
+		if (!textNode) continue;
+		if (!strcmp(ixmlNode_getNodeValue(textNode), s)) {
+			ret = true;
+			break;
+		}
+	}
 
 	if (nodeList) ixmlNodeList_free(nodeList);
 

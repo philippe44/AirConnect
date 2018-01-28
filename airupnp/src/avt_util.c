@@ -40,7 +40,6 @@ static log_level 	*loglevel = &upnp_loglevel;
 static char *CreateDIDL(char *URI, char *ProtInfo, struct metadata_s *MetaData, struct sMRConfig *Config);
 
 
-
 /*----------------------------------------------------------------------------*/
 bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 {
@@ -50,7 +49,7 @@ bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 	if (!Device->WaitCookie) {
 		Device->WaitCookie = Device->seqN++;
 		rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type,
-								 NULL, ActionNode, CallbackActionHandler, Device->WaitCookie);
+								 NULL, ActionNode, ActionHandler, Device->WaitCookie);
 
 		if (rc != UPNP_E_SUCCESS) {
 			LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
@@ -134,7 +133,7 @@ int AVTCallAction(struct sMR *Device, char *Action, void *Cookie)
 	UpnpAddToAction(&ActionNode, Action, Service->Type, "InstanceID", "0");
 
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
-							 ActionNode, CallbackActionHandler, Cookie);
+							 ActionNode, ActionHandler, Cookie);
 
 	if (rc != UPNP_E_SUCCESS) LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
 	ixmlDocument_free(ActionNode);
@@ -223,7 +222,7 @@ bool AVTStop(struct sMR *Device)
 
 	Device->WaitCookie = Device->seqN++;
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type,
-							 NULL, ActionNode, CallbackActionHandler, Device->WaitCookie);
+							 NULL, ActionNode, ActionHandler, Device->WaitCookie);
 
 	ixmlDocument_free(ActionNode);
 
@@ -261,7 +260,7 @@ int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 	UpnpAddToAction(&ActionNode, cmd, Service->Type, "DesiredVolume", params);
 
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
-							 ActionNode, CallbackActionHandler, Cookie);
+							 ActionNode, ActionHandler, Cookie);
 
  	if (ActionNode) ixmlDocument_free(ActionNode);
 
@@ -287,7 +286,7 @@ int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie)
 	UpnpAddToAction(&ActionNode, "SetMute", Service->Type, "DesiredMute", Mute ? "1" : "0");
 
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
-							 ActionNode, CallbackActionHandler, Cookie);
+							 ActionNode, ActionHandler, Cookie);
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
 

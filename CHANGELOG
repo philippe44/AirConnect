@@ -1,3 +1,13 @@
+0.2.0.0
+ - new handling of discovery (mDNS-SD and UPnP) for on-the-fly player addition / removal (no more discovery time and removal counts)
+ - Review of all mutex-related issue and various risk of unprotected code
+ - review of memory leaks (only the SSL remains, which is the same all over execution)
+ - mDNS records is now 120s (per RFQ) and not 75m so that in case of crash, player do not appear sticky for some applications
+ - add possibility to dump players ('dump' & 'dumpall' commmands)
+ - in SETUP response, cport and tport are set to 0 by default which will cause session to fail if none of these are provided
+ - handle "header folding" in HTTP response
+ - HTTP headers w/o : should not crash kbd_free
+
 0.1.6.1
  - add Solaris i86pc build
  - change some mdns options

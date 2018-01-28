@@ -321,8 +321,8 @@ void hairtunes_end(hairtunes_t *ctx)
 		pthread_join(ctx->http_thread, NULL);
 	}
 
-	close_socket(ctx->http_listener);
-	for (i = 0; i < 3; i++) close_socket(ctx->rtp_sockets[i].sock);
+	shutdown_socket(ctx->http_listener);
+	for (i = 0; i < 3; i++) shutdown_socket(ctx->rtp_sockets[i].sock);
 
 	delete_alac(ctx->alac_codec);
 	if (ctx->flac_codec) {
@@ -805,6 +805,26 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 	return curframe->data;
 }
 
+
+/*---------------------------------------------------------------------------*/
+#ifdef CHUNKED
+int send_data(int sock, void *data, int len, int flags) {
+	char *chunk;
+	int sent;
+
+	asprintf(&chunk, "%x\r\n", len);
+	send(sock, chunk, strlen(chunk), flags);
+	free(chunk);
+	sent = send(sock, data, len, flags);
+	send(sock, "\r\n", 2, flags);
+
+	return sent;
+}
+#else
+#define send_data send
+#endif
+
+
 /*---------------------------------------------------------------------------*/
 static void *http_thread_func(void *arg) {
 	signed short *inbuf;
@@ -866,7 +886,7 @@ static void *http_thread_func(void *arg) {
 			if (ctx->codec == CODEC_FLAC) {
 				// send streaminfo at beginning
 				if (ctx->flac_header && ctx->flac_len) {
-					send(sock, (void*) ctx->flac_buffer, ctx->flac_len, 0);
+					send_data(sock, (void*) ctx->flac_buffer, ctx->flac_len, 0);
 					ctx->flac_len = 0;
 					ctx->flac_header = false;
 				}
@@ -892,7 +912,7 @@ static void *http_thread_func(void *arg) {
 				fwrite(inbuf, len, 1, ctx->httpOUT);
 #endif
 				LOG_SDEBUG("[%p]: HTTP sent frame count:%u bytes:%u (W:%hu R:%hu)", ctx, frame_count++, len, ctx->ab_write, ctx->ab_read);
-				sent = send(sock, (void*) inbuf, len, 0);
+				sent = send_data(sock, (void*) inbuf, len, 0);
 				gap = gettime_ms() - gap;
 
 				if (gap > 50) {
@@ -913,7 +933,7 @@ static void *http_thread_func(void *arg) {
 		}
 	}
 
-	if (sock != -1) close_socket(sock);
+	if (sock != -1) shutdown_socket(sock);
 
 	if (ctx->codec == CODEC_FLAC && flac_samples) free(flac_samples);
 
@@ -921,6 +941,18 @@ static void *http_thread_func(void *arg) {
 
 	return NULL;
 }
+
+
+#ifdef CHUNKED
+/*----------------------------------------------------------------------------*/
+static void mirror_header(key_data_t *src, key_data_t *rsp, char *key) {
+	char *data;
+
+	data = kd_lookup(src, key);
+	if (data) kd_add(rsp, key, data);
+}
+#endif
+
 
 static struct wave_header_s {
 	u8_t 	chunk_id[4];
@@ -951,6 +983,7 @@ static struct wave_header_s {
 		{ 'd', 'a', 't', 'a' },
 		{ 0x00, 0xff, 0xff, 0xff },
 	};
+
 /*----------------------------------------------------------------------------*/
 static bool handle_http(hairtunes_t *ctx, int sock)
 {
@@ -963,11 +996,19 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	LOG_INFO("[%p]: received %s", ctx, method);
 
 	kd_add(resp, "Server", "HairTunes");
-	kd_add(resp, "Connection", "close");
-
 	kd_add(resp, "Content-Type", mime_types[ctx->codec]);
 
+#ifdef CHUNKED
+	mirror_header(headers, resp, "Connection");
+	mirror_header(headers, resp, "TransferMode.DLNA.ORG");
+	kd_add(resp, "Transfer-Encoding", "chunked");
+
+	str = http_send(sock, "HTTP/1.1 200 OK", resp);
+#else
+	kd_add(resp, "Connection", "close");
+
 	str = http_send(sock, "HTTP/1.0 200 OK", resp);
+#endif
 
 	LOG_INFO("[%p]: responding:\n%s", ctx, str);
 
@@ -976,7 +1017,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	kd_free(resp);
 	kd_free(headers);
 
-	if (ctx->codec == CODEC_WAV) send(sock, (void*) &wave_header, sizeof(wave_header), 0);
+	if (ctx->codec == CODEC_WAV) send_data(sock, (void*) &wave_header, sizeof(wave_header), 0);
 
 	return true;
 }

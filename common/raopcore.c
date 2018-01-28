@@ -59,10 +59,10 @@ typedef struct raop_ctx_s {
 	struct hairtunes_s *ht;
 	raop_cb_t	callback;
 	struct {
-		char			DACPid[32], id[32];
-		struct in_addr	host;
-		u16_t			port;
-		bool 			search;
+		char				DACPid[32], id[32];
+		struct in_addr		host;
+		u16_t				port;
+		struct mDNShandle_s *handle;
 	} active_remote;
 	void *owner;
 } raop_ctx_t;
@@ -105,7 +105,6 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	ctx->latencies = latencies;
 	ctx->owner = owner;
 	ctx->volume_stamp = gettime_ms() - 1000;
-	S_ADDR(ctx->active_remote.host) = INADDR_ANY;
 	if (!strcasecmp(codec, "pcm")) ctx->codec = CODEC_PCM;
 	else if (!strcasecmp(codec, "wav")) ctx->codec = CODEC_WAV;
 	else ctx->codec = CODEC_FLAC;
@@ -161,7 +160,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 
 
 /*----------------------------------------------------------------------------*/
-void  raop_delete(struct raop_ctx_s *ctx) {
+void raop_delete(struct raop_ctx_s *ctx) {
 
 	if (!ctx) return;
 
@@ -178,8 +177,9 @@ void  raop_delete(struct raop_ctx_s *ctx) {
 
 	pthread_join(ctx->thread, NULL);
 
-	if (ctx->active_remote.search) {
-		ctx->active_remote.search = false;
+	// terminate search, but do not reclaim memory of pthread if never launched
+	if (ctx->active_remote.handle) {
+		close_mDNS(ctx->active_remote.handle);
 		pthread_join(ctx->search_thread, NULL);
 	}
 
@@ -226,7 +226,11 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 			break;
 	}
 
-	if (!command) return;
+	// no command to send to remote or no remote found yet
+	if (!command || !ctx->active_remote.port) {
+		NFREE(command);
+		return;
+	}
 
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -250,7 +254,7 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 		buf = http_send(sock, method, headers);
 		len = recv(sock, resp, 512, 0);
 		if (len > 0) resp[len-1] = '\0';
-		LOG_INFO("[%p]: sending airplay remote\n%s and received\n%s", ctx, buf, resp);
+		LOG_INFO("[%p]: sending airplay remote\n%s<== received ==>\n%s", ctx, buf, resp);
 
 		NFREE(method);
 		NFREE(buf);
@@ -280,12 +284,13 @@ static void *rtsp_thread(void *arg) {
 			FD_ZERO(&rfds);
 			FD_SET(ctx->sock, &rfds);
 
+			// freeBSD does not exit from accept() even when shutdown is made
 			n = select(ctx->sock + 1, &rfds, NULL, NULL, &timeout);
 
 			if (n > 0) {
 				sock = accept(ctx->sock, (struct sockaddr*) &peer, &addrlen);
 				ctx->peer.s_addr = peer.sin_addr.s_addr;
-            }
+			}
 
 			if (sock != -1 && ctx->running) {
 				LOG_INFO("got RTSP connection %u", sock);
@@ -400,13 +405,13 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		if ((buf = kd_lookup(headers, "DACP-ID")) != NULL) strcpy(ctx->active_remote.DACPid, buf);
 		if ((buf = kd_lookup(headers, "Active-Remote")) != NULL) strcpy(ctx->active_remote.id, buf);
 
-		ctx->active_remote.search = true;
+		ctx->active_remote.handle = init_mDNS(false, ctx->host);
 		pthread_create(&ctx->search_thread, NULL, &search_remote, ctx);
 
 	} else if (!strcmp(method, "SETUP") && ((buf = kd_lookup(headers, "Transport")) != NULL)) {
 		char *p;
 		hairtunes_resp_t ht;
-		short unsigned tport, cport;
+		short unsigned tport = 0, cport = 0;
 
 		if ((p = stristr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
 		if ((p = stristr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
@@ -461,8 +466,8 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		ctx->ht = NULL;
 		ctx->hport = -1;
 
-		// need to make sure no search is on-going
-		ctx->active_remote.search = false;
+		// need to make sure no search is on-going and reclaim pthread memory
+		if (ctx->active_remote.handle) close_mDNS(ctx->active_remote.handle);
 		pthread_join(ctx->search_thread, NULL);
 		memset(&ctx->active_remote, 0, sizeof(ctx->active_remote));
 
@@ -524,34 +529,32 @@ static void hairtunes_cb(void *owner, hairtunes_event_t event)
 
 
 /*----------------------------------------------------------------------------*/
-static void* search_remote(void *args) {
-	raop_ctx_t *ctx = (raop_ctx_t*) args;
-	DiscoveredList DiscDevices;
-	int mDNSId;
-	int i;
-	bool done = false;
+bool search_remote_cb(mDNSservice_t *slist, void *cookie, bool *stop) {
+	mDNSservice_t *s;
+	raop_ctx_t *ctx = (raop_ctx_t*) cookie;
 
-	mDNSId = init_mDNS(false, ctx->host);
-
-	while (ctx->active_remote.search && !done) {
-		query_mDNS(mDNSId, NULL, "_dacp._tcp.local", &DiscDevices, 5);
-
-		// see if we have found an active remote for our ID
-		for (i = 0; i < DiscDevices.count; i++) {
-			if (stristr(DiscDevices.items[i].name, ctx->active_remote.DACPid)) {
-				ctx->active_remote.host = DiscDevices.items[i].addr;
-				ctx->active_remote.port = DiscDevices.items[i].port;
-				done = true;
-				LOG_INFO("[%p]: found ActiveRemote for %s at %s:%u", ctx, ctx->active_remote.DACPid,
+	// see if we have found an active remote for our ID
+	for (s = slist; s; s = s->next) {
+		if (stristr(s->name, ctx->active_remote.DACPid)) {
+			ctx->active_remote.host = s->addr;
+			ctx->active_remote.port = s->port;
+			LOG_INFO("[%p]: found ActiveRemote for %s at %s:%u", ctx, ctx->active_remote.DACPid,
 								inet_ntoa(ctx->active_remote.host), ctx->active_remote.port);
-				break;
-			}
+			*stop = true;
+			break;
 		}
-
-		free_discovered_list(&DiscDevices);
 	}
 
-	close_mDNS(mDNSId, NULL);
+	// let caller clear list
+	return false;
+}
+
+
+/*----------------------------------------------------------------------------*/
+static void* search_remote(void *args) {
+	raop_ctx_t *ctx = (raop_ctx_t*) args;
+
+	query_mDNS(ctx->active_remote.handle, "_dacp._tcp.local", 0, 0, &search_remote_cb, (void*) ctx);
 
 	return NULL;
 }

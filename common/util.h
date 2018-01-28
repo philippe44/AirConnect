@@ -34,9 +34,13 @@
 
 #define NFREE(p) if (p) { free(p); p = NULL; }
 
-typedef struct sQueue {
-	struct sQueue *next;
-	void *item;
+typedef struct {
+	pthread_mutex_t	*mutex;
+	void (*cleanup)(void*);
+	struct sQueue_e {
+		struct sQueue_e *next;
+		void 			*item;
+	} list;
 } tQueue;
 
 typedef struct metadata_s {
@@ -51,10 +55,22 @@ typedef struct metadata_s {
 	u32_t track_hash;
 } metadata_t;
 
-void 		QueueInit(tQueue *queue);
+
+typedef struct list_s {
+	struct list_s *next;
+} list_t;
+
+void 		QueueInit(tQueue *queue, bool mutex, void (*f)(void*));
 void 		QueueInsert(tQueue *queue, void *item);
 void 		*QueueExtract(tQueue *queue);
 void 		QueueFlush(tQueue *queue);
+
+list_t*		push_item(list_t *item, list_t **list);
+list_t*		add_tail_item(list_t *item, list_t **list);
+list_t*		add_ordered_item(list_t *item, list_t **list, int (*compare)(void *a, void *b));
+list_t*		pop_item(list_t **list);
+list_t*   	remove_item(list_t *item, list_t **list);
+void 		clear_list(list_t **list, void (*free_func)(void *));
 
 void 		free_metadata(struct metadata_s *metadata);
 
@@ -67,6 +83,7 @@ IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, 
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);
 char 		*XMLGetFirstElementItem(IXML_Element *element, const char *item);
+bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s);
 #endif
 
 u32_t 		gettime_ms(void);
@@ -89,7 +106,7 @@ in_addr_t 	get_localhost(char **name);
 void 		get_mac(u8_t mac[]);
 void 		winsock_init(void);
 void 		winsock_close(void);
-int 		close_socket(int sd);
+int 		shutdown_socket(int sd);
 int 		bind_socket(short unsigned *port, int mode);
 int 		conn_socket(unsigned short port);#if !WINint SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size);#endif
 typedef struct {
@@ -107,6 +124,8 @@ bool 		kd_add(key_data_t *kd, char *key, char *value);
 char* 		kd_dump(key_data_t *kd);
 void 		kd_free(key_data_t *kd);
 
-int _fprintf(FILE *file, ...);
-#endif
+u64_t 		gettime_ms64(void);
+
+int 		_fprintf(FILE *file, ...);
+#endif
 

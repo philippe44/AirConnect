@@ -339,13 +339,11 @@ bool CastConnect(struct sCastCtx *Ctx)
 
 	pthread_mutex_lock(&Ctx->Mutex);
 
-	// do nothing if we are already connected
-	if (Ctx->ssl) {
+	if (Ctx->Status != CAST_DISCONNECTED) {
 		pthread_mutex_unlock(&Ctx->Mutex);
 		return true;
 	}
 
-	Ctx->ssl  = SSL_new(glSSLctx);
 	Ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
 	set_nonblock(Ctx->sock);
 	set_nosigpipe(Ctx->sock);
@@ -373,11 +371,6 @@ bool CastConnect(struct sCastCtx *Ctx)
 		err = SSL_get_error(Ctx->ssl,err);
 		LOG_ERROR("[%p]: Cannot open SSL connection (%d)", Ctx->owner, err);
 		closesocket(Ctx->sock);
-#if 0
-		// FIXME: causes a segfault !
-		SSL_free(Ctx->ssl);
-#endif
-		Ctx->ssl = NULL;
 		pthread_mutex_unlock(&Ctx->Mutex);
 		return false;
 	}
@@ -404,21 +397,14 @@ void CastDisconnect(struct sCastCtx *Ctx)
 
 	Ctx->reqId = 1;
 	Ctx->waitId = Ctx->waitMedia = Ctx->mediaSessionId = 0;
+	Ctx->Status = CAST_DISCONNECTED;
 	NFREE(Ctx->sessionId);
 	NFREE(Ctx->transportId);
 	QueueFlush(&Ctx->eventQueue);
 	CastQueueFlush(&Ctx->reqQueue);
-	if (Ctx->ssl) {
-		SSL_shutdown(Ctx->ssl);
-#if 0
-		// FIXME: causes a segfault !
-		SSL_free(Ctx->ssl);
-#endif
-		Ctx->ssl = NULL;
-		closesocket(Ctx->sock);
-	}
 
-	Ctx->Status = CAST_DISCONNECTED;
+	SSL_shutdown(Ctx->ssl);
+	closesocket(Ctx->sock);
 
 	pthread_mutex_unlock(&Ctx->Mutex);
 }
@@ -456,9 +442,10 @@ void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_add
 	Ctx->MediaVolume  = MediaVolume;
 	Ctx->group 		= group;
 	Ctx->stopReceiver = stopReceiver;
+	Ctx->ssl  		= SSL_new(glSSLctx);
 
-	QueueInit(&Ctx->eventQueue);
-	QueueInit(&Ctx->reqQueue);
+	QueueInit(&Ctx->eventQueue, false, NULL);
+	QueueInit(&Ctx->reqQueue, false, NULL);
 	pthread_mutexattr_init(&mutexAttr);
 	pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&Ctx->Mutex, &mutexAttr);
@@ -475,7 +462,7 @@ void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_add
 
 
 /*----------------------------------------------------------------------------*/
-void UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, u16_t port)
+bool UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, u16_t port)
 {
 	if (Ctx->port != port || Ctx->ip.s_addr != ip.s_addr) {
 		LOG_INFO("[%p]: changed ip:port %s:%d", Ctx, inet_ntoa(ip), port);
@@ -484,7 +471,9 @@ void UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, u16_t port)
 		Ctx->port = port;
 		pthread_mutex_unlock(&Ctx->Mutex);
 		CastDisconnect(Ctx);
+		return true;
 	}
+	return false;
 }
 
 
@@ -501,6 +490,7 @@ void DeleteCastDevice(struct sCastCtx *Ctx)
 	pthread_mutex_destroy(&Ctx->eventMutex);
 	pthread_mutex_destroy(&Ctx->sslMutex);
 	LOG_INFO("[%p]: Cast device stopped", Ctx->owner);
+	SSL_free(Ctx->ssl);
 	free(Ctx);
 }
 
@@ -666,6 +656,9 @@ static void *CastPingThread(void *args)
 		usleep(50000);
 	}
 
+	// clear SSL error allocated memorry
+	ERR_remove_state(0);
+
 	return NULL;
 }
 
@@ -725,7 +718,10 @@ static void *CastSocketThread(void *args)
 				Ctx->waitId = 0;
 				ProcessQueue(Ctx);
 				// VERSION_1_24
-				if (Ctx->stopReceiver) forward = false;
+				if (Ctx->stopReceiver) {
+					json_decref(root);
+					forward = false;
+                }
 			}
 
 			// respond to device ping
@@ -796,6 +792,7 @@ static void *CastSocketThread(void *args)
 					}
 
 					// Don't need to forward this, no valuable info
+					json_decref(root);
 					forward = false;
 				}
 
@@ -814,6 +811,9 @@ static void *CastSocketThread(void *args)
 			pthread_mutex_unlock(&Ctx->eventMutex);
 		}
 	}
+
+	// clear SSL error allocated memorry
+	ERR_remove_state(0);
 
 	return NULL;
 }

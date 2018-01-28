@@ -52,7 +52,6 @@ typedef struct sMRConfig
 	bool		Enabled;
 	bool		StopReceiver;
 	char		Name[_STR_LEN_];
-	int			RemoveCount;
 	char		Codec[_STR_LEN_];
 	double		MediaVolume;
 	u8_t		mac[6];
@@ -61,33 +60,29 @@ typedef struct sMRConfig
 
 struct sMR {
 	u32_t Magic;
-	bool  InUse;
+	bool  Running;
 	tMRConfig Config;
 	struct raop_ctx_s *Raop;
 	raop_event_t	RaopState;
-	char UDN			[RESOURCE_LENGTH];
+	char UDN	   	[RESOURCE_LENGTH];
 	enum eMRstate 	State;
 	bool			ExpectStop;
 	u32_t			Elapsed;
 	unsigned		TrackPoll;
-	bool			TimeOut;
 	void			*CastCtx;
 	pthread_mutex_t Mutex;
 	pthread_t 		Thread;
 	double			Volume;
 	bool			Group;
-	int				MissingCount;
-	bool			Running;
+	struct sGroupMember {
+		struct sGroupMember	*Next;
+		struct in_addr		Host;
+		u16_t				Port;
+   } *GroupMaster;
 };
 
-extern unsigned int 		glPort;
-extern char 				glIPaddress[];
-extern char 				glUPnPSocket[];
-extern u8_t		   			glMac[6];
 extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
-extern u32_t				glScanInterval;
-extern u32_t				glScanTimeout;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
 
 #endif

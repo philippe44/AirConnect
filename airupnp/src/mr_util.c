@@ -32,7 +32,7 @@ extern log_level	util_loglevel;
 static log_level 	*loglevel = &util_loglevel;
 
 static IXML_Node*	_getAttributeNode(IXML_Node *node, char *SearchAttr);
-
+int 				_voidHandler(Upnp_EventType EventType, void *_Event, void *Cookie) { return 0; }
 
 /*----------------------------------------------------------------------------*/
 bool isMaster(char *UDN, struct sService *Service, char **Name)
@@ -103,12 +103,14 @@ void FlushMRDevices(void)
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
 		struct sMR *p = &glMRDevices[i];
-		if (p->InUse) {
-			// critical to stop the device otherwise libupnp mean wait forever
+		pthread_mutex_lock(&p->Mutex);
+		if (p->Running) {
+			// critical to stop the device otherwise libupnp might wait forever
 			if (p->RaopState == RAOP_PLAY) AVTStop(p);
 			raop_delete(p->Raop);
+			// device's mutex returns unlocked
 			DelMRDevice(p);
-		}
+		} else pthread_mutex_unlock(&p->Mutex);
 	}
 }
 
@@ -118,45 +120,43 @@ void DelMRDevice(struct sMR *p)
 {
 	int i;
 
+	// already locked expect for failed creation which means a trylock is fine
+	pthread_mutex_trylock(&p->Mutex);
+
+	// try to unsubscribe but missing players will not succeed and as a result
+	// terminating the libupnp takes a while ...
 	for (i = 0; i < NB_SRV; i++) {
-		if (p->Service[i].TimeOut)
-			UpnpUnSubscribe(glControlPointHandle, p->Service[i].SID);
+		if (p->Service[i].TimeOut) {
+			UpnpUnSubscribeAsync(glControlPointHandle, p->Service[i].SID, _voidHandler, NULL);
+		}
 	}
 
-	pthread_mutex_lock(&p->Mutex);
 	p->Running = false;
+
 	pthread_mutex_unlock(&p->Mutex);
 	pthread_join(p->Thread, NULL);
-
-	pthread_mutex_lock(&p->Mutex);
-	p->InUse = false;
 
 	AVTActionFlush(&p->ActionQueue);
 	free_metadata(&p->MetaData);
 	NFREE(p->CurrentURI);
-
-	pthread_mutex_unlock(&p->Mutex);
-	pthread_mutex_destroy(&p->Mutex);
-
-	memset(p, 0, sizeof(struct sMR));
 }
 
 
- /*----------------------------------------------------------------------------*/
-void MakeMacUnique(struct sMR *Device)
+/*----------------------------------------------------------------------------*/
+struct sMR* CURL2Device(char *CtrlURL)
 {
-	int i;
+	int i, j;
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
-		if (!glMRDevices[i].InUse || Device == &glMRDevices[i]) continue;
-		if (!memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
-			u32_t hash = hash32(Device->UDN);
-
-			LOG_INFO("[%p]: duplicated mac ... updating", Device);
-			memset(&Device->Config.mac[0], 0xcc, 2);
-			memcpy(&Device->Config.mac[0] + 2, &hash, 4);
+		if (!glMRDevices[i].Running) continue;
+		for (j = 0; j < NB_SRV; j++) {
+			if (!strcmp(glMRDevices[i].Service[j].ControlURL, CtrlURL)) {
+				return &glMRDevices[i];
+			}
 		}
 	}
+
+	return NULL;
 }
 
 
@@ -166,7 +166,7 @@ struct sMR* SID2Device(char *SID)
 	int i, j;
 
 	for (i = 0; i < MAX_RENDERERS; i++) {
-		if (!glMRDevices[i].InUse) continue;
+		if (!glMRDevices[i].Running) continue;
 		for (j = 0; j < NB_SRV; j++) {
 			if (!strcmp(glMRDevices[i].Service[j].SID, SID)) {
 				return &glMRDevices[i];
@@ -179,12 +179,26 @@ struct sMR* SID2Device(char *SID)
 
 
 /*----------------------------------------------------------------------------*/
+struct sService *EventURL2Service(char *URL, struct sService *s)
+{
+	int i;
+
+	for (i = 0; i < NB_SRV; s++, i++) {
+		if (strcmp(s->EventURL, URL)) continue;
+		return s;
+	}
+
+	return NULL;
+}
+
+
+/*----------------------------------------------------------------------------*/
 struct sMR* UDN2Device(char *UDN)
 {
 	int i;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
-		if (!glMRDevices[i].InUse) continue;
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (!glMRDevices[i].Running) continue;
 		if (!strcmp(glMRDevices[i].UDN, UDN)) {
 			return &glMRDevices[i];
 		}
@@ -195,20 +209,41 @@ struct sMR* UDN2Device(char *UDN)
 
 
 /*----------------------------------------------------------------------------*/
-struct sMR* CURL2Device(char *CtrlURL)
+bool CheckAndLock(struct sMR *Device)
 {
-	int i, j;
+	bool Checked = false;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
-		if (!glMRDevices[i].InUse) continue;
-		for (j = 0; j < NB_SRV; j++) {
-			if (!strcmp(glMRDevices[i].Service[j].ControlURL, CtrlURL)) {
-				return &glMRDevices[i];
-			}
-		}
+	if (!Device) {
+		LOG_INFO("device is NULL", NULL);
+		return false;
 	}
 
-	return NULL;
+	pthread_mutex_lock(&Device->Mutex);
+	if (Device->Running) Checked = true;
+	else { LOG_INFO("[%p]: device has been removed", Device); }
+
+	pthread_mutex_unlock(&Device->Mutex);
+
+	return Checked;
+}
+
+
+/*----------------------------------------------------------------------------*/
+void MakeMacUnique(struct sMR *Device)
+{
+	int i;
+
+	// mutex is locked
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
+		if (!memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
+			u32_t hash = hash32(Device->UDN);
+
+			LOG_INFO("[%p]: duplicated mac ... updating", Device);
+			memset(&Device->Config.mac[0], 0xcc, 2);
+			memcpy(&Device->Config.mac[0] + 2, &hash, 4);
+		}
+	}
 }
 
 

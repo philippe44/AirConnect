@@ -39,10 +39,6 @@
 #define MAX_RENDERERS	32
 #define MAGIC			0xAABBCCDD
 #define RESOURCE_LENGTH	250
-#define	SCAN_TIMEOUT 	15
-#define SCAN_INTERVAL	30
-
-#define	HTTP_DEFAULT_MODE	-3
 
 enum 	eMRstate { UNKNOWN, STOPPED, PLAYING, PAUSED, TRANSITIONING };
 enum 	{ AVT_SRV_IDX = 0, REND_SRV_IDX, CNX_MGR_IDX, TOPOLOGY_IDX, GRP_REND_SRV_IDX, NB_SRV };
@@ -54,6 +50,7 @@ struct sService {
 	char ControlURL	[RESOURCE_LENGTH];
 	Upnp_SID		SID;
 	s32_t			TimeOut;
+	u32_t			Failed;
 };
 
 typedef struct sMRConfig
@@ -64,7 +61,6 @@ struct sService {
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	int			MaxVolume;
-	int			RemoveCount;
 	char		Codec[_STR_LEN_];
 	char		Latency[_STR_LEN_];
 	u8_t		mac[6];
@@ -72,12 +68,10 @@ struct sService {
 
 struct sMR {
 	u32_t Magic;
-	bool  InUse;
+	bool  Running;
 	tMRConfig Config;
 	char UDN			[RESOURCE_LENGTH];
 	char DescDocURL		[RESOURCE_LENGTH];
-	char PresURL		[RESOURCE_LENGTH];
-	char Manufacturer	[RESOURCE_LENGTH];
 	enum eMRstate 	State;
 	bool			ExpectStop;
 	struct raop_ctx_s *Raop;
@@ -86,6 +80,7 @@ struct sMR {
 	metadata_t		MetaData;
 	raop_event_t	RaopState;
 	u32_t			Elapsed;
+	u32_t			LastSeen;
 	u8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
 	tQueue			ActionQueue;
@@ -97,25 +92,16 @@ struct sMR {
 	u8_t			Volume;
 	bool			Muted;
 	u16_t			ErrorCount;
-	int				MissingCount;
 	bool			TimeOut;
-	enum 			{EVT_ACTIVE, EVT_FAILED, EVT_BYEBYE} Eventing;
-	bool			Running;
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;
-extern unsigned int 		glPort;
-extern char 				glIPaddress[];
-extern char 				glUPnPSocket[];
 extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
-extern u32_t				glScanInterval;
-extern u32_t				glScanTimeout;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
 
-struct sMR 		*mr_File2Device(const char *FileName);
-int 			CallbackEventHandler(Upnp_EventType EventType, void *Event, void *Cookie);
-int 			CallbackActionHandler(Upnp_EventType EventType, void *Event, void *Cookie);
+int 			MasterHandler(Upnp_EventType EventType, void *Event, void *Cookie);
+int 			ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie);
 
 
 #endif

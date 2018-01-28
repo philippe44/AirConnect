@@ -1,3 +1,5 @@
+# [UPDATE]: version 0.2.0.0 is out and brings immediate player addition/supression, which also means that the issues relaedt to players missing after a while should be fixed. There are a lot of other changes, so it might be unstable for a bit - I need feedback :-) !
+
 # AirConnect: Send audio to UPnP/Sonos/Chromecast players using AirPlay
 
 Use these applications to add AirPlay capabilities to Chromecast and UPnP (like Sonos) players. 
@@ -25,9 +27,9 @@ Double click the [executable] or launch it by typing `./[executable]` in the sam
 
 <strong>For Sonos players, set latency by adding `-l 1000:2000` on the command line.</strong> (Example: `./airupnp-osx-multi -l 1000:2000`) 
 
-After ~30 seconds you should see lots of log messages on screen. Using your iOS/Mac/iTunes/Airfoil/other client, you should now see new AirPlay devices and can try to play audio to them. 
+You should start to see lots of log messages on screen. Using your iOS/Mac/iTunes/Airfoil/other client, you should now see new AirPlay devices and can try to play audio to them. 
 
-If it works, type `exit`, which terminates the executable, and then, on non-Windows machines, relaunch it with `-z` so that it can run in the background and you can close the command line window. You can also start it automatically using any startup script. Nothing else should be required, no library or anything to install.
+If it works, type `exit`, which terminates the executable, and then, on non-Windows/MacOS machines, relaunch it with `-z` so that it can run in the background and you can close the command line window. You can also start it automatically using any startup script or a a Linux service as explained below. Nothing else should be required, no library or anything to install.
 
 ## Common information:
 
@@ -50,7 +52,6 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `latency <[rtp][:http]>` 	: (default: (0:0))buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
 	* [rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay
 	* [http]	: ms of buffering silence for HTTP audio (not needed normaly, except for Sonos)
-- `remove_count < 0 .. n>` 	: (default 3) how many times a player must be missing during a search to be removed. 0 disables removal
 - `enabled <0|1>`			: in common section, enables new discovered players by default. In a dedicated section, enables the player
 - `name` 				: The name that will appear for the device in AirPlay. You can change the default name. [1]
 - `log_limit <-1 | n>` 	: (default -1) when using log file, limits its size (-1 = no limit)
@@ -85,7 +86,7 @@ To start or stop manually the service, type `sudo service airupnp start|stop` in
 
 ## Sonos hints
 
-The upnp version is often used with Sonos players. When a Sonos group is created, only the master of that group will appear as an AirPlay player and others will be removed if they were already detected. If the group is later split, then individual players will re-appear. Each detection cycle takes ~30s (can be tweaked in the config file).
+The upnp version is often used with Sonos players. When a Sonos group is created, only the master of that group will appear as an AirPlay player and others will be removed if they were already detected. If the group is later split, then individual players will re-appear. 
 
 Volume is set for the whole group, but the same level applies to all members. If you need to change individual volumes, you need to use a Sonos native controller. Note that these will be overridden if the group volume is changed later from an iXXX device.
 
@@ -113,7 +114,7 @@ https://github.com/nanopb/nanopb
 
 https://github.com/akheron/jansson
 
-https://github.com/philippe44/mDNS-SD
+https://github.com/philippe44/mDNS-SD (use fork v2)
 
 https://github.com/philippe44/TinySVCmDNS
 

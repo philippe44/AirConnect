@@ -7,9 +7,9 @@
  - in SETUP response, cport and tport are set to 0 by default which will cause session to fail if none of these are provided
  - handle "header folding" in HTTP response
  - HTTP headers w/o : should not crash kbd_free
- - (aircast) SSL context is not deleted at every disconnect to avoid memory leaks
  - use closesocket under Windows, not close!
-
+ - (aircast) SSL context is not deleted at every disconnect to avoid memory leaks
+ 
 0.1.6.1
  - add Solaris i86pc build
  - change some mdns options

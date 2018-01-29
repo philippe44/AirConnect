@@ -85,6 +85,12 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 To start or stop manually the service, type `sudo service airupnp start|stop` in a command line window
 
+## Synology installation
+
+Andras has made a nice package for automatic installation & laucnh of airupnp on Syno's
+
+https://github.com/bandesz/AirConnect-Synology
+
 ## Sonos hints
 
 The upnp version is often used with Sonos players. When a Sonos group is created, only the master of that group will appear as an AirPlay player and others will be removed if they were already detected. If the group is later split, then individual players will re-appear. 

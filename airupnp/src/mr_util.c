@@ -90,7 +90,7 @@ bool isMaster(char *UDN, struct sService *Service, char **Name)
 
 		ixmlNodeList_free(GroupList);
 		ixmlDocument_free(Response);
-	}
+	} else Master = true;
 
 	return Master;
 }

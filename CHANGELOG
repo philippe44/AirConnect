@@ -1,3 +1,7 @@
+0.2.0.1
+ - (airupnp) search for master should return true in case of UPnP error
+ - (aircast) mDNS search for groups was messed-up
+ 
 0.2.0.0
  - new handling of discovery (mDNS-SD and UPnP) for on-the-fly player addition / removal (no more discovery time and removal counts)
  - Review of all mutex-related issue and various risk of unprotected code
@@ -10,7 +14,7 @@
  - use closesocket under Windows, not close!
  - (aircast) SSL context is not deleted at every disconnect to avoid memory leaks
  - (aircast) wrong volume local change when mute was set
- 
+  
 0.1.6.1
  - add Solaris i86pc build
  - change some mdns options

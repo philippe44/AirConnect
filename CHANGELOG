@@ -1,3 +1,6 @@
+0.2.0.2
+ - On keep-alive UPnP result, always move to next item if device found in list (even if removed as a Sonos slave)
+ 
 0.2.0.1
  - (airupnp) search for master should return true in case of UPnP error
  - (aircast) mDNS search for groups was messed-up

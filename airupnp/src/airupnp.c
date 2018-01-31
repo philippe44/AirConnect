@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.0.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.0.2"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -652,7 +652,6 @@ static void *UpdateThread(void *args)
 
 			// device keepalive or search response
 			} else if (Update->Type == DISCOVERY) {
-				bool Refresh = false;
 				IXML_Document *DescDoc = NULL;
 				char *UDN = NULL, *ModelName = NULL;
 				int i, rc;
@@ -680,13 +679,10 @@ static void *UpdateThread(void *args)
 						} else {
 							Device->LastSeen = now;
 							LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->Config.Name);
-							Refresh = true;
 						}
-						break;
+						goto cleanup;
 					}
 				}
-
-				if (Refresh) continue;
 
 				// this can take a very long time, too bad for the queue...
 				if ((rc = UpnpDownloadXmlDoc(Update->Data, &DescDoc)) != UPNP_E_SUCCESS) {
@@ -822,8 +818,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Volume 		= 0;
 	Device->Actions 	= NULL;
 
-	if (stristr(manufacturer, "Sonos")) Device->MetaData.duration = 1;
-
 	if (!strcasecmp(Device->Config.Codec, "pcm"))
 		Device->ProtoInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
 	else if (!strcasecmp(Device->Config.Codec, "wav"))
@@ -870,6 +864,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
 
 	// set remaining items now that we are sure
+	if (*Device->Service[TOPOLOGY_IDX].ControlURL) Device->MetaData.duration = 1;
 	Device->MetaData.title = strdup("Streaming from AirConnect");
 	Device->Running 	= true;
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", friendlyName);

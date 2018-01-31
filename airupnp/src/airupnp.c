@@ -784,7 +784,6 @@ static void *MainThread(void *args)
 static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location)
 {
 	char *friendlyName = NULL;
-	char *manufacturer;
 	int i;
 	unsigned long mac_size = 6;
 	in_addr_t ip;
@@ -798,7 +797,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	// Read key elements from description document
 	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName");
 	if (!friendlyName || !*friendlyName) friendlyName = strdup(UDN);
-	manufacturer = XMLGetFirstDocumentItem(DescDoc, "manufacturer");
 
 	LOG_SDEBUG("UDN:\t%s\nFriendlyName:\t%s", UDN,  friendlyName);
 
@@ -856,7 +854,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	if (!isMaster(UDN, &Device->Service[TOPOLOGY_IDX], &friendlyName) ) {
 		LOG_DEBUG("[%p] skipping Sonos slave %s", Device, friendlyName);
-		NFREE(manufacturer);
 		NFREE(friendlyName);
 		return false;
 	}
@@ -884,7 +881,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	MakeMacUnique(Device);
 
 	NFREE(friendlyName);
-	NFREE(manufacturer);
 
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
 

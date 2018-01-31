@@ -492,6 +492,8 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 
 	switch ( EventType ) {
 		case UPNP_DISCOVERY_ADVERTISEMENT_ALIVE:
+			// probably not needed now as the search happens often enough
+			break;
 		case UPNP_DISCOVERY_SEARCH_RESULT: {
 			struct Upnp_Discovery *Event = (struct Upnp_Discovery *) _Event;
 			tUpdate *Update = malloc(sizeof(tUpdate));

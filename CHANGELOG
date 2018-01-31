@@ -1,5 +1,6 @@
 0.2.0.2
  - On keep-alive UPnP result, always move to next item if device found in list (even if removed as a Sonos slave)
+ - only use SEARCH_RESULT and not ADVERTISEMENT_ALIVE for keep-alive
  
 0.2.0.1
  - (airupnp) search for master should return true in case of UPnP error

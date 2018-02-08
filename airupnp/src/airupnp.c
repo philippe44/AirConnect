@@ -541,7 +541,8 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 
 			if (!CheckAndLock(Device)) break;
 
-			if ((s = EventURL2Service(Event->PublisherUrl, Device->Service)) != NULL) {
+			s = EventURL2Service(Event->PublisherUrl, Device->Service);
+			if (s != NULL) {
 				UpnpSubscribeAsync(glControlPointHandle, s->EventURL, s->TimeOut,
 								   MasterHandler, (void*) strdup(Device->UDN));
 				LOG_INFO("[%p]: Auto-renewal failed, re-subscribing", Device);
@@ -561,19 +562,22 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 
 			if (!CheckAndLock(Device)) break;
 
-			if ((s = EventURL2Service(Event->PublisherUrl, Device->Service)) != NULL &&
-				 Event->ErrCode == UPNP_E_SUCCESS) {
-				s->Failed = 0;
-				strcpy(s->SID, Event->Sid);
-				s->TimeOut = Event->TimeOut;
-				LOG_INFO("[%p]: subscribe success", Device);
-			} else {
-				if (s->Failed++ < 3) {
-					LOG_INFO("[%p]: subscribe fail, re-trying %u", Device, s->Failed);
-					UpnpSubscribeAsync(glControlPointHandle, s->EventURL, s->TimeOut,
-									   MasterHandler, (void*) strdup(Device->UDN));
+			s = EventURL2Service(Event->PublisherUrl, Device->Service);
+			if (s != NULL)
+			{
+				if (Event->ErrCode == UPNP_E_SUCCESS) {
+					s->Failed = 0;
+					strcpy(s->SID, Event->Sid);
+					s->TimeOut = Event->TimeOut;
+					LOG_INFO("[%p]: subscribe success", Device);
 				} else {
-					LOG_WARN("[%p]: subscribe fail, volume feedback will not work", Device);
+					if (s->Failed++ < 3) {
+						LOG_INFO("[%p]: subscribe fail, re-trying %u", Device, s->Failed);
+						UpnpSubscribeAsync(glControlPointHandle, s->EventURL, s->TimeOut,
+										   MasterHandler, (void*) strdup(Device->UDN));
+					} else {
+						LOG_WARN("[%p]: subscribe fail, volume feedback will not work", Device);
+					}
 				}
 			}
 

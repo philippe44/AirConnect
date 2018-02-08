@@ -97,6 +97,10 @@ The upnp version is often used with Sonos players. When a Sonos group is created
 
 Volume is set for the whole group, but the same level applies to all members. If you need to change individual volumes, you need to use a Sonos native controller. Note that these will be overridden if the group volume is changed later from an iXXX device.
 
+## Other players
+
+-[@chpusch](https://github.com/chpusch) has found that Bose SoundTouch work well including synchonisation (as for Sonos, you need to use Bose's native application for grouping / ungrouping). I don't have a SoundTouch system so I cannot do the level of slave/master detection I did for Sonos
+
 ## Latency parameters explained:
 
 These bridges receive realtime "synchronous" audio from the AirPlay controler in the format of RTP frames and forward it to the Chromecast/UPnP/Sonos player in an HTTP "asynchronous" continuous audio binary format (notion of frames does not exist on that side). In other words, the AirPlay clients "push" the audio using RTP and the Chromecast/UPnP/Sonos players "pull" the audio using an HTTP GET request. 

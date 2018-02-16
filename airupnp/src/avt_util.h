@@ -36,8 +36,8 @@ typedef struct sAction {
 } tAction;
 
 void 	AVTInit(log_level level);
-bool 	AVTSetURI(struct sMR *Device);
-bool 	AVTSetNextURI(struct sMR *Device);
+bool 	AVTSetURI(struct sMR *Device, char *ProtoInfo);
+bool 	AVTSetNextURI(struct sMR *Device, char *ProtoInfo);
 int 	AVTCallAction(struct sMR *Device, char *Var, void *Cookie);
 bool 	AVTPlay(struct sMR *Device);
 bool 	AVTSetPlayMode(struct sMR *Device);

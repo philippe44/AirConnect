@@ -50,6 +50,7 @@ typedef struct metadata_s {
 	char *genre;
 	char *path;
 	char *artwork;
+	char *remote_title;
 	u32_t track;
 	u32_t duration;
 	u32_t track_hash;

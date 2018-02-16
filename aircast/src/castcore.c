@@ -97,8 +97,8 @@ static int connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t a
 	FD_ZERO(&w);
 	FD_SET(sock, &w);
 	e = w;
-	tval.tv_sec = timeout;
-	tval.tv_usec = 0;
+	tval.tv_sec = timeout / 1000;
+	tval.tv_usec = (timeout - tval.tv_sec * 1000) * 1000;
 
 	// only return 0 if w set and sock error is zero, otherwise return error code
 	if (select(sock + 1, NULL, &w, &e, timeout ? &tval : NULL) == 1 && FD_ISSET(sock, &w)) {
@@ -352,7 +352,7 @@ bool CastConnect(struct sCastCtx *Ctx)
 	addr.sin_addr.s_addr = S_ADDR(Ctx->ip);
 	addr.sin_port = htons(Ctx->port);
 
-	err = connect_timeout(Ctx->sock, (struct sockaddr *) &addr, sizeof(addr), 2);
+	err = connect_timeout(Ctx->sock, (struct sockaddr *) &addr, sizeof(addr), 2*1000);
 
 	if (err) {
 		closesocket(Ctx->sock);

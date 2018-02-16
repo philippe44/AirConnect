@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.2.0.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.0.3"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -160,69 +160,69 @@ static void  RemoveCastDevice(struct sMR *Device);
 
 void callback(void *owner, raop_event_t event, void *param)
 {
-	struct sMR *device = (struct sMR*) owner;
+	struct sMR *Device = (struct sMR*) owner;
 
-	pthread_mutex_lock(&device->Mutex);
+	pthread_mutex_lock(&Device->Mutex);
 
 	// this is async, so player might have been deleted
-	if (!device->Running) {
+	if (!Device->Running) {
 		LOG_WARN("[%p]: device has been removed", owner);
-		pthread_mutex_unlock(&device->Mutex);
+		pthread_mutex_unlock(&Device->Mutex);
 		return;
 	}
 
 	switch (event) {
 		case RAOP_STREAM:
 			// a PLAY will come later, so we'll do the load at that time
-			LOG_INFO("[%p]: Stream", device);
-			device->RaopState = event;
+			LOG_INFO("[%p]: Stream", Device);
+			Device->RaopState = event;
 			break;
 		case RAOP_STOP:
-			LOG_INFO("[%p]: Stop", device);
-			if (device->RaopState == RAOP_PLAY) {
-				CastStop(device->CastCtx);
-				device->ExpectStop = true;
+			LOG_INFO("[%p]: Stop", Device);
+			if (Device->RaopState == RAOP_PLAY) {
+				CastStop(Device->CastCtx);
+				Device->ExpectStop = true;
 			}
-			device->RaopState = event;
+			Device->RaopState = event;
 			break;
 		case RAOP_FLUSH:
-			LOG_INFO("[%p]: Flush", device);
-			CastStop(device->CastCtx);
-			device->ExpectStop = true;
-			device->RaopState = event;
+			LOG_INFO("[%p]: Flush", Device);
+			CastStop(Device->CastCtx);
+			Device->ExpectStop = true;
+			Device->RaopState = event;
 			break;
 		case RAOP_PLAY: {
 			metadata_t MetaData = { "", "", "Streaming from AirConnect",
 									"", "", NULL, 0, 0, 0 };
 
-			LOG_INFO("[%p]: Play", device);
-			if (device->RaopState != RAOP_PLAY) {
+			LOG_INFO("[%p]: Play", Device);
+			if (Device->RaopState != RAOP_PLAY) {
 				char *uri;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
 				asprintf(&uri, "http://%s:%u/stream", inet_ntoa(glHost), *((short unsigned*) param));
 #pragma GCC diagnostic pop
-				CastLoad(device->CastCtx, uri, !strcasecmp(device->Config.Codec, "flac") ? "audio/flac" : "audio/wav", &MetaData);
+				CastLoad(Device->CastCtx, uri, !strcasecmp(Device->Config.Codec, "flac") ? "audio/flac" : "audio/wav", &MetaData);
 				free(uri);
 			}
 
-			CastPlay(device->CastCtx);
+			CastPlay(Device->CastCtx);
 
-			CastSetDeviceVolume(device->CastCtx, device->Volume, true);
-			device->RaopState = event;
+			CastSetDeviceVolume(Device->CastCtx, Device->Volume, true);
+			Device->RaopState = event;
 			break;
 		}
 		case RAOP_VOLUME: {
-			device->Volume = *((double*) param);
-			CastSetDeviceVolume(device->CastCtx, device->Volume, false);
-			LOG_INFO("[%p]: Volume[0..1] %0.4lf", device, device->Volume);
+			Device->Volume = *((double*) param);
+			CastSetDeviceVolume(Device->CastCtx, Device->Volume, false);
+			LOG_INFO("[%p]: Volume[0..1] %0.4lf", Device, Device->Volume);
 			break;
 		}
 		default:
 			break;
 	}
 
-	pthread_mutex_unlock(&device->Mutex);
+	pthread_mutex_unlock(&Device->Mutex);
 }
 
 

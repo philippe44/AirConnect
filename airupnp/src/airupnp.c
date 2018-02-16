@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.0.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.0.3"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -259,7 +259,7 @@ static void *MRThread(void *args)
 /*----------------------------------------------------------------------------*/
 void callback(void *owner, raop_event_t event, void *param)
 {
-	struct sMR *device = (struct sMR*) owner;
+	struct sMR *Device = (struct sMR*) owner;
 
 	// this is async, so need to check context validity
 	if (!CheckAndLock(owner)) return;
@@ -267,54 +267,64 @@ void callback(void *owner, raop_event_t event, void *param)
 	switch (event) {
 		case RAOP_STREAM:
 			// a PLAY will come later, so we'll do the load at that time
-			LOG_INFO("[%p]: Stream", device);
-			device->RaopState = event;
+			LOG_INFO("[%p]: Stream", Device);
+			Device->RaopState = event;
 			break;
 		case RAOP_STOP:
 			// this is TEARDOWN, so far there is always a FLUSH before
-			LOG_INFO("[%p]: Stop", device);
-			if (device->RaopState == RAOP_PLAY) {
-				AVTStop(device);
-				device->ExpectStop = true;
+			LOG_INFO("[%p]: Stop", Device);
+			if (Device->RaopState == RAOP_PLAY) {
+				AVTStop(Device);
+				Device->ExpectStop = true;
 			}
-			device->RaopState = event;
-			NFREE(device->CurrentURI);
+			Device->RaopState = event;
+			NFREE(Device->CurrentURI);
 			break;
 		case RAOP_FLUSH:
-			LOG_INFO("[%p]: Flush", device);
-			AVTStop(device);
-			device->RaopState = event;
-			device->ExpectStop = true;
-			NFREE(device->CurrentURI);
+			LOG_INFO("[%p]: Flush", Device);
+			AVTStop(Device);
+			Device->RaopState = event;
+			Device->ExpectStop = true;
+			NFREE(Device->CurrentURI);
 			break;
-		case RAOP_PLAY:
-			if (device->RaopState != RAOP_PLAY) {
+		case RAOP_PLAY: {
+			char *ProtoInfo;
+
+			if (Device->RaopState != RAOP_PLAY) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
-				asprintf(&device->CurrentURI, "http://%s:%u/stream.%s", inet_ntoa(glHost),
+				asprintf(&Device->CurrentURI, "http://%s:%u/stream.%s", inet_ntoa(glHost),
 								*((short unsigned*) param),
-								device->Config.Codec);
+								Device->Config.Codec);
 #pragma GCC diagnostic pop
-				AVTSetURI(device);
-				NFREE(device->CurrentURI);
+				if (!strcasecmp(Device->Config.Codec, "pcm"))
+					ProtoInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
+				else if (!strcasecmp(Device->Config.Codec, "wav"))
+					ProtoInfo = "http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
+				else
+					ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
+
+				AVTSetURI(Device, ProtoInfo);
+				NFREE(Device->CurrentURI);
 			}
 
-			AVTPlay(device);
+			AVTPlay(Device);
 
-			CtrlSetVolume(device, device->Volume, device->seqN++);
-			device->RaopState = event;
+			CtrlSetVolume(Device, Device->Volume, Device->seqN++);
+			Device->RaopState = event;
 			break;
+		}
 		case RAOP_VOLUME: {
-			device->Volume = *((double*) param) * device->Config.MaxVolume;
-			CtrlSetVolume(device, device->Volume, device->seqN++);
-			LOG_INFO("[%p]: Volume[0..100] %d", device, device->Volume);
+			Device->Volume = *((double*) param) * Device->Config.MaxVolume;
+			CtrlSetVolume(Device, Device->Volume, Device->seqN++);
+			LOG_INFO("[%p]: Volume[0..100] %d", Device, Device->Volume);
 			break;
 		}
 		default:
 			break;
 	}
 
-	pthread_mutex_unlock(&device->Mutex);
+	pthread_mutex_unlock(&Device->Mutex);
 }
 
 
@@ -410,7 +420,7 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (p->WaitCookie)  {
 				const char *Resp = XMLGetLocalName(Action->ActionResult, 1);
 
-				LOG_ERROR("[%p]: Waited action %s", p, Resp ? Resp : "<none>");
+				LOG_DEBUG("[%p]: Waited action %s", p, Resp ? Resp : "<none>");
 
 				// discard everything else except waiting action
 				if (Cookie != p->WaitCookie) break;
@@ -563,21 +573,18 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 			if (!CheckAndLock(Device)) break;
 
 			s = EventURL2Service(Event->PublisherUrl, Device->Service);
-			if (s != NULL)
-			{
+			if (s != NULL) {
 				if (Event->ErrCode == UPNP_E_SUCCESS) {
 					s->Failed = 0;
 					strcpy(s->SID, Event->Sid);
 					s->TimeOut = Event->TimeOut;
 					LOG_INFO("[%p]: subscribe success", Device);
+				} else if (s->Failed++ < 3) {
+					LOG_INFO("[%p]: subscribe fail, re-trying %u", Device, s->Failed);
+					UpnpSubscribeAsync(glControlPointHandle, s->EventURL, s->TimeOut,
+									   MasterHandler, (void*) strdup(Device->UDN));
 				} else {
-					if (s->Failed++ < 3) {
-						LOG_INFO("[%p]: subscribe fail, re-trying %u", Device, s->Failed);
-						UpnpSubscribeAsync(glControlPointHandle, s->EventURL, s->TimeOut,
-										   MasterHandler, (void*) strdup(Device->UDN));
-					} else {
-						LOG_WARN("[%p]: subscribe fail, volume feedback will not work", Device);
-					}
+					LOG_WARN("[%p]: subscribe fail, volume feedback will not work", Device);
 				}
 			}
 
@@ -822,14 +829,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Volume 		= 0;
 	Device->Actions 	= NULL;
 
-	if (!strcasecmp(Device->Config.Codec, "pcm"))
-		Device->ProtoInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
-	else if (!strcasecmp(Device->Config.Codec, "wav"))
-		Device->ProtoInfo = "http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
-	else
-		Device->ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
-
-    strcpy(Device->UDN, UDN);
+	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
 
 	memset(&Device->MetaData, 0, sizeof(metadata_t));

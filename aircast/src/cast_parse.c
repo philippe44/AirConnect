@@ -111,6 +111,21 @@ const char *GetMediaItem_S(json_t *root, int n, char *item)
 	return str;
 }
 
+/*----------------------------------------------------------------------------*/
+const char *GetMediaInfoItem_S(json_t *root, int n, char *item)
+{
+	json_t *elm;
+	const char *str;
+
+	if ((elm = json_object_get(root, "status")) == NULL) return NULL;
+	if ((elm = json_array_get(elm, n)) == NULL) return NULL;
+	if ((elm = json_object_get(elm, "media")) == NULL) return NULL;
+	elm = json_object_get(elm, item);
+	str = json_string_value(elm);
+	return str;
+}
+
+
 
 
 

@@ -39,7 +39,6 @@ static log_level 	*loglevel = &upnp_loglevel;
 
 static char *CreateDIDL(char *URI, char *ProtInfo, struct metadata_s *MetaData, struct sMRConfig *Config);
 
-
 /*----------------------------------------------------------------------------*/
 bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 {
@@ -52,7 +51,7 @@ bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 								 NULL, ActionNode, ActionHandler, Device->WaitCookie);
 
 		if (rc != UPNP_E_SUCCESS) {
-			LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
+			LOG_ERROR("[%p]: Error in UpnpSendActionAsync -- %d", Device, rc);
 		}
 
 		ixmlDocument_free(ActionNode);
@@ -79,16 +78,16 @@ void AVTActionFlush(tQueue *Queue)
 }
 
 /*----------------------------------------------------------------------------*/
-bool AVTSetURI(struct sMR *Device)
+bool AVTSetURI(struct sMR *Device, char *ProtoInfo)
 {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(Device->CurrentURI, Device->ProtoInfo, &Device->MetaData, &Device->Config);
-	LOG_DEBUG("DIDL header: %s", DIDLData);
+	DIDLData = CreateDIDL(Device->CurrentURI, ProtoInfo, &Device->MetaData, &Device->Config);
+	LOG_DEBUG("[%p]: DIDL header: %s", Device, DIDLData);
 
-	LOG_INFO("uPNP setURI %s for %s (cookie %p)", Device->CurrentURI, Service->ControlURL, Device->seqN);
+	LOG_INFO("[%p]: uPNP setURI %s (cookie %p)", Device, Device->CurrentURI, Device->seqN);
 
 	if ((ActionNode = UpnpMakeAction("SetAVTransportURI", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "SetAVTransportURI", Service->Type, "InstanceID", "0");
@@ -100,16 +99,16 @@ void AVTActionFlush(tQueue *Queue)
 }
 
 /*----------------------------------------------------------------------------*/
-bool AVTSetNextURI(struct sMR *Device)
+bool AVTSetNextURI(struct sMR *Device, char *ProtoInfo)
 {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(Device->NextURI, Device->ProtoInfo, &Device->MetaData, &Device->Config);
-	LOG_DEBUG("DIDL header: %s", DIDLData);
+	DIDLData = CreateDIDL(Device->NextURI, ProtoInfo, &Device->MetaData, &Device->Config);
+	LOG_DEBUG("[%p]: DIDL header: %s", Device, DIDLData);
 
-	LOG_INFO("uPNP setNextURI %s for %s (cookie %p)", Device->NextURI, Service->ControlURL, Device->seqN);
+	LOG_INFO("[%p]: uPNP setNextURI %s (cookie %p)", Device, Device->NextURI, Device->seqN);
 
 	if ((ActionNode = UpnpMakeAction("SetNextAVTransportURI", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", Service->Type, "InstanceID", "0");
@@ -127,7 +126,7 @@ int AVTCallAction(struct sMR *Device, char *Action, void *Cookie)
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	int rc;
 
-	LOG_SDEBUG("uPNP %s for %s (cookie %p)", Action, Service->ControlURL, Cookie);
+	LOG_SDEBUG("[%p]: uPNP %s (cookie %p)", Device, Action, Cookie);
 
 	if ((ActionNode = UpnpMakeAction(Action, Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, Action, Service->Type, "InstanceID", "0");
@@ -135,7 +134,7 @@ int AVTCallAction(struct sMR *Device, char *Action, void *Cookie)
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
 							 ActionNode, ActionHandler, Cookie);
 
-	if (rc != UPNP_E_SUCCESS) LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
+	if (rc != UPNP_E_SUCCESS) LOG_ERROR("[%p]: Error in UpnpSendActionAsync -- %d", Device, rc);
 	ixmlDocument_free(ActionNode);
 
 	return rc;
@@ -148,7 +147,7 @@ bool AVTPlay(struct sMR *Device)
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	IXML_Document *ActionNode = NULL;
 
-	LOG_INFO("uPNP play for %s (cookie %p)", Service->ControlURL, Device->seqN);
+	LOG_INFO("[%p]: uPNP play (cookie %p)", Device, Device->seqN);
 
 	if ((ActionNode =  UpnpMakeAction("Play", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "Play", Service->Type, "InstanceID", "0");
@@ -164,7 +163,7 @@ bool AVTSetPlayMode(struct sMR *Device)
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	IXML_Document *ActionNode = NULL;
 
-	LOG_INFO("uPNP set play mode for %s (cookie %p)", Service->ControlURL, Device->seqN);
+	LOG_INFO("[%p]: uPNP set play mode (cookie %p)", Device, Device->seqN);
 	if ((ActionNode =  UpnpMakeAction("SetPlayMode", Service->Type, 0, NULL)) == NULL) return false;;
 	UpnpAddToAction(&ActionNode, "SetPlayMode", Service->Type, "InstanceID", "0");
 	UpnpAddToAction(&ActionNode, "SetPlayMode", Service->Type, "NewPlayMode", "NORMAL");
@@ -180,7 +179,7 @@ bool AVTSeek(struct sMR *Device, unsigned Interval)
 	IXML_Document *ActionNode = NULL;
 	char	params[128];
 
-	LOG_INFO("uPNP seek for %s (%ds) (cookie %p)", Service->ControlURL, Device->seqN);
+	LOG_INFO("[%p]: uPNP seek (%ds) (cookie %p)", Device, Interval, Device->seqN);
 
 	if ((ActionNode =  UpnpMakeAction("Seek", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "Seek", Service->Type, "InstanceID", "0");
@@ -198,7 +197,7 @@ bool AVTBasic(struct sMR *Device, char *Action)
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	IXML_Document *ActionNode = NULL;
 
-	LOG_INFO("uPNP %s for %s (cookie %p)", Action, Service->ControlURL, Device->seqN);
+	LOG_INFO("[%p]: uPNP %s (cookie %p)", Device, Action, Device->seqN);
 
 	if ((ActionNode = UpnpMakeAction(Action, Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, Action, Service->Type, "InstanceID", "0");
@@ -214,7 +213,7 @@ bool AVTStop(struct sMR *Device)
 	IXML_Document *ActionNode = NULL;
 	int rc;
 
-	LOG_INFO("uPNP stop for %s (cookie %p)", Service->ControlURL, Device->seqN);
+	LOG_INFO("[%p]: uPNP stop (cookie %p)", Device, Device->seqN);
 
 	if ((ActionNode = UpnpMakeAction("Stop", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "Stop", Service->Type, "InstanceID", "0");
@@ -227,7 +226,7 @@ bool AVTStop(struct sMR *Device)
 	ixmlDocument_free(ActionNode);
 
 	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
+		LOG_ERROR("[%p]: Error in UpnpSendActionAsync -- %d", Device, rc);
 	}
 
 	return (rc == 0);
@@ -250,7 +249,7 @@ int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 		cmd = "SetVolume";
 	}
 
-	LOG_INFO("uPNP volume %d for %s (cookie %p)", Volume, Service->ControlURL, Cookie);
+	LOG_INFO("[%p]: uPNP volume %d (cookie %p)", Device, Volume, Cookie);
 
 	ActionNode =  UpnpMakeAction(cmd, Service->Type, 0, NULL);
 	UpnpAddToAction(&ActionNode, cmd, Service->Type, "InstanceID", "0");
@@ -262,10 +261,10 @@ int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
 							 ActionNode, ActionHandler, Cookie);
 
- 	if (ActionNode) ixmlDocument_free(ActionNode);
+	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
+		LOG_ERROR("[%p]: Error in UpnpSendActionAsync -- %d", Device, rc);
 	}
 
 	return rc;
@@ -279,7 +278,7 @@ int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie)
 	struct sService *Service = &Device->Service[REND_SRV_IDX];
 	int rc;
 
-	LOG_INFO("uPNP mute %d for %s (cookie %p)", Mute, Service->ControlURL, Cookie);
+	LOG_INFO("[%p]: uPNP mute %d (cookie %p)", Device, Mute, Cookie);
 	ActionNode =  UpnpMakeAction("SetMute", Service->Type, 0, NULL);
 	UpnpAddToAction(&ActionNode, "SetMute", Service->Type, "InstanceID", "0");
 	UpnpAddToAction(&ActionNode, "SetMute", Service->Type, "Channel", "Master");
@@ -291,7 +290,7 @@ int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie)
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error in UpnpSendActionAsync -- %d", rc);
+		LOG_ERROR("[%p]: Error in UpnpSendActionAsync -- %d", Device, rc);
 	}
 
 	return rc;
@@ -334,7 +333,7 @@ char *GetProtocolInfo(struct sMR *Device)
 	struct sService *Service = &Device->Service[CNX_MGR_IDX];
 	char *ProtocolInfo = NULL;
 
-	LOG_DEBUG("uPNP %s GetProtocolInfo", Service->ControlURL);
+	LOG_DEBUG("[%p]: uPNP GetProtocolInfo", Device);
 	ActionNode =  UpnpMakeAction("GetProtocolInfo", Service->Type, 0, NULL);
 
 	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
@@ -353,7 +352,7 @@ char *GetProtocolInfo(struct sMR *Device)
 
 
 /*----------------------------------------------------------------------------*/
-char *CreateDIDL(char *URI, char *DLNAOptions, struct metadata_s *MetaData, struct sMRConfig *Config)
+char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct sMRConfig *Config)
 {
 	char *s;
 
@@ -371,20 +370,17 @@ char *GetProtocolInfo(struct sMR *Device)
 	XMLAddAttribute(doc, node, "parentID", "0");
 	XMLAddAttribute(doc, node, "restricted", "1");
 
-	if (Config->SendMetaData) {
-		XMLAddNode(doc, node, "dc:title", MetaData->title);
-		XMLAddNode(doc, node, "dc:creator", MetaData->artist);
-		XMLAddNode(doc, node, "upnp:genre", MetaData->genre);
-		if (MetaData->artwork) XMLAddNode(doc, node, "upnp:albumArtURI", "%s", MetaData->artwork);
-	}
-
 	if (MetaData->duration) {
 		div_t duration 	= div(MetaData->duration, 1000);
 
 		if (Config->SendMetaData) {
+			XMLAddNode(doc, node, "dc:title", MetaData->title);
+			XMLAddNode(doc, node, "dc:creator", MetaData->artist);
+			XMLAddNode(doc, node, "upnp:genre", MetaData->genre);
 			XMLAddNode(doc, node, "upnp:artist", MetaData->artist);
 			XMLAddNode(doc, node, "upnp:album", MetaData->album);
 			XMLAddNode(doc, node, "upnp:originalTrackNumber", "%d", MetaData->track);
+			if (MetaData->artwork) XMLAddNode(doc, node, "upnp:albumArtURI", "%s", MetaData->artwork);
 		}
 
 		XMLAddNode(doc, node, "upnp:class", "object.item.audioItem.musicTrack");
@@ -395,15 +391,19 @@ char *GetProtocolInfo(struct sMR *Device)
 	}
 	else {
 		if (Config->SendMetaData) {
-			XMLAddNode(doc, node, "upnp:channelName", MetaData->artist);
+			XMLAddNode(doc, node, "dc:title", MetaData->remote_title);
+			XMLAddNode(doc, node, "dc:creator", "");
+			XMLAddNode(doc, node, "upnp:album", "");
+			XMLAddNode(doc, node, "upnp:channelName", MetaData->remote_title);
 			XMLAddNode(doc, node, "upnp:channelNr", "%d", MetaData->track);
+			if (MetaData->artwork) XMLAddNode(doc, node, "upnp:albumArtURI", "%s", MetaData->artwork);
 		}
 
 		XMLAddNode(doc, node, "upnp:class", "object.item.audioItem.audioBroadcast");
 		node = XMLAddNode(doc, node, "res", URI);
 	}
 
-	XMLAddAttribute(doc, node, "protocolInfo", DLNAOptions);
+	XMLAddAttribute(doc, node, "protocolInfo", ProtoInfo);
 
 	s = ixmlNodetoString((IXML_Node*) doc);
 

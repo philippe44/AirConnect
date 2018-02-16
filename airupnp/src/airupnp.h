@@ -76,7 +76,6 @@ struct sMR {
 	bool			ExpectStop;
 	struct raop_ctx_s *Raop;
 	char			*CurrentURI, *NextURI;
-	char*			ProtoInfo;
 	metadata_t		MetaData;
 	raop_event_t	RaopState;
 	u32_t			Elapsed;

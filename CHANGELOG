@@ -1,3 +1,10 @@
+0.2.0.3
+ - race condition & double free when stopping device (credit @codepeon)
+ - http parsing error caused memory leak (headers not released)
+ - cosmetic changes
+ - (airupnp) backport squeeze2upnp modification (AVTSetURI)
+ - (airupnp) subscription complete failure could lead to access NULL pointer
+ 
 0.2.0.2
  - On keep-alive UPnP result, always move to next item if device found in list (even if removed as a Sonos slave)
  - only use SEARCH_RESULT and not ADVERTISEMENT_ALIVE for keep-alive

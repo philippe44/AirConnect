@@ -166,6 +166,8 @@ void raop_delete(struct raop_ctx_s *ctx) {
 
 	ctx->running = false;
 
+	pthread_join(ctx->thread, NULL);
+
 	hairtunes_end(ctx->ht);
 
 #if WIN
@@ -174,8 +176,6 @@ void raop_delete(struct raop_ctx_s *ctx) {
 	shutdown(ctx->sock, SHUT_RDWR);
 #endif
 	closesocket(ctx->sock);
-
-	pthread_join(ctx->thread, NULL);
 
 	// terminate search, but do not reclaim memory of pthread if never launched
 	if (ctx->active_remote.handle) {
@@ -327,7 +327,11 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 	int len;
 	bool success = true;
 
-	if (!http_parse(sock, method, headers, &body, &len)) return false;
+	if (!http_parse(sock, method, headers, &body, &len)) {
+		NFREE(body);
+		kd_free(headers);
+		return false;
+	}
 
 	if (strcmp(method, "OPTIONS")) {
 		LOG_INFO("[%p]: received %s", ctx, method);

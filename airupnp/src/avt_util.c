@@ -78,20 +78,20 @@ void AVTActionFlush(tQueue *Queue)
 }
 
 /*----------------------------------------------------------------------------*/
-bool AVTSetURI(struct sMR *Device, char *ProtoInfo)
+bool AVTSetURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char *ProtoInfo)
 {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(Device->CurrentURI, ProtoInfo, &Device->MetaData, &Device->Config);
+	DIDLData = CreateDIDL(URI, ProtoInfo, MetaData, &Device->Config);
 	LOG_DEBUG("[%p]: DIDL header: %s", Device, DIDLData);
 
-	LOG_INFO("[%p]: uPNP setURI %s (cookie %p)", Device, Device->CurrentURI, Device->seqN);
+	LOG_INFO("[%p]: uPNP setURI %s (cookie %p)", Device, URI, Device->seqN);
 
 	if ((ActionNode = UpnpMakeAction("SetAVTransportURI", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "SetAVTransportURI", Service->Type, "InstanceID", "0");
-	UpnpAddToAction(&ActionNode, "SetAVTransportURI", Service->Type, "CurrentURI", Device->CurrentURI);
+	UpnpAddToAction(&ActionNode, "SetAVTransportURI", Service->Type, "CurrentURI", URI);
 	UpnpAddToAction(&ActionNode, "SetAVTransportURI", Service->Type, "CurrentURIMetaData", DIDLData);
 	free(DIDLData);
 
@@ -99,20 +99,20 @@ void AVTActionFlush(tQueue *Queue)
 }
 
 /*----------------------------------------------------------------------------*/
-bool AVTSetNextURI(struct sMR *Device, char *ProtoInfo)
+bool AVTSetNextURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char *ProtoInfo)
 {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	char *DIDLData;
 
-	DIDLData = CreateDIDL(Device->NextURI, ProtoInfo, &Device->MetaData, &Device->Config);
+	DIDLData = CreateDIDL(URI, ProtoInfo, MetaData, &Device->Config);
 	LOG_DEBUG("[%p]: DIDL header: %s", Device, DIDLData);
 
-	LOG_INFO("[%p]: uPNP setNextURI %s (cookie %p)", Device, Device->NextURI, Device->seqN);
+	LOG_INFO("[%p]: uPNP setNextURI %s (cookie %p)", Device, URI, Device->seqN);
 
 	if ((ActionNode = UpnpMakeAction("SetNextAVTransportURI", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", Service->Type, "InstanceID", "0");
-	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", Service->Type, "NextURI", Device->NextURI);
+	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", Service->Type, "NextURI", URI);
 	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", Service->Type, "NextURIMetaData", DIDLData);
 	free(DIDLData);
 

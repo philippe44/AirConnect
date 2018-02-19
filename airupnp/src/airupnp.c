@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.0.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.0.4"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -278,22 +278,21 @@ void callback(void *owner, raop_event_t event, void *param)
 				Device->ExpectStop = true;
 			}
 			Device->RaopState = event;
-			NFREE(Device->CurrentURI);
 			break;
 		case RAOP_FLUSH:
 			LOG_INFO("[%p]: Flush", Device);
 			AVTStop(Device);
 			Device->RaopState = event;
 			Device->ExpectStop = true;
-			NFREE(Device->CurrentURI);
 			break;
 		case RAOP_PLAY: {
 			char *ProtoInfo;
+			char *uri;
 
 			if (Device->RaopState != RAOP_PLAY) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
-				asprintf(&Device->CurrentURI, "http://%s:%u/stream.%s", inet_ntoa(glHost),
+				asprintf(&uri, "http://%s:%u/stream.%s", inet_ntoa(glHost),
 								*((short unsigned*) param),
 								Device->Config.Codec);
 #pragma GCC diagnostic pop
@@ -304,8 +303,8 @@ void callback(void *owner, raop_event_t event, void *param)
 				else
 					ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
 
-				AVTSetURI(Device, ProtoInfo);
-				NFREE(Device->CurrentURI);
+				AVTSetURI(Device, uri, &Device->MetaData, ProtoInfo);
+				NFREE(uri);
 			}
 
 			AVTPlay(Device);
@@ -822,7 +821,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->State 		= STOPPED;
 	Device->LastSeen	= gettime_ms() / 1000;
 	Device->Raop 		= NULL;
-	Device->CurrentURI 	= Device->NextURI = NULL;
 	Device->Elapsed		= 0;
 	Device->seqN		= NULL;
 	Device->TrackPoll 	= Device->StatePoll = 0;

@@ -1,3 +1,7 @@
+0.2.0.4
+ - (airupnp) backporting of squeeze2upnp modifications
+ - Add TCP_NODELAY to HTTP socket
+
 0.2.0.3
  - race condition & double free when stopping device (credit @codepeon)
  - http parsing error caused memory leak (headers not released)

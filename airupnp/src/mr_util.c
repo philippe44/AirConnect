@@ -138,7 +138,6 @@ void DelMRDevice(struct sMR *p)
 
 	AVTActionFlush(&p->ActionQueue);
 	free_metadata(&p->MetaData);
-	NFREE(p->CurrentURI);
 }
 
 

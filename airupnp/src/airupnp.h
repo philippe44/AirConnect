@@ -75,7 +75,6 @@ struct sMR {
 	enum eMRstate 	State;
 	bool			ExpectStop;
 	struct raop_ctx_s *Raop;
-	char			*CurrentURI, *NextURI;
 	metadata_t		MetaData;
 	raop_event_t	RaopState;
 	u32_t			Elapsed;

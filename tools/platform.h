@@ -60,6 +60,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <sys/socket.h>

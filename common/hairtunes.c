@@ -856,6 +856,8 @@ static void *http_thread_func(void *arg) {
 			}
 
 			if (sock != -1 && ctx->running) {
+				int on = 1;
+				setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *) &on, sizeof(on));
 				ctx->silence_count = (ctx->delay * 44100) / (ctx->frame_size * 1000);
 				LOG_INFO("[%p]: got HTTP connection %u (silent frames %d)", ctx, sock, ctx->silence_count);
 			} else continue;
@@ -916,7 +918,7 @@ static void *http_thread_func(void *arg) {
 				gap = gettime_ms() - gap;
 
 				if (gap > 50) {
-					LOG_ERROR("[%p]: spent %u ms in send!", ctx, gap);
+					LOG_ERROR("[%p]: spent %u ms in send for %u bytes (sent %zd)!", ctx, gap, len, sent);
 				}
 
 				if (sent != len) {

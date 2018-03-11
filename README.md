@@ -101,6 +101,11 @@ Volume is set for the whole group, but the same level applies to all members. If
 
 - [@chpusch](https://github.com/chpusch) has found that Bose SoundTouch work well including synchonisation (as for Sonos, you need to use Bose's native application for grouping / ungrouping). I don't have a SoundTouch system so I cannot do the level of slave/master detection I did for Sonos
 
+## Misc tips
+ 
+- When players disappear regularly, it might be that your router is filtering out multicast packets. For example, for a Asus AC-RT68U, you have to login by ssh and run echo 0 > /sys/class/net/br0/bridge/multicast_snooping but it does not stay after a reboot.     
+- There is no dedicated version for ARM64 bits (aarch64). To use 32 bits version with such architecture, the corresponding libc must be added. On Debian, try `sudo dpkg --add-architecture armhf` and then add libc6 with `sudo apt-get update`and `sudo apt-get install libc6:armhf`
+
 ## Latency parameters explained:
 
 These bridges receive realtime "synchronous" audio from the AirPlay controler in the format of RTP frames and forward it to the Chromecast/UPnP/Sonos player in an HTTP "asynchronous" continuous audio binary format (notion of frames does not exist on that side). In other words, the AirPlay clients "push" the audio using RTP and the Chromecast/UPnP/Sonos players "pull" the audio using an HTTP GET request. 

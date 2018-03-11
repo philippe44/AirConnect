@@ -460,7 +460,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		if ((p = stristr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
 
 		// only send FLUSH if useful (discards frames above buffer head and top)
-		if (hairtunes_flush(ctx->ht, seqno, 0))
+		if (ctx->ht && hairtunes_flush(ctx->ht, seqno, 0))
 			ctx->callback(ctx->owner, RAOP_FLUSH, &ctx->hport);
 
 	}  else if (!strcmp(method, "TEARDOWN")) {

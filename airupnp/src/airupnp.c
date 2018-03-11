@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.0.4"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.0.5"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -501,7 +501,7 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 
 	switch ( EventType ) {
 		case UPNP_DISCOVERY_ADVERTISEMENT_ALIVE:
-			// probably not needed now as the search happens often enough
+			// probably not needed now as the search happens often enough and alive comes from many other devices
 			break;
 		case UPNP_DISCOVERY_SEARCH_RESULT: {
 			struct Upnp_Discovery *Event = (struct Upnp_Discovery *) _Event;

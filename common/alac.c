@@ -29,7 +29,12 @@
  *
  */
 
+#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 static const int host_bigendian = 0;
+#else
+static const int host_bigendian = 1;
+#endif
+
 
 #include <stdio.h>
 #include <stdlib.h>

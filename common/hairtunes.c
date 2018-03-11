@@ -126,7 +126,7 @@ typedef struct hairtunes_s {
 	bool flac_header;
 	alac_file *alac_codec;
 	int flush_seqno;
-	bool playing, silence;
+	bool playing, silence, http_ready;
 	codec_t codec;
 	hairtunes_cb_t callback;
 	void *owner;
@@ -244,6 +244,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, b
 	ctx->owner = owner;
 	ctx->synchro.required = sync;
 	ctx->timing.drift = drift;
+	ctx->http_ready = false;
 
 #ifdef __RTP_STORE
 	ctx->rtpIN = fopen("airplay.rtpin", "wb");
@@ -356,6 +357,7 @@ bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpfra
 		ctx->playing = false;
 		ctx->flush_seqno = seqno;
 		ctx->synchro.first = false;
+		ctx->http_ready = false;
 
 		if (ctx->codec == CODEC_FLAC) {
 			FLAC__stream_encoder_finish(ctx->flac_codec);
@@ -832,7 +834,6 @@ static void *http_thread_func(void *arg) {
 	FLAC__int32 *flac_samples = NULL;
 	hairtunes_t *ctx = (hairtunes_t*) arg;
 	int sock = -1;
-	bool http_ready = false;
 	struct timeval timeout = { 0, 0 };
 
 	if (ctx->codec == CODEC_FLAC && ((flac_samples = malloc(2 * ctx->frame_size * sizeof(FLAC__int32))) == NULL)) {
@@ -870,7 +871,9 @@ static void *http_thread_func(void *arg) {
 
 		if (n > 0) {
 			res = handle_http(ctx, sock);
-			http_ready = res;
+			pthread_mutex_lock(&ctx->ab_mutex);
+			ctx->http_ready = res;
+			pthread_mutex_unlock(&ctx->ab_mutex);
 		}
 
 		// terminate connection if required by HTTP peer
@@ -878,11 +881,13 @@ static void *http_thread_func(void *arg) {
 			closesocket(sock);
 			LOG_INFO("HTTP close %u", sock);
 			sock = -1;
-			http_ready = false;
+			pthread_mutex_lock(&ctx->ab_mutex);
+			ctx->http_ready = false;
+			pthread_mutex_unlock(&ctx->ab_mutex);
 		}
 
-		// wait for session to be ready before sending
-		if (http_ready && (inbuf = buffer_get_frame(ctx)) != NULL) {
+		// wait for session to be ready before sending (no need for mutex)
+		if (ctx->http_ready && (inbuf = buffer_get_frame(ctx)) != NULL) {
 			int len;
 
 			if (ctx->codec == CODEC_FLAC) {

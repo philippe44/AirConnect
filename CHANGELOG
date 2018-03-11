@@ -1,3 +1,8 @@
+0.2.0.5
+ - alac.c compiles depends on endianness
+ - Some players (Roon) send a FLUSH after a TEARDOWN which caused access to a NULL hairtunes context
+ - When changing track, the previous HTTP socket was used to send new track, causing miss of flac header & track beginning yielding to very long CC start
+  
 0.2.0.4
  - (airupnp) backporting of squeeze2upnp modifications
  - Add TCP_NODELAY to HTTP socket

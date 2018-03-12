@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef __AIRPLAY_H
-#define __AIRPLAY_H
+#ifndef __RAOPCORE_H
+#define __RAOPCORE_H
 
 #include "pthread.h"
 #include "mdnsd.h"

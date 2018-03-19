@@ -101,7 +101,7 @@ Volume is set for the whole group, but the same level applies to all members. If
 ## Misc tips
  
 - When players disappear regularly, it might be that your router is filtering out multicast packets. For example, for a Asus AC-RT68U, you have to login by ssh and run echo 0 > /sys/class/net/br0/bridge/multicast_snooping but it does not stay after a reboot.     
-- There is no dedicated version for ARM64 bits (aarch64). To use 32 bits version with such architecture, the corresponding libc must be added. On Debian, try `sudo dpkg --add-architecture armhf` and then add libc6 with `sudo apt-get update`and `sudo apt-get install libc6:armhf`
+- There is no dedicated version for ARM64 bits yet (aarch64). To use 32 bits version with such architecture, the corresponding libc must be added. On Debian, try `sudo dpkg --add-architecture armhf` and then add libc6 with `sudo apt-get update`and `sudo apt-get install libc6:armhf`. If there is enough requests for such version, I'll build it so create a ticket if you want it!
 
 ## Latency parameters explained:
 

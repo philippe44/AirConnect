@@ -86,7 +86,7 @@ To start or stop manually the service, type `sudo service airupnp start|stop` in
 
 ## Start automatically in MacOS (credits @aiwipro)
 
-Created the file com.aircast.bridge.plist in ~/Library/LaunchAgents/ with 
+Create the file com.aircast.bridge.plist in ~/Library/LaunchAgents/ containing 
 
 ```
 <?xml version="1.0" encoding="UTF-8"?>

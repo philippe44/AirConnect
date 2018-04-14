@@ -1214,7 +1214,7 @@ char *kd_dump(key_data_t *kd)
 	int pos = 0, size = 0;
 	char *str = NULL;
 
-	if (!kd) return strdup("\r\n");
+	if (!kd || !kd[0].key) return strdup("\r\n");
 
 	while (kd && kd[i].key) {
 		char *buf;

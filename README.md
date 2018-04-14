@@ -83,6 +83,37 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 To start or stop manually the service, type `sudo service airupnp start|stop` in a command line window
 
+## Start automatically in MacOS (credits @)
+
+Created the file com.aircast.bridge.plist in ~/Library/LaunchAgents/ with 
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.aircast.bridge</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/[path]/aircast-osx-multi</string>
+        <string>-x</string>
+        <string>/[path]/config.xml</string>
+        <string>-f</string>
+        <string>/[path]/aircast.log</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>LaunchOnlyOnce</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>
+```
+
+Where `[path]` is the path where you've stored the aircast executable (without the []). It can be for example `/Users/xxx/airconnect` where `xxx` is your user name 
+
 ## Synology installation
 
 Andras has made a nice package for automatic installation & laucnh of airupnp on Syno's

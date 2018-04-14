@@ -62,7 +62,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 ## Start automatically in Linux (crude example, I'm not a systemd expert)
 
 1. Create a file in `/etc/systemd/system`, e.g. `airupnp.service` with the following content (assuming the airupnp binary is in `/var/lib/airconnect`)
-
+...
 	[Unit]  
 	Description=AirUPnP bridge  
 	After=network-online.target  
@@ -76,14 +76,14 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 	[Install]  
 	WantedBy=multi-user.target   
-
+...
 2. Enable the service `systemctl enable airupnp.service`
 
 3. Start the service `sudo service airupnp start`
 
 To start or stop manually the service, type `sudo service airupnp start|stop` in a command line window
 
-## Start automatically in MacOS (credits @)
+## Start automatically in MacOS (credits @aiwipro)
 
 Created the file com.aircast.bridge.plist in ~/Library/LaunchAgents/ with 
 

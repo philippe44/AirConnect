@@ -55,7 +55,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `name` 				: The name that will appear for the device in AirPlay. You can change the default name. [1]
 - `log_limit <-1 | n>` 	: (default -1) when using log file, limits its size (-1 = no limit)
 - `codec <flac | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP)
-- `media_volume	<0..1>` 	: (default 0.5) Applies a scaling factor to device's hardware volume
+- `media_volume	<0..1>` 	: (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
 
 [1] Hint: To identify your Sonos players, pick an identified IP address, and visit the Sonos status page in your browser, like `http://192.168.1.126:1400/status/topology`. Click `Zone Players` and you will see the identifiers for your players in the `UUID` column.
 

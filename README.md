@@ -71,7 +71,7 @@ Wants=network-online.target
 
 [Service]  
 Type=forking  
-ExecStart=/var/lib/airconnect/airupnp-arm -l 1000:2000 -z -f /var/log/airupnp.log   
+ExecStart=/var/lib/airconnect/airupnp-arm -l 1000:2000 -z -x /var/lib/airconnect/airupnp.xml -f /var/log/airupnp.log   
 Restart=on-failure  
 RestartSec=30  
 
@@ -98,8 +98,9 @@ Create the file com.aircast.bridge.plist in ~/Library/LaunchAgents/
     <key>ProgramArguments</key>
     <array>
         <string>/[path]/aircast-osx-multi</string>
+	<string>-Z</string>
         <string>-x</string>
-        <string>/[path]/config.xml</string>
+        <string>/[path]/aircast.xml</string>
         <string>-f</string>
         <string>/[path]/aircast.log</string>
     </array>

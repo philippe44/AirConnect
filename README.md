@@ -38,7 +38,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Volume changes made in native control applications are synchronized with AirPlay client
 - Pause, Stop, Next, Prev using native control application are sent to AirPlay client - once paused, "native" play will not work
 - Re-scan for new / lost players happens every 30s
-- A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i <config file name>` command line)
+- A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i [config file name]` command line)
 - Chromecast groups are supported
 - Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`). On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows
 - A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements, but that might cause overrun or underrun on long playbacks

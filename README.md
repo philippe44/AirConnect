@@ -114,7 +114,7 @@ Create the file com.aircast.bridge.plist in ~/Library/LaunchAgents/
 </plist>
 ```
 
-Where `[path]` is the path where you've stored the aircast executable (without the []). It can be for example `/Users/xxx/airconnect` where `xxx` is your user name 
+Where `[path]` is the path where you've stored the aircast executable (without the []). It can be for example `Users/xxx/airconnect` where `xxx` is your user name 
 
 ## Synology installation
 

@@ -1,3 +1,6 @@
+0.2.0.7
+ - loglimit was not used in airupnp
+ 
 0.2.0.6
  - kd_dump was writing in a NULL string when no header was received
  

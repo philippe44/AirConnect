@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.0.6"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.0.7"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -763,7 +763,7 @@ static void *MainThread(void *args)
 		pthread_cond_reltimedwait(&glMainCond, &glMainMutex, 30*1000);
 		pthread_mutex_unlock(&glMainMutex);
 
-		if (glLogFile && glLogLimit == - 1) {
+		if (glLogFile && glLogLimit != - 1) {
 			u32_t size = ftell(stderr);
 
 			if (size > glLogLimit*1024*1024) {

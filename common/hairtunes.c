@@ -48,10 +48,10 @@
 #include "util.h"
 
 #define NTP2MS(ntp) ((((ntp) >> 10) * 1000L) >> 22)
-#define MS2NTP(ms) (((((__u64) (ms)) << 22) / 1000) << 10)
+#define MS2NTP(ms) (((((u64_t) (ms)) << 22) / 1000) << 10)
 #define NTP2TS(ntp, rate) ((((ntp) >> 16) * (rate)) >> 16)
-#define TS2NTP(ts, rate)  (((((__u64) (ts)) << 16) / (rate)) << 16)
-#define MS2TS(ms, rate) ((((__u64) (ms)) * (rate)) / 1000)
+#define TS2NTP(ts, rate)  (((((u64_t) (ts)) << 16) / (rate)) << 16)
+#define MS2TS(ms, rate) ((((u64_t) (ms)) * (rate)) / 1000)
 #define TS2MS(ts, rate) NTP2MS(TS2NTP(ts,rate))
 
 #define GAP_THRES	8

@@ -148,17 +148,9 @@ int gettimeofday(struct timeval *tv, struct timezone *tz);
 
 #endif
 
-typedef u8_t  __u8;
-typedef u16_t __u16;
-typedef u32_t __u32;
-typedef u64_t __u64;
-typedef s16_t __s16;
-typedef s32_t __s32;
-typedef s64_t __s64;
-
 typedef struct ntp_s {
-	__u32 seconds;
-	__u32 fraction;
+	u32_t seconds;
+	u32_t fraction;
 } ntp_t;
 
 u64_t timeval_to_ntp(struct timeval tv, struct ntp_s *ntp);

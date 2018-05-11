@@ -17,7 +17,7 @@ AirConnect can run on any machine that has access to your local network (Windows
 
 4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x [executable]`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
-Some Debian Stretch distributions (e.g. Raspian) only provide openssl1.0.2, but 1.0.0 is needed. For armv7 (Pi 2 and above) download the version for Jessie [here](http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u8_armhf.deb) or using `wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u8_armhf.deb` then install it with `sudo dpkg -i libssl1.0.0_1.0.1t-1+deb8u7_armhf.deb`. For an armv6 (Pi A and Zero), use this one [here](http://mirrordirector.raspbian.org/raspbian/pool/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u8_armhf.deb)
+Some Debian Stretch distributions (e.g. Raspian) only provide openssl1.0.2, but 1.0.0 is needed. For armv7 (Pi 2 and above) download the version for Jessie [here](http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u8_armhf.deb) or using `wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u8_armhf.deb` then install it with `sudo dpkg -i libssl1.0.0_1.0.1t-1+deb8u8_armhf.deb`. For an armv6 (Pi A and Zero), use this one [here](http://mirrordirector.raspbian.org/raspbian/pool/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u8_armhf.deb)
 	
 ## Running
 
@@ -135,7 +135,6 @@ Volume is set for the whole group, but the same level applies to all members. If
 ## Misc tips
  
 - When players disappear regularly, it might be that your router is filtering out multicast packets. For example, for a Asus AC-RT68U, you have to login by ssh and run echo 0 > /sys/class/net/br0/bridge/multicast_snooping but it does not stay after a reboot.     
-- There is no dedicated version for ARM64 bits yet (aarch64). To use 32 bits version with such architecture, the corresponding libc must be added. On Debian, try `sudo dpkg --add-architecture armhf` and then add libc6 with `sudo apt-get update`and `sudo apt-get install libc6:armhf`. If there is enough requests for such version, I'll build it so create a ticket if you want it!
 
 ## Latency parameters explained:
 

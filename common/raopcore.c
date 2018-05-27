@@ -211,7 +211,7 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 			break;
 		case RAOP_VOLUME: {
 			// feedback that is less than aecond old is an echo, ignore it
-			if (ctx->volume_stamp + 1000 - gettime_ms() > 0x7fffffff) {
+			if ((ctx->volume_stamp + 1000) - gettime_ms() > 1000) {
 				double Volume = *((double*) param);
 
 				Volume = Volume ? (Volume - 1) * 30 : -144;

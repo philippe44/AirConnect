@@ -768,7 +768,7 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 		// look for "blocking" frames at the top of the queue and try to catch-up
 		for (i = 0; i < min(16, buf_fill); i++) {
 			abuf_t *frame = ctx->audio_buffer + BUFIDX(ctx->ab_read + i);
-			if (!frame->ready && frame->last_resend + RESEND_TO - now > 0x7fffffff) {
+			if (!frame->ready && (frame->last_resend + RESEND_TO) - now > RESEND_TO) {
 				rtp_request_resend(ctx, ctx->ab_read + i, ctx->ab_read + i);
 				frame->last_resend = now;
 			}
@@ -785,7 +785,7 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 	// each missing packet will be requested up to (latency_frames / 16) times
 	for (i = 16; seq_order(ctx->ab_read + i, ctx->ab_write); i += 16) {
 		abuf_t *frame = ctx->audio_buffer + BUFIDX(ctx->ab_read + i);
-		if (!frame->ready && frame->last_resend + RESEND_TO - now > 0x7fffffff) {
+		if (!frame->ready && (frame->last_resend + RESEND_TO) - now > RESEND_TO) {
 			rtp_request_resend(ctx, ctx->ab_read + i, ctx->ab_read + i);
 			frame->last_resend = now;
 		}

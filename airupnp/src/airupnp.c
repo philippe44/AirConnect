@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.0.8"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.1.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -75,7 +75,8 @@ tMRConfig			glMRConfig = {
 							100,		// MaxVolume
 							"flac",	    // Codec
 							"",			// RTP:HTTP Latency (0 = use AirPlay requested)
-							{0, 0, 0, 0, 0, 0 } // MAC
+							{0, 0, 0, 0, 0, 0 }, // MAC
+							"",			// artwork
 					};
 
 /*----------------------------------------------------------------------------*/
@@ -638,7 +639,7 @@ static void *UpdateThread(void *args)
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running &&
-						(Device->LastSeen + PRESENCE_TIMEOUT - now > 0x7fffffff	||
+						((Device->LastSeen + PRESENCE_TIMEOUT) - now > PRESENCE_TIMEOUT	||
 						Device->ErrorCount > MAX_ACTION_ERRORS)) {
 
 						pthread_mutex_lock(&Device->Mutex);
@@ -867,6 +868,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	// set remaining items now that we are sure
 	if (*Device->Service[TOPOLOGY_IDX].ControlURL) Device->MetaData.duration = 1;
 	Device->MetaData.title = strdup("Streaming from AirConnect");
+	if (*Device->Config.ArtWork) Device->MetaData.artwork = Device->Config.ArtWork;
 	Device->Running 	= true;
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", friendlyName);
 	QueueInit(&Device->ActionQueue, false, NULL);

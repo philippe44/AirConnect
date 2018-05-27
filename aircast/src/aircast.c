@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.2.0.8"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.1.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -57,6 +57,7 @@ tMRConfig			glMRConfig = {
 							0.5,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 							"",		// rtp/http_latency (0 = use client's request)
+							"", 	// artwork
 					};
 
 /*----------------------------------------------------------------------------*/
@@ -194,6 +195,8 @@ void callback(void *owner, raop_event_t event, void *param)
 		case RAOP_PLAY: {
 			metadata_t MetaData = { "", "", "Streaming from AirConnect",
 									"", "", NULL, 0, 0, 0 };
+
+			if (*Device->Config.ArtWork) MetaData.artwork = Device->Config.ArtWork;
 
 			LOG_INFO("[%p]: Play", Device);
 			if (Device->RaopState != RAOP_PLAY) {

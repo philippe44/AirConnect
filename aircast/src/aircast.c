@@ -260,7 +260,7 @@ static void *MRThread(void *args)
 			if (type && !strcasecmp(type, "MEDIA_STATUS")) {
 				const char *state = GetMediaItem_S(data, 0, "playerState");
 
-				if (state && (!strcasecmp(state, "PLAYING") || !strcasecmp(state, "BUFFERING")) && p->State != PLAYING) {
+				if (state && !strcasecmp(state, "PLAYING") && p->State != PLAYING) {
 					LOG_INFO("[%p]: Cast playing", p);
 					p->State = PLAYING;
 					if (p->RaopState != RAOP_PLAY) raop_notify(p->Raop, RAOP_PLAY, NULL);

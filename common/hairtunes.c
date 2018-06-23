@@ -255,7 +255,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, b
 	ctx->rtp_sockets[CONTROL].rport = pCtrlPort;
 	ctx->rtp_sockets[TIMING].rport = pTimingPort;
 
-	if (aesiv && aeskey) {
+	if (aesiv && aeskey && *aesiv && *aeskey) {
 		memcpy(ctx->aesiv, aesiv, 16);
 		AES_set_decrypt_key((unsigned char*) aeskey, 128, &ctx->aes);
 	}

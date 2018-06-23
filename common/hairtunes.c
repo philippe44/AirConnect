@@ -252,12 +252,13 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, b
 	ctx->httpOUT = fopen("airplay.httpout", "wb");
 #endif
 
-	memcpy(ctx->aesiv, aesiv, 16);
-
 	ctx->rtp_sockets[CONTROL].rport = pCtrlPort;
 	ctx->rtp_sockets[TIMING].rport = pTimingPort;
 
-	AES_set_decrypt_key((unsigned char*) aeskey, 128, &ctx->aes);
+	if (aesiv && aeskey) {
+		memcpy(ctx->aesiv, aesiv, 16);
+		AES_set_decrypt_key((unsigned char*) aeskey, 128, &ctx->aes);
+	}
 
 	memset(fmtp, 0, sizeof(fmtp));
 	while ((arg = strsep(&fmtpstr, " \t")) != NULL) fmtp[i++] = atoi(arg);
@@ -408,12 +409,13 @@ static void alac_decode(hairtunes_t *ctx, s16_t *dest, char *buf, int len) {
 	int outsize;
 	assert(len<=MAX_PACKET);
 
-	aeslen = len & ~0xf;
-	memcpy(iv, ctx->aesiv, sizeof(iv));
-	AES_cbc_encrypt((unsigned char*)buf, packet, aeslen, &ctx->aes, iv, AES_DECRYPT);
-	memcpy(packet+aeslen, buf+aeslen, len-aeslen);
-
-	decode_frame(ctx->alac_codec, packet, dest, &outsize);
+	if (*ctx->aesiv) {
+		aeslen = len & ~0xf;
+		memcpy(iv, ctx->aesiv, sizeof(iv));
+		AES_cbc_encrypt((unsigned char*)buf, packet, aeslen, &ctx->aes, iv, AES_DECRYPT);
+		memcpy(packet+aeslen, buf+aeslen, len-aeslen);
+		decode_frame(ctx->alac_codec, packet, dest, &outsize);
+	} else decode_frame(ctx->alac_codec, (unsigned char*) buf, dest, &outsize);
 
 	assert(outsize == ctx->frame_size*4);
 }

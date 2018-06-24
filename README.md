@@ -79,7 +79,7 @@ RestartSec=30
 [Install]  
 WantedBy=multi-user.target   
 ```
-2. Enable the service `systemctl enable airupnp.service`
+2. Enable the service `sudo systemctl enable airupnp.service`
 
 3. Start the service `sudo service airupnp start`
 

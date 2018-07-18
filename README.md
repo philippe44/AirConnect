@@ -85,7 +85,7 @@ WantedBy=multi-user.target
 
 To start or stop manually the service, type `sudo service airupnp start|stop` in a command line window
 
-To disable the service `sudo systemctl disable airupnp.service`
+To disable the service, type `sudo systemctl disable airupnp.service`
 
 ## Start automatically in MacOS (credits @aiwipro)
 

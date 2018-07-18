@@ -40,7 +40,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Re-scan for new / lost players happens every 30s
 - A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i [config file name]` command line)
 - Chromecast groups are supported
-- <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`). On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
+- <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`), otherwise AirConnect will consume CPU. On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
 - A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements, but that might cause overrun or underrun on long playbacks
 - <strong>This is an audio-only application. Do not expect to play a video on your device and have the audio from UPnP/Sonos or ChromeCast synchronized. It does not, cannot and will not work, regardless of any latency parameter. Please do not open tickets requesting this (see details below to understand why)</strong>
 

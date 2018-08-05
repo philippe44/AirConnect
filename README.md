@@ -88,7 +88,7 @@ To disable the service, type `sudo systemctl disable airupnp.service`
 
 To view the log, `journalctl -u airupnp.service`
 
-Thanks [@cactus]https://github.com/cactus for systemd cleaning
+Thanks [@cactus](https://github.com/cactus) for systemd cleaning
 
 ## Start automatically in MacOS (credits @aiwipro)
 

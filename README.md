@@ -60,7 +60,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 [1] Hint: To identify your Sonos players, pick an identified IP address, and visit the Sonos status page in your browser, like `http://192.168.1.126:1400/status/topology`. Click `Zone Players` and you will see the identifiers for your players in the `UUID` column.
 
-## Start automatically in Linux (crude example, I'm not a systemd expert)
+## Start automatically in Linux
 
 1. Create a file in `/etc/systemd/system`, e.g. `airupnp.service` with the following content (assuming the airupnp binary is in `/var/lib/airconnect`)
 
@@ -88,7 +88,7 @@ To disable the service, type `sudo systemctl disable airupnp.service`
 
 To view the log, `journalctl -u airupnp.service`
 
-Thanks @cactus for systemd cleaning
+Thanks [@cactus]https://github.com/cactus for systemd cleaning
 
 ## Start automatically in MacOS (credits @aiwipro)
 
@@ -124,7 +124,7 @@ Where `[path]` is the path where you've stored the aircast executable (without t
 
 ## Synology installation
 
-@bandesz has made a nice package for automatic installation & laucnh of airupnp on Syno's
+[@bandesz](https://github.com/bandesz) has made a nice package for automatic installation & laucnh of airupnp on Syno's
 
 https://github.com/bandesz/AirConnect-Synology
 

@@ -71,8 +71,7 @@ After=network-online.target
 Wants=network-online.target  
 
 [Service]  
-Type=forking  
-ExecStart=/var/lib/airconnect/airupnp-arm -l 1000:2000 -z -x /var/lib/airconnect/airupnp.xml -f /var/log/airupnp.log   
+ExecStart=/var/lib/airconnect/airupnp-arm -l 1000:2000 -Z -x /var/lib/airconnect/airupnp.xml   
 Restart=on-failure  
 RestartSec=30  
 
@@ -86,6 +85,10 @@ WantedBy=multi-user.target
 To start or stop manually the service, type `sudo service airupnp start|stop` in a command line window
 
 To disable the service, type `sudo systemctl disable airupnp.service`
+
+To view the log, `journalctl -u airupnp.service`
+
+Thanks @cactus for systemd cleaning
 
 ## Start automatically in MacOS (credits @aiwipro)
 

@@ -124,7 +124,7 @@ Where `[path]` is the path where you've stored the aircast executable (without t
 
 ## Synology installation
 
-Andras has made a nice package for automatic installation & laucnh of airupnp on Syno's
+@bandesz has made a nice package for automatic installation & laucnh of airupnp on Syno's
 
 https://github.com/bandesz/AirConnect-Synology
 

@@ -23,7 +23,7 @@ Some Debian Stretch distributions (e.g. Raspian) only provide openssl1.0.2, but 
 
 Double click the [executable] or launch it by typing `./[executable]` in the same command line window. 
 
-<strong>For Sonos players, set latency by adding `-l 1000:2000` on the command line.</strong> (Example: `./airupnp-osx-multi -l 1000:2000`) 
+<strong>For Sonos & Heos players, set latency by adding `-l 1000:2000` on the command line.</strong> (Example: `./airupnp-osx-multi -l 1000:2000`) 
 
 You should start to see lots of log messages on screen. Using your iOS/Mac/iTunes/Airfoil/other client, you should now see new AirPlay devices and can try to play audio to them. 
 

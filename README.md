@@ -23,7 +23,7 @@ Some Debian Stretch distributions (e.g. Raspian) only provide openssl1.0.2, but 
 
 Double click the [executable] or launch it by typing `./[executable]` in the same command line window. 
 
-<strong>For Sonos players, set latency by adding `-l 1000:2000` on the command line.</strong> (Example: `./airupnp-osx-multi -l 1000:2000`) 
+<strong>For Sonos & Heos players, set latency by adding `-l 1000:2000` on the command line.</strong> (Example: `./airupnp-osx-multi -l 1000:2000`) 
 
 You should start to see lots of log messages on screen. Using your iOS/Mac/iTunes/Airfoil/other client, you should now see new AirPlay devices and can try to play audio to them. 
 
@@ -40,7 +40,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Re-scan for new / lost players happens every 30s
 - A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i [config file name]` command line)
 - Chromecast groups are supported
-- Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`). On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows
+- <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`), otherwise it will consume all CPU. On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
 - A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements, but that might cause overrun or underrun on long playbacks
 - <strong>This is an audio-only application. Do not expect to play a video on your device and have the audio from UPnP/Sonos or ChromeCast synchronized. It does not, cannot and will not work, regardless of any latency parameter. Please do not open tickets requesting this (see details below to understand why)</strong>
 
@@ -60,7 +60,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 [1] Hint: To identify your Sonos players, pick an identified IP address, and visit the Sonos status page in your browser, like `http://192.168.1.126:1400/status/topology`. Click `Zone Players` and you will see the identifiers for your players in the `UUID` column.
 
-## Start automatically in Linux (crude example, I'm not a systemd expert)
+## Start automatically in Linux
 
 1. Create a file in `/etc/systemd/system`, e.g. `airupnp.service` with the following content (assuming the airupnp binary is in `/var/lib/airconnect`)
 
@@ -71,19 +71,24 @@ After=network-online.target
 Wants=network-online.target  
 
 [Service]  
-Type=forking  
-ExecStart=/var/lib/airconnect/airupnp-arm -l 1000:2000 -z -x /var/lib/airconnect/airupnp.xml -f /var/log/airupnp.log   
+ExecStart=/var/lib/airconnect/airupnp-arm -l 1000:2000 -Z -x /var/lib/airconnect/airupnp.xml   
 Restart=on-failure  
 RestartSec=30  
 
 [Install]  
 WantedBy=multi-user.target   
 ```
-2. Enable the service `systemctl enable airupnp.service`
+2. Enable the service `sudo systemctl enable airupnp.service`
 
 3. Start the service `sudo service airupnp start`
 
 To start or stop manually the service, type `sudo service airupnp start|stop` in a command line window
+
+To disable the service, type `sudo systemctl disable airupnp.service`
+
+To view the log, `journalctl -u airupnp.service`
+
+Thanks [@cactus](https://github.com/cactus) for systemd cleaning
 
 ## Start automatically in MacOS (credits @aiwipro)
 
@@ -119,7 +124,7 @@ Where `[path]` is the path where you've stored the aircast executable (without t
 
 ## Synology installation
 
-Andras has made a nice package for automatic installation & laucnh of airupnp on Syno's
+[@bandesz](https://github.com/bandesz) has made a nice package for automatic installation & laucnh of airupnp on Syno's
 
 https://github.com/bandesz/AirConnect-Synology
 
@@ -174,3 +179,7 @@ https://github.com/mrjimenez/pupnp (I'm using 1.6.19)
 https://xiph.org/flac/
 
 http://www.sourceware.org/pthreads-win32/
+
+http://https://github.com/toots/shine
+
+https://github.com/mattstevens/dmap-parser

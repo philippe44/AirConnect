@@ -54,6 +54,7 @@ tMRConfig			glMRConfig = {
 							false,	// stop_receiver
 							"",		// name
 							"flac",	// use_flac
+							true,	// metadata
 							0.5,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 							"",		// rtp/http_latency (0 = use client's request)
@@ -464,9 +465,10 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		if (!Name) Name = strdup(s->hostname);
 
 		if (AddCastDevice(Device, Name, UDN, Group, s->addr, s->port) && !glDiscovery) {
-			Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name, "aircast", Device->Config.mac,
-										!strcasecmp(Device->Config.Codec, "flac") ? "flac" : "wav",
-										glDrift, Device->Config.Latency, Device, callback);
+			Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
+										"aircast", Device->Config.mac, Device->Config.Codec,
+										Device->Config.Metadata, glDrift, Device->Config.Latency,
+										Device, callback);
 			if (!Device->Raop) {
 				LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 				RemoveCastDevice(Device);

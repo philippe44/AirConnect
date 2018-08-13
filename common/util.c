@@ -943,6 +943,13 @@ char* strsep(char** stringp, const char* delim)
 
   return start;
 }
+
+/*---------------------------------------------------------------------------*/
+char *strndup(const char *s, size_t n) {
+	char *p = malloc(n + 1);
+	strncpy(p, s, n);
+	p[n] = '\0';
+}
 #endif
 
 
@@ -1438,8 +1445,25 @@ void free_metadata(struct metadata_s *metadata)
 }
 
 
+/*--------------------------------------------------------------------------*/
+void dup_metadata(struct metadata_s *dst, struct metadata_s *src)
+{
+	free_metadata(dst);
+	if (src->artist) dst->artist = strdup(src->artist);
+	if (src->album) dst->album = strdup(src->album);
+	if (src->title) dst->title = strdup(src->title);
+	if (src->genre) dst->genre = strdup(src->genre);
+	if (src->path) dst->path = strdup(src->path);
+	if (src->artwork) dst->artwork = strdup(src->artwork);
+	if (src->remote_title) dst->remote_title = strdup(src->remote_title);
+	dst->duration = src->duration;
+	dst->track = src->track;
+	dst->track_hash = src->track_hash;
 
-/*----------------------------------------------------------------------------*/
+}
+
+
+/*----------------------------------------------------------------------------*/
 
 int _fprintf(FILE *file, ...)
 {

@@ -62,6 +62,7 @@ struct sService {
 	bool		SendCoverArt;
 	int			MaxVolume;
 	char		Codec[_STR_LEN_];
+	bool		Metadata;
 	char		Latency[_STR_LEN_];
 	u8_t		mac[6];
 	char		ArtWork[4*_STR_LEN_];

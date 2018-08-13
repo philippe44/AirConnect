@@ -74,6 +74,7 @@ list_t*   	remove_item(list_t *item, list_t **list);
 void 		clear_list(list_t **list, void (*free_func)(void *));
 
 void 		free_metadata(struct metadata_s *metadata);
+void 		dup_metadata(struct metadata_s *dst, struct metadata_s *src);
 
 int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait);
 
@@ -92,6 +93,7 @@ u32_t 		gettime_ms(void);
 char*		stristr(char *s1, char *s2);
 #if WIN
 char* 		strsep(char** stringp, const char* delim);
+char 		*strndup(const char *s, size_t n);
 int 		asprintf(char **strp, const char *fmt, ...);
 #else
 char 		*strlwr(char *str);

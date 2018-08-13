@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.1.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.2.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -74,6 +74,7 @@ tMRConfig			glMRConfig = {
 							false,		// SendCoverArt
 							100,		// MaxVolume
 							"flac",	    // Codec
+							true,		// Metadata
 							"",			// RTP:HTTP Latency (0 = use AirPlay requested)
 							{0, 0, 0, 0, 0, 0 }, // MAC
 							"",			// artwork
@@ -298,11 +299,17 @@ void callback(void *owner, raop_event_t event, void *param)
 								Device->Config.Codec);
 #pragma GCC diagnostic pop
 				if (!strcasecmp(Device->Config.Codec, "pcm"))
-					ProtoInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
+					ProtoInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
 				else if (!strcasecmp(Device->Config.Codec, "wav"))
-					ProtoInfo = "http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
-				else
-					ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=05400000000000000000000000000000";
+					ProtoInfo = "http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+				else if (stristr(Device->Config.Codec, "mp3")) {
+					if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
+						asprintf(&uri, "x-rincon-mp3radio://%s", uri);
+						LOG_INFO("[%p]: Sonos live stream", Device);
+					}
+					ProtoInfo = "http-get:*:audio/mp3:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+				} else
+					ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
 
 				AVTSetURI(Device, uri, &Device->MetaData, ProtoInfo);
 				NFREE(uri);
@@ -417,7 +424,7 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			LOG_SDEBUG("[%p]: ac %i %s (cookie %p)", p, EventType, Action->CtrlUrl, Cookie);
 
 			// If waited action has been completed, proceed to next one if any
-			if (p->WaitCookie)  {
+			if (p->WaitCookie) {
 				const char *Resp = XMLGetLocalName(Action->ActionResult, 1);
 
 				LOG_DEBUG("[%p]: Waited action %s", p, Resp ? Resp : "<none>");
@@ -474,14 +481,20 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (Action->ErrCode != UPNP_E_SUCCESS) {
 				p->ErrorCount++;
 				LOG_ERROR("Error in action callback -- %d (cookie %p)",	Action->ErrCode, Cookie);
-			} else p->ErrorCount = 0;
+			} else {
+				p->ErrorCount = 0;
+			}
+
 			break;
 		}
 		default:
 			break;
 	}
 
-	if (p) pthread_mutex_unlock(&p->Mutex);
+	if (p) {
+		pthread_mutex_unlock(&p->Mutex);
+    }
+
 	recurse--;
 
 	return 0;
@@ -732,7 +745,8 @@ static void *UpdateThread(void *args)
 					// create a new AirPlay
 					Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 									   "airupnp", Device->Config.mac, Device->Config.Codec,
-									   glDrift, Device->Config.Latency, Device, callback);
+									   Device->Config.Metadata, glDrift, Device->Config.Latency,
+									   Device, callback);
 					if (!Device->Raop) {
 						LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 						DelMRDevice(Device);
@@ -776,7 +790,7 @@ static void *MainThread(void *args)
 				LOG_DEBUG("Resizing log", NULL);
 				for (Sum = 0, fseek(rlog, size - (glLogLimit*1024*1024) / 2, SEEK_SET);
 					 (BufSize = fread(buf, 1, BufSize, rlog)) != 0;
-					 Sum += BufSize, fwrite(buf, 1, BufSize, wlog));
+					 Sum += BufSize, fwrite(buf, 1, BufSize, wlog)) {}
 
 				Sum = fresize(wlog, Sum);
 				fclose(wlog);

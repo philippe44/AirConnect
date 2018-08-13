@@ -1,3 +1,9 @@
+0.2.2.0
+ - add mp3 for encoding and icy metadata
+ - use Sonos radio stream url for mp3
+ - add option to set flac compression level
+ - encoder was not mutex protected against flush
+  
 0.2.1.1
  - Some controlers like AirParrot do not send encrypted audio
  

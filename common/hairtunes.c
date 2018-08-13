@@ -44,6 +44,7 @@
 #include "hairtunes.h"
 #include "alac.h"
 #include "FLAC/stream_encoder.h"
+#include "layer3.h"
 #include "log_util.h"
 #include "util.h"
 
@@ -60,21 +61,25 @@
 extern log_level 	raop_loglevel;
 static log_level 	*loglevel = &raop_loglevel;
 
-// #define __RTP_STORE
+#define __RTP_STORE
 
 // default buffer size
 #define BUFFER_FRAMES 1024
 #define MAX_PACKET    2048
 #define FLAC_BLOCK_SIZE 1024
 #define MAX_FLAC_BYTES (FLAC_BLOCK_SIZE*4 + 1024)
+#define ENCODE_BUFFER_SIZE	(max(MAX_FLAC_BYTES, SHINE_MAX_SAMPLES*2*2*2))
 
 #define RTP_SYNC	(0x01)
 #define NTP_SYNC	(0x02)
 
 #define RESEND_TO	200
 
+#define	ICY_INTERVAL 16384
+#define ICY_LEN_MAX		(255*16+1)
+
 enum { DATA, CONTROL, TIMING };
-static char *mime_types[] = { "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav" };
+static char *mime_types[] = { "audio/mp3", "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav" };
 
 typedef u16_t seq_t;
 typedef struct audio_buffer_entry {   // decoded audio packets
@@ -118,16 +123,23 @@ typedef struct hairtunes_s {
 	int skip;
 	pthread_mutex_t ab_mutex;
 	pthread_t http_thread, rtp_thread;
-	FLAC__StreamEncoder *flac_codec;
-	char flac_buffer[MAX_FLAC_BYTES];
+	struct {
+		char 		buffer[ENCODE_BUFFER_SIZE];
+		void 		*codec;
+		encode_t 	config;
+		int 		len;
+		bool 		header;
+	} encode;
+	struct {
+		size_t interval, remain;
+		bool  updated;
+	} icy;
+	struct metadata_s metadata;
 	char *silence_frame;
 	int delay, silence_count;
-	int flac_len;
-	bool flac_header;
 	alac_file *alac_codec;
 	int flush_seqno;
 	bool playing, silence, http_ready;
-	codec_t codec;
 	hairtunes_cb_t callback;
 	void *owner;
 } hairtunes_t;
@@ -146,21 +158,27 @@ static bool 	handle_http(hairtunes_t *ctx, int sock);
 static int	  	seq_order(seq_t a, seq_t b);
 static FLAC__StreamEncoderWriteStatus 	flac_write_callback(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void *client_data);
 
+
 /*---------------------------------------------------------------------------*/
 static void flac_init(hairtunes_t *ctx) {
 	bool ok = true;
+	FLAC__StreamEncoder *codec;
 
-	ctx->flac_len = 0;
-	ctx->flac_header = true;
+	ctx->encode.len = 0;
+	ctx->encode.header = true;
+	ctx->encode.codec = FLAC__stream_encoder_new();
+	codec = (FLAC__StreamEncoder*) ctx->encode.codec;
 
-	ok &= FLAC__stream_encoder_set_verify(ctx->flac_codec, false);
-	ok &= FLAC__stream_encoder_set_compression_level(ctx->flac_codec, 5);
-	ok &= FLAC__stream_encoder_set_channels(ctx->flac_codec, 2);
-	ok &= FLAC__stream_encoder_set_bits_per_sample(ctx->flac_codec, 16);
-	ok &= FLAC__stream_encoder_set_sample_rate(ctx->flac_codec, 44100);
-	ok &= FLAC__stream_encoder_set_blocksize(ctx->flac_codec, FLAC_BLOCK_SIZE);
-	ok &= FLAC__stream_encoder_set_streamable_subset(ctx->flac_codec, true);
-	ok &= !FLAC__stream_encoder_init_stream(ctx->flac_codec, flac_write_callback, NULL, NULL, NULL, ctx);
+	LOG_INFO("[%p]: Using FLAC (%p)", ctx, ctx->encode.codec);
+
+	ok &= FLAC__stream_encoder_set_verify(codec, false);
+	ok &= FLAC__stream_encoder_set_compression_level(codec, ctx->encode.config.flac.level);
+	ok &= FLAC__stream_encoder_set_channels(codec, 2);
+	ok &= FLAC__stream_encoder_set_bits_per_sample(codec, 16);
+	ok &= FLAC__stream_encoder_set_sample_rate(codec, 44100);
+	ok &= FLAC__stream_encoder_set_blocksize(codec, FLAC_BLOCK_SIZE);
+	ok &= FLAC__stream_encoder_set_streamable_subset(codec, true);
+	ok &= !FLAC__stream_encoder_init_stream(codec, flac_write_callback, NULL, NULL, NULL, ctx);
 
 	if (!ok) {
 		LOG_ERROR("{%p]: Cannot set FLAC parameters", ctx);
@@ -171,9 +189,9 @@ static void flac_init(hairtunes_t *ctx) {
 static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void *client_data) {
 	hairtunes_t *ctx = (hairtunes_t*) client_data;
 
-	if (ctx->flac_len + bytes <= MAX_FLAC_BYTES) {
-		memcpy(ctx->flac_buffer + ctx->flac_len, buffer, bytes);
-		ctx->flac_len += bytes;
+	if (ctx->encode.len + bytes <= MAX_FLAC_BYTES) {
+		memcpy(ctx->encode.buffer + ctx->encode.len, buffer, bytes);
+		ctx->encode.len += bytes;
 	} else {
 		LOG_WARN("[%p]: flac coded buffer too big %u", ctx, bytes);
 	}
@@ -181,6 +199,37 @@ static FLAC__StreamEncoderWriteStatus flac_write_callback(const FLAC__StreamEnco
 	return FLAC__STREAM_ENCODER_WRITE_STATUS_OK;
 }
 
+/*---------------------------------------------------------------------------*/
+static void mp3_init(hairtunes_t *ctx) {
+	shine_config_t config;
+
+	ctx->encode.len = 0;
+
+	shine_set_config_mpeg_defaults(&config.mpeg);
+	config.wave.samplerate = 44100;
+	config.wave.channels = 2;
+	config.mpeg.bitr = ctx->encode.config.mp3.bitrate ? ctx->encode.config.mp3.bitrate : 128;
+	config.mpeg.mode = STEREO;
+
+	ctx->encode.codec = shine_initialise(&config);
+	LOG_INFO("[%p]: Using shine MP3 (%p)", ctx, ctx->encode.codec);
+}
+
+/*---------------------------------------------------------------------------*/
+static void encoder_close(hairtunes_t *ctx) {
+    if (!ctx->encode.codec) return;
+
+	if (ctx->encode.config.codec == CODEC_FLAC) {
+		FLAC__stream_encoder_finish(ctx->encode.codec);
+		FLAC__stream_encoder_delete(ctx->encode.codec);
+	} else if (ctx->encode.config.codec == CODEC_MP3) {
+		int len;
+		shine_flush(ctx->encode.codec, &len);
+		shine_close(ctx->encode.codec);
+	}
+
+	ctx->encode.codec = NULL;
+}
 
 /*---------------------------------------------------------------------------*/
 static alac_file* alac_init(int fmtp[32]) {
@@ -216,8 +265,9 @@ static alac_file* alac_init(int fmtp[32]) {
 }
 
 /*---------------------------------------------------------------------------*/
-hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, bool drift,
-								char *latencies, char *aeskey, char *aesiv, char *fmtpstr,
+hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
+								bool sync, bool drift, char *latencies,
+								char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
 								void *owner, hairtunes_cb_t callback)
 {
@@ -236,8 +286,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, b
 	ctx->rtp_host.sin_addr.s_addr = INADDR_ANY;
 	pthread_mutex_init(&ctx->ab_mutex, 0);
 	ctx->flush_seqno = -1;
-	ctx->codec = codec;
-	ctx->flac_header = false;
+	ctx->encode.config = codec;
+	ctx->encode.header = false;
 	ctx->latency = atoi(latencies);
 	if ((p = strchr(latencies, ':')) != NULL) ctx->delay = atoi(p + 1);
 	ctx->callback = callback;
@@ -270,13 +320,6 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, b
 	ctx->alac_codec = alac_init(fmtp);
 	rc &= ctx->alac_codec != NULL;
 
-	// flac encoder
-	if (ctx->codec == CODEC_FLAC) {
-		ctx->flac_codec = FLAC__stream_encoder_new();
-		rc &= ctx->flac_codec != NULL;
-		LOG_INFO("[%p]: Using FLAC", ctx);
-	}
-
 	buffer_alloc(ctx->audio_buffer, ctx->frame_size*4);
 
 	// create rtp ports
@@ -288,7 +331,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, b
 	// create http port and start listening
 	ctx->http_listener = bind_socket(&resp.hport, SOCK_STREAM);
 	i = 128*1024;
-	setsockopt(ctx->http_listener, SOL_SOCKET, SO_SNDBUF, &i, sizeof(i));
+	setsockopt(ctx->http_listener, SOL_SOCKET, SO_SNDBUF, (void*) &i, sizeof(i));
 	rc &= ctx->http_listener > 0;
 	rc &= listen(ctx->http_listener, 1) == 0;
 
@@ -311,6 +354,15 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, codec_t codec, bool sync, b
 }
 
 /*---------------------------------------------------------------------------*/
+void hairtunes_metadata(struct hairtunes_s *ctx, metadata_t *metadata) {
+	pthread_mutex_lock(&ctx->ab_mutex);
+	free_metadata(&ctx->metadata);
+	dup_metadata(&ctx->metadata, metadata);
+	ctx->icy.updated = true;
+	pthread_mutex_unlock(&ctx->ab_mutex);
+}
+
+/*---------------------------------------------------------------------------*/
 void hairtunes_end(hairtunes_t *ctx)
 {
 	int i;
@@ -327,14 +379,20 @@ void hairtunes_end(hairtunes_t *ctx)
 	for (i = 0; i < 3; i++) shutdown_socket(ctx->rtp_sockets[i].sock);
 
 	delete_alac(ctx->alac_codec);
-	if (ctx->flac_codec) {
-		FLAC__stream_encoder_finish(ctx->flac_codec);
-		FLAC__stream_encoder_delete(ctx->flac_codec);
+	if (ctx->encode.codec) {
+		if (ctx->encode.config.codec == CODEC_FLAC) {
+			FLAC__stream_encoder_finish(ctx->encode.codec);
+			FLAC__stream_encoder_delete(ctx->encode.codec);
+		} else if (ctx->encode.config.codec == CODEC_MP3) {
+			shine_close(ctx->encode.codec);
+		}
 	}
 
 	buffer_release(ctx->audio_buffer);
 	free(ctx->silence_frame);
 	free(ctx);
+
+	free_metadata(&ctx->metadata);
 
 #ifdef __RTP_STORE
 	fclose(ctx->rtpIN);
@@ -359,10 +417,7 @@ bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpfra
 		ctx->flush_seqno = seqno;
 		ctx->synchro.first = false;
 		ctx->http_ready = false;
-
-		if (ctx->codec == CODEC_FLAC) {
-			FLAC__stream_encoder_finish(ctx->flac_codec);
-		}
+		encoder_close(ctx);
 	}
 
 	pthread_mutex_unlock(&ctx->ab_mutex);
@@ -438,7 +493,8 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 			ctx->silence = true;
 			ctx->synchro.first = false;
 			ctx->resent_frames = ctx->silent_frames = 0;
-			if (ctx->codec == CODEC_FLAC) flac_init(ctx);
+			if (ctx->encode.config.codec == CODEC_FLAC) flac_init(ctx);
+			else if (ctx->encode.config.codec == CODEC_MP3) mp3_init(ctx);
 		} else {
 			pthread_mutex_unlock(&ctx->ab_mutex);
 			return;
@@ -728,7 +784,7 @@ static bool rtp_request_resend(hairtunes_t *ctx, seq_t first, seq_t last) {
 
 /*---------------------------------------------------------------------------*/
 // get the next frame, when available. return 0 if underrun/stream reset.
-static short *buffer_get_frame(hairtunes_t *ctx) {
+static short *_buffer_get_frame(hairtunes_t *ctx) {
 	short buf_fill;
 	abuf_t *curframe = 0;
 	int i;
@@ -739,8 +795,6 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 
 	// send silence if required to create enough buffering
 	if (ctx->silence_count && ctx->silence_count--)	return (short*) ctx->silence_frame;
-
-	pthread_mutex_lock(&ctx->ab_mutex);
 
 	// skip frames if we are running late and skip could not be done in SYNC
 	while (ctx->skip && ctx->ab_read != ctx->ab_write) {
@@ -775,7 +829,6 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 				frame->last_resend = now;
 			}
 		}
-		pthread_mutex_unlock(&ctx->ab_mutex);
 		return NULL;
 	}
 
@@ -804,8 +857,6 @@ static short *buffer_get_frame(hairtunes_t *ctx) {
 	curframe->ready = 0;
 	ctx->ab_read++;
 
-	pthread_mutex_unlock(&ctx->ab_mutex);
-
 	return curframe->data;
 }
 
@@ -831,14 +882,14 @@ int send_data(int sock, void *data, int len, int flags) {
 
 /*---------------------------------------------------------------------------*/
 static void *http_thread_func(void *arg) {
-	signed short *inbuf;
+	s16_t *inbuf;
 	int frame_count = 0;
 	FLAC__int32 *flac_samples = NULL;
 	hairtunes_t *ctx = (hairtunes_t*) arg;
 	int sock = -1;
 	struct timeval timeout = { 0, 0 };
 
-	if (ctx->codec == CODEC_FLAC && ((flac_samples = malloc(2 * ctx->frame_size * sizeof(FLAC__int32))) == NULL)) {
+	if (ctx->encode.config.codec == CODEC_FLAC && ((flac_samples = malloc(2 * ctx->frame_size * sizeof(FLAC__int32))) == NULL)) {
 		LOG_ERROR("[%p]: Cannot allocate FLAC sample buffer %u", ctx, ctx->frame_size);
 	}
 
@@ -871,11 +922,11 @@ static void *http_thread_func(void *arg) {
 
 		n = select(sock + 1, &rfds, NULL, NULL, &timeout);
 
+		pthread_mutex_lock(&ctx->ab_mutex);
+
 		if (n > 0) {
 			res = handle_http(ctx, sock);
-			pthread_mutex_lock(&ctx->ab_mutex);
 			ctx->http_ready = res;
-			pthread_mutex_unlock(&ctx->ab_mutex);
 		}
 
 		// terminate connection if required by HTTP peer
@@ -883,32 +934,40 @@ static void *http_thread_func(void *arg) {
 			closesocket(sock);
 			LOG_INFO("HTTP close %u", sock);
 			sock = -1;
-			pthread_mutex_lock(&ctx->ab_mutex);
 			ctx->http_ready = false;
-			pthread_mutex_unlock(&ctx->ab_mutex);
 		}
 
 		// wait for session to be ready before sending (no need for mutex)
-		if (ctx->http_ready && (inbuf = buffer_get_frame(ctx)) != NULL) {
+		if (ctx->http_ready && (inbuf = _buffer_get_frame(ctx)) != NULL) {
 			int len;
 
-			if (ctx->codec == CODEC_FLAC) {
+			if (ctx->encode.config.codec == CODEC_FLAC) {
 				// send streaminfo at beginning
-				if (ctx->flac_header && ctx->flac_len) {
-					send_data(sock, (void*) ctx->flac_buffer, ctx->flac_len, 0);
-					ctx->flac_len = 0;
-					ctx->flac_header = false;
+				if (ctx->encode.header && ctx->encode.len) {
+					// should be fast enough and can't release mutex anyway
+					send_data(sock, (void*) ctx->encode.buffer, ctx->encode.len, 0);
+					ctx->encode.len = 0;
+					ctx->encode.header = false;
 				}
 
 				// now send body
 				for (len = 0; len < 2*ctx->frame_size; len++) flac_samples[len] = inbuf[len];
-				FLAC__stream_encoder_process_interleaved(ctx->flac_codec, flac_samples, ctx->frame_size);
-				inbuf = (void*) ctx->flac_buffer;
-				len = ctx->flac_len;
-				ctx->flac_len = 0;
+				FLAC__stream_encoder_process_interleaved(ctx->encode.codec, flac_samples, ctx->frame_size);
+				inbuf = (void*) ctx->encode.buffer;
+				len = ctx->encode.len;
+				ctx->encode.len = 0;
+			} else if (ctx->encode.config.codec == CODEC_MP3) {
+				int block = shine_samples_per_pass(ctx->encode.codec) * 4;
+				memcpy(ctx->encode.buffer + ctx->encode.len, inbuf, ctx->frame_size * 4);
+				ctx->encode.len += ctx->frame_size * 4;
+				if (ctx->encode.len >= block) {
+					inbuf = (s16_t*) shine_encode_buffer_interleaved(ctx->encode.codec, (s16_t*) ctx->encode.buffer, &len);
+					ctx->encode.len -= block;
+					memcpy(ctx->encode.buffer, ctx->encode.buffer + block, ctx->encode.len);
+				} else len = 0;
 			} else {
-				if (ctx->codec == CODEC_PCM) {
-					short *p = inbuf;
+				if (ctx->encode.config.codec == CODEC_PCM) {
+					s16_t *p = inbuf;
 					for (len = ctx->frame_size*2; len > 0; len--,p++) *p = (u8_t) *p << 8 | (u8_t) (*p >> 8);
 				}
 				len = ctx->frame_size*4;
@@ -916,12 +975,57 @@ static void *http_thread_func(void *arg) {
 
 			if (len) {
 				u32_t gap = gettime_ms();
+				int offset;
 
 #ifdef __RTP_STORE
 				fwrite(inbuf, len, 1, ctx->httpOUT);
 #endif
-				LOG_SDEBUG("[%p]: HTTP sent frame count:%u bytes:%u (W:%hu R:%hu)", ctx, frame_count++, len, ctx->ab_write, ctx->ab_read);
-				sent = send_data(sock, (void*) inbuf, len, 0);
+
+				// check if ICY sending is active (len < ICY_INTERVAL)
+				if (ctx->icy.interval && len > ctx->icy.remain) {
+					int len_16 = 0;
+					char buffer[ICY_LEN_MAX];
+
+					if (ctx->icy.updated) {
+						char *format;
+
+						// there is room for 1 extra byte at the beginning for length
+						if (ctx->metadata.artwork) format = "NStreamTitle='%s%s%s';StreamURL='%s';";
+						else format = "NStreamTitle='%s%s%s';";
+						len_16 = sprintf(buffer, format, ctx->metadata.artist,
+										 *ctx->metadata.artist ? " - " : "",
+										 ctx->metadata.title, ctx->metadata.artwork) - 1;
+						LOG_INFO("[%p]: ICY update %s", ctx, buffer + 1);
+						len_16 = (len_16 + 15) / 16;
+						ctx->icy.updated = false;
+					}
+
+					buffer[0] = len_16;
+
+					// release mutex here as send might take a while
+					pthread_mutex_unlock(&ctx->ab_mutex);
+
+					// send remaining data first
+					offset = ctx->icy.remain;
+					send_data(sock, (void*) inbuf, offset, 0);
+					len -= offset;
+
+					// then send icy data
+					send_data(sock, (void*) buffer, len_16 * 16 + 1, 0);
+					ctx->icy.remain = ctx->icy.interval;
+
+					LOG_SDEBUG("[%p]: ICY checked %u", ctx, ctx->icy.remain);
+				} else {
+					offset = 0;
+					pthread_mutex_unlock(&ctx->ab_mutex);
+				}
+
+				LOG_SDEBUG("[%p]: HTTP sent frame count:%u bytes:%u (W:%hu R:%hu)", ctx, frame_count++, len+offset, ctx->ab_write, ctx->ab_read);
+				sent = send_data(sock, (u8_t*) inbuf + offset , len, 0);
+
+				// update remaining count with desired length
+				if (ctx->icy.interval) ctx->icy.remain -= len;
+
 				gap = gettime_ms() - gap;
 
 				if (gap > 50) {
@@ -931,20 +1035,20 @@ static void *http_thread_func(void *arg) {
 				if (sent != len) {
 					LOG_WARN("[%p]: HTTP send() unexpected response: %li (data=%i): %s", ctx, (long int) sent, len, strerror(errno));
 				}
-			}
+			} else pthread_mutex_unlock(&ctx->ab_mutex);
 
 			// packet just sent, don't wait in case we have more so sent (catch-up mode)
 			timeout.tv_usec = 0;
 		} else {
-
 			// nothing to send, so probably can wait a nominal amount, i.e 2/3 of length of a frame
 			timeout.tv_usec = (ctx->frame_size*1000000)/44100;
+			pthread_mutex_unlock(&ctx->ab_mutex);
 		}
 	}
 
 	if (sock != -1) shutdown_socket(sock);
 
-	if (ctx->codec == CODEC_FLAC && flac_samples) free(flac_samples);
+	if (ctx->encode.config.codec == CODEC_FLAC && flac_samples) free(flac_samples);
 
 	LOG_INFO("[%p]: terminating", ctx);
 
@@ -1005,17 +1109,24 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	LOG_INFO("[%p]: received %s", ctx, method);
 
 	kd_add(resp, "Server", "HairTunes");
-	kd_add(resp, "Content-Type", mime_types[ctx->codec]);
+	kd_add(resp, "Content-Type", mime_types[ctx->encode.config.codec]);
+
+	// check if add ICY metadata is needed (only on live stream)
+	if (ctx->encode.config.codec == CODEC_MP3 && ctx->encode.config.mp3.icy &&
+		((str = kd_lookup(headers, "Icy-MetaData")) != NULL) && atoi(str)) {
+		asprintf(&str, "%u", ICY_INTERVAL);
+		kd_add(resp, "icy-metaint", str);
+		ctx->icy.interval = ctx->icy.remain = ICY_INTERVAL;
+		free(str);
+	} else ctx->icy.interval = 0;
 
 #ifdef CHUNKED
 	mirror_header(headers, resp, "Connection");
-	mirror_header(headers, resp, "TransferMode.DLNA.ORG");
+	mirror_header(headers, resp, "transferMode.dlna.org");
 	kd_add(resp, "Transfer-Encoding", "chunked");
-
 	str = http_send(sock, "HTTP/1.1 200 OK", resp);
 #else
 	kd_add(resp, "Connection", "close");
-
 	str = http_send(sock, "HTTP/1.0 200 OK", resp);
 #endif
 
@@ -1026,7 +1137,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	kd_free(resp);
 	kd_free(headers);
 
-	if (ctx->codec == CODEC_WAV) send_data(sock, (void*) &wave_header, sizeof(wave_header), 0);
+	if (ctx->encode.config.codec == CODEC_WAV) send_data(sock, (void*) &wave_header, sizeof(wave_header), 0);
 
 	return true;
 }

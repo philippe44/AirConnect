@@ -179,3 +179,7 @@ https://github.com/mrjimenez/pupnp (I'm using 1.6.19)
 https://xiph.org/flac/
 
 http://www.sourceware.org/pthreads-win32/
+
+http://https://github.com/toots/shine
+
+https://github.com/mattstevens/dmap-parser

@@ -61,7 +61,7 @@
 extern log_level 	raop_loglevel;
 static log_level 	*loglevel = &raop_loglevel;
 
-#define __RTP_STORE
+// #define __RTP_STORE
 
 // default buffer size
 #define BUFFER_FRAMES 1024
@@ -169,7 +169,7 @@ static void flac_init(hairtunes_t *ctx) {
 	ctx->encode.codec = FLAC__stream_encoder_new();
 	codec = (FLAC__StreamEncoder*) ctx->encode.codec;
 
-	LOG_INFO("[%p]: Using FLAC (%p)", ctx, ctx->encode.codec);
+	LOG_INFO("[%p]: Using FLAC-%u (%p)", ctx, ctx->encode.config.flac.level, ctx->encode.codec);
 
 	ok &= FLAC__stream_encoder_set_verify(codec, false);
 	ok &= FLAC__stream_encoder_set_compression_level(codec, ctx->encode.config.flac.level);
@@ -212,12 +212,12 @@ static void mp3_init(hairtunes_t *ctx) {
 	config.mpeg.mode = STEREO;
 
 	ctx->encode.codec = shine_initialise(&config);
-	LOG_INFO("[%p]: Using shine MP3 (%p)", ctx, ctx->encode.codec);
+	LOG_INFO("[%p]: Using shine MP3-%u (%p)", ctx, ctx->encode.config.mp3.bitrate, ctx->encode.codec);
 }
 
 /*---------------------------------------------------------------------------*/
 static void encoder_close(hairtunes_t *ctx) {
-    if (!ctx->encode.codec) return;
+	if (!ctx->encode.codec) return;
 
 	if (ctx->encode.config.codec == CODEC_FLAC) {
 		FLAC__stream_encoder_finish(ctx->encode.codec);

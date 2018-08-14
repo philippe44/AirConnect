@@ -289,27 +289,28 @@ void callback(void *owner, raop_event_t event, void *param)
 			break;
 		case RAOP_PLAY: {
 			char *ProtoInfo;
-			char *uri;
+			char *uri, *mp3radio = NULL;
 
 			if (Device->RaopState != RAOP_PLAY) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-				asprintf(&uri, "http://%s:%u/stream.%s", inet_ntoa(glHost),
-								*((short unsigned*) param),
-								Device->Config.Codec);
-#pragma GCC diagnostic pop
 				if (!strcasecmp(Device->Config.Codec, "pcm"))
 					ProtoInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
 				else if (!strcasecmp(Device->Config.Codec, "wav"))
 					ProtoInfo = "http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
 				else if (stristr(Device->Config.Codec, "mp3")) {
 					if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
-						asprintf(&uri, "x-rincon-mp3radio://%s", uri);
+						mp3radio = "x-rincon-mp3radio://";
 						LOG_INFO("[%p]: Sonos live stream", Device);
 					}
 					ProtoInfo = "http-get:*:audio/mp3:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
 				} else
 					ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+				asprintf(&uri, "%shttp://%s:%u/stream.%s", mp3radio ? mp3radio : "",
+								inet_ntoa(glHost), *((short unsigned*) param),
+								Device->Config.Codec);
+#pragma GCC diagnostic pop
 
 				AVTSetURI(Device, uri, &Device->MetaData, ProtoInfo);
 				NFREE(uri);

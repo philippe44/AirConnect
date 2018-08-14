@@ -42,7 +42,8 @@ DEPS	= $(SRC)/airupnp.h
 SOURCES = avt_util.c airupnp.c mr_util.c config_upnp.c  \
 		  alac.c base64.c hairtunes.c raopcore.c util.c log_util.c \
 		  dmap_parser.c \
-		  mdnssd-min.c mdns.c mdnsd.c
+		  mdnssd-min.c \
+		  mdns.c mdnsd.c
 		
 SOURCES_LIBS = 
 		

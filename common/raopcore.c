@@ -114,10 +114,10 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	else if (stristr(codec, "mp3")) {
 		ctx->encode.codec = CODEC_MP3;
 		ctx->encode.mp3.icy = metadata;
-		if (strchr(codec, ':')) ctx->encode.mp3.bitrate = atoi(strchr(codec,':') + 1);
+		if (strchr(codec, ':')) ctx->encode.mp3.bitrate = atoi(strchr(codec, ':') + 1);
 	} else {
 		ctx->encode.codec = CODEC_FLAC;
-		if (strchr(codec, ':')) ctx->encode.flac.level = atoi(strchr(codec,':') + 1);
+		if (strchr(codec, ':')) ctx->encode.flac.level = atoi(strchr(codec, ':') + 1);
 	}
 
 	if (ctx->sock == -1) {

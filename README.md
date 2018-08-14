@@ -4,6 +4,8 @@ Use these applications to add AirPlay capabilities to Chromecast and UPnP (like 
 
 AirConnect can run on any machine that has access to your local network (Windows, MacOS, Linux -x86, x64 and ARM, Solaris and FreeBSD). It does not need to be on your main computer. (For example, a Raspberry Pi works well). It will detect UPnP/Sonos/Chromecast players, create as many virtual AirPlay devices as needed, and act as a bridge/proxy between AirPlay clients (iPhone, iPad, iTunes, MacOS, AirFoil ...) and the real UPnP/Sonos/Chromecast players.
 
+The audio, after being decoded from alac, can be sent in plain, or re-encoded using mp3 or flac. Most player will not display metadata (artist, title, album ...) except when mp3 re-encoding is used and for UPnP/DLNA devices that support icy protocol. Chromecast do not support this (yet).
+
 ## Installing
 
 1. Pre-built binaries are in bin/ directory of this repository. You can download the whole repository as a zip file, clone it using git, or go to the [bin/ folder in the web interface](https://github.com/philippe44/AirConnect/tree/master/bin) and download the version that matches your OS. It's also possible to download files manually in a terminal by typing (e.g. for aircast arm version)<br/>`wget https://raw.githubusercontent.com/philippe44/AirConnect/master/bin/aircast-arm` 
@@ -51,11 +53,12 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `latency <[rtp][:http]>` 	: (default: (0:0))buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
 	* [rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay
 	* [http]	: ms of buffering silence for HTTP audio (not needed normaly, except for Sonos)
-- `enabled <0|1>`			: in common section, enables new discovered players by default. In a dedicated section, enables the player
-- `name` 				: The name that will appear for the device in AirPlay. You can change the default name. [1]
+- `enabled <0|1>`	: in common section, enables new discovered players by default. In a dedicated section, enables the player
+- `name` 		: The name that will appear for the device in AirPlay. You can change the default name. [1]
 - `log_limit <-1 | n>` 	: (default -1) when using log file, limits its size (-1 = no limit)
-- `codec <flac | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP)
-- `media_volume	<0..1>` 	: (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
+- `codec <mp3[:<bitrate>] | flac[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP)
+- `metadata`		: send metadata to player (only for mp3 codec and if player supports it)
+- `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
 - `artwork`		: an URL to an artwork to be displayed on player	
 
 [1] Hint: To identify your Sonos players, pick an identified IP address, and visit the Sonos status page in your browser, like `http://192.168.1.126:1400/status/topology`. Click `Zone Players` and you will see the identifiers for your players in the `UUID` column.

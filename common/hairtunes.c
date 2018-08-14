@@ -1114,7 +1114,10 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	// check if add ICY metadata is needed (only on live stream)
 	if (ctx->encode.config.codec == CODEC_MP3 && ctx->encode.config.mp3.icy &&
 		((str = kd_lookup(headers, "Icy-MetaData")) != NULL) && atoi(str)) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
 		asprintf(&str, "%u", ICY_INTERVAL);
+#pragma GCC diagnostic pop
 		kd_add(resp, "icy-metaint", str);
 		ctx->icy.interval = ctx->icy.remain = ICY_INTERVAL;
 		free(str);

@@ -57,7 +57,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `name` 		: The name that will appear for the device in AirPlay. You can change the default name. [1]
 - `log_limit <-1 | n>` 	: (default -1) when using log file, limits its size (-1 = no limit)
 - `codec <mp3[:<bitrate>] | flac[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP)
-- `metadata`		: send metadata to player (only for mp3 codec and if player supports it)
+- `metadata <0|1>`	: send metadata to player (only for mp3 codec and if player supports ICY protocol)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
 - `artwork`		: an URL to an artwork to be displayed on player	
 
@@ -127,7 +127,7 @@ Where `[path]` is the path where you've stored the aircast executable (without t
 
 ## Synology installation
 
-[@bandesz](https://github.com/bandesz) has made a nice package for automatic installation & laucnh of airupnp on Syno's
+[@bandesz](https://github.com/bandesz) has made a nice package for automatic installation & launch of airupnp on Syno's
 
 https://github.com/bandesz/AirConnect-Synology
 

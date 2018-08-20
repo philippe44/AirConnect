@@ -135,7 +135,6 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 	if (!strcmp(name, "enabled")) Conf->Enabled = atol(val);
 	if (!strcmp(name, "stop_receiver")) Conf->StopReceiver = atol(val);
 	if (!strcmp(name, "media_volume")) Conf->MediaVolume = atof(val);
-	if (!strcmp(name, "use_flac")) strcpy(Conf->Codec, "flac");  // temporary
 	if (!strcmp(name, "codec")) strcpy(Conf->Codec, val);
 	if (!strcmp(name, "metadata")) Conf->Metadata = atoi(val);
 	if (!strcmp(name, "artwork")) strcpy(Conf->ArtWork, val);

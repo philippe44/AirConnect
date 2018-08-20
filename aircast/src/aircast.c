@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.2.2.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.2.1"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -53,7 +53,7 @@ tMRConfig			glMRConfig = {
 							true,	// enabled
 							false,	// stop_receiver
 							"",		// name
-							"flac",	// use_flac
+							"flc",	// use_flac
 							true,	// metadata
 							0.5,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
@@ -206,7 +206,7 @@ void callback(void *owner, raop_event_t event, void *param)
 #pragma GCC diagnostic ignored "-Wunused-result"
 				asprintf(&uri, "http://%s:%u/stream", inet_ntoa(glHost), *((short unsigned*) param));
 #pragma GCC diagnostic pop
-				CastLoad(Device->CastCtx, uri, !strcasecmp(Device->Config.Codec, "flac") ? "audio/flac" : "audio/wav", &MetaData);
+				CastLoad(Device->CastCtx, uri, !strcasecmp(Device->Config.Codec, "flc") ? "audio/flac" : "audio/wav", &MetaData);
 				free(uri);
 			}
 

@@ -1,3 +1,6 @@
+0.2.2.1
+ - flac codec name is 'flc' not 'flac'
+
 0.2.2.0
  - add mp3 for encoding and icy metadata
  - use Sonos radio stream url for mp3

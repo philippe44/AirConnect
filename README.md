@@ -125,6 +125,10 @@ Create the file com.aircast.bridge.plist in ~/Library/LaunchAgents/
 
 Where `[path]` is the path where you've stored the aircast executable (without the []). It can be for example `Users/xxx/airconnect` where `xxx` is your user name 
 
+## Start automatically under Windows
+
+There are many tools that allow an application to be run as a service. You can try this [one](http://nssm.cc/)
+
 ## Synology installation
 
 [@bandesz](https://github.com/bandesz) has made a nice package for automatic installation & launch of airupnp on Syno's

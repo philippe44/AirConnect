@@ -1,13 +1,12 @@
-[Unit]
-Description=AirUPnP bridge
-After=network-online.target
-Wants=network-online.target
+[Unit]  
+Description=AirUPnP bridge  
+After=network-online.target  
+Wants=network-online.target  
 
-[Service]
-Type=forking
-ExecStart=/var/lib/airconnect/airupnp-arm -m squeezebox -l 1000:2000 -z -f /var/log/airupnp.log -x /var/lib/airconnect/config-upnp.xml
-Restart=on-failure
-RestartSec=30
+[Service]  
+ExecStart=/var/lib/airconnect/airupnp-arm -l 1000:2000 -Z -x /var/lib/airconnect/airupnp.xml   
+Restart=on-failure  
+RestartSec=30  
 
-[Install]
-WantedBy=multi-user.target
+[Install]  
+WantedBy=multi-user.target   

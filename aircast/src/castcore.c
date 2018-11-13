@@ -478,6 +478,13 @@ bool UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, u16_t port)
 
 
 /*----------------------------------------------------------------------------*/
+struct in_addr GetAddr(struct sCastCtx *Ctx)
+{
+	return Ctx->ip;
+}
+
+
+/*----------------------------------------------------------------------------*/
 void DeleteCastDevice(struct sCastCtx *Ctx)
 {
 	pthread_mutex_lock(&Ctx->Mutex);
@@ -595,7 +602,7 @@ void ProcessQueue(tCastCtx *Ctx) {
 		str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
 		SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str);
 		NFREE(str);
-
+		
 		json_decref(msg);
    }
 
@@ -606,11 +613,11 @@ void ProcessQueue(tCastCtx *Ctx) {
 		// version 1.24
 		if (Ctx->stopReceiver) {
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-						"{\"type\":\"STOP\",\"requestId\":%d,\"sessionId\":%d}", Ctx->waitId, Ctx->mediaSessionId);
+						"{\"type\":\"STOP\",\"requestId\":%d,\"sessionId\":%s}", Ctx->waitId, Ctx->sessionId);
 			Ctx->Status = CAST_CONNECTED;
 
 		}
-		else {
+		else if (Ctx->mediaSessionId) {
 			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId,
 							"{\"type\":\"STOP\",\"requestId\":%d,\"mediaSessionId\":%d}",
 							Ctx->waitId, Ctx->mediaSessionId);
@@ -779,16 +786,15 @@ static void *CastSocketThread(void *args)
 				// media status only acquired for expected id
 				if (!strcasecmp(str,"MEDIA_STATUS") && Ctx->waitMedia == requestId) {
 					int id = GetMediaItem_I(root, 0, "mediaSessionId");
+
 					if (id) {
 						Ctx->waitMedia = 0;
 						Ctx->mediaSessionId = id;
 						LOG_INFO("[%p]: Media session id %d", Ctx->owner, Ctx->mediaSessionId);
 						// set media volume when session is re-connected
 						SetMediaVolume(Ctx, Ctx->MediaVolume);
-					}
-					else {
-						LOG_ERROR("[%p]: waitMedia match but no session %u",
-							Ctx->owner, Ctx->waitMedia);
+					} else {
+						LOG_ERROR("[%p]: waitMedia match but no session %u", Ctx->owner, Ctx->waitMedia);
 					}
 
 					// Don't need to forward this, no valuable info

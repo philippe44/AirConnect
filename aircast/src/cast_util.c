@@ -104,7 +104,6 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadat
 					"contentType", ContentType);
 
 	if (MetaData) {
-
 		json_t *metadata = json_pack("{si,ss,ss,ss,ss,si}",
 							"metadataType", 3,
 							"albumName", MetaData->album, "title", MetaData->title,
@@ -118,8 +117,15 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadat
 		}
 
 		metadata = json_pack("{s,o}", "metadata", metadata);
+
 		json_object_update(msg, metadata);
 		json_decref(metadata);
+
+		if (MetaData->duration) {
+			json_t *duration = json_pack("{sf}", "duration", (double) MetaData->duration / 1000);
+			json_object_update(msg, duration);
+			json_decref(duration);
+		}
 	}
 
 	pthread_mutex_lock(&Ctx->Mutex);
@@ -160,9 +166,8 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadat
 		tReqItem *req = malloc(sizeof(tReqItem));
 #ifndef LOAD_FLUSH
 		// if waiting for a media, need to unlock queue and take precedence
-		if (Ctx->waitMedia) Ctx->waitId = Ctx->waitMedia = 0;
+		Ctx->waitMedia = 0;
 #endif
-
 		strcpy(req->Type, "LOAD");
 		req->data.msg = msg;
 		QueueInsert(&Ctx->reqQueue, req);
@@ -225,7 +230,7 @@ void CastStop(struct sCastCtx *Ctx)
 		// version 1.24
 		if (Ctx->stopReceiver) {
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-						"{\"type\":\"STOP\",\"requestId\":%d,\"sessionId\":%d}", Ctx->waitId, Ctx->mediaSessionId);
+						"{\"type\":\"STOP\",\"requestId\":%d,\"sessionId\":%s}", Ctx->waitId, Ctx->sessionId);
 			Ctx->Status = CAST_CONNECTED;
 
 		}
@@ -248,8 +253,8 @@ void CastStop(struct sCastCtx *Ctx)
 
 	// launching happening, just go back to CONNECT mode
 	} else if (Ctx->Status == CAST_LAUNCHING) {
-			Ctx->Status = CAST_CONNECTED;
-			LOG_WARN("[%p]: Stop while still launching receiver", Ctx->owner);
+		Ctx->Status = CAST_CONNECTED;
+		LOG_WARN("[%p]: Stop while still launching receiver", Ctx->owner);
 	// a random stop
 	} else {
 		LOG_WARN("[%p]: Stop w/o session or connect", Ctx->owner);

@@ -1,3 +1,8 @@
+0.2.2.2
+ - update build toolchain to full cross compiling, including OSX, FreeBSD and Solaris
+ - added Linux ppc
+ - (cast) stop receiver should send STOP to sessionId, not mediaSessionId
+ 
 0.2.2.1
  - flac codec name is 'flc' not 'flac'
 

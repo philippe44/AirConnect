@@ -1140,7 +1140,12 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	kd_free(resp);
 	kd_free(headers);
 
-	if (ctx->encode.config.codec == CODEC_WAV) send_data(sock, (void*) &wave_header, sizeof(wave_header), 0);
+	if (ctx->encode.config.codec == CODEC_WAV) {
+#ifdef __RTP_STORE
+		fwrite(&wave_header, sizeof(wave_header), 1, ctx->httpOUT);
+#endif
+		send_data(sock, (void*) &wave_header, sizeof(wave_header), 0);
+	}
 
 	return true;
 }

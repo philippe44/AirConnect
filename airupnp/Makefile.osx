@@ -1,5 +1,7 @@
-CFLAGS  ?= -Wall -fPIC -O2 $(OPTS) $(INCLUDE) $(DEFINES) -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk -arch x86_64
-LDFLAGS ?= -lpthread -lssl -lcrypto -ldl -lm -L. -Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk -arch x86_64 -mmacosx-version-min=10.5
+CC		 = o64-gcc
+CFLAGS  ?= -Wall -fPIC -O2 $(OPTS) $(INCLUDE) $(DEFINES) -arch x86_64
+LDFLAGS ?= -lpthread -lssl -lcrypto -ldl -lm -L. -arch x86_64 -mmacosx-version-min=10.10
+OS		 = Darwin
 
 OBJ					= bin/osx
 EXECUTABLE 			= ../bin/airupnp-osx-multi

@@ -1,5 +1,4 @@
 BASE		= ../..
-OS 			:= $(shell uname)
 
 TOOLS		= ../tools
 COMMON		= ../common

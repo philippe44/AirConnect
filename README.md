@@ -151,6 +151,26 @@ To identify your Sonos players, pick an identified IP address, and visit the Son
  
 - When players disappear regularly, it might be that your router is filtering out multicast packets. For example, for a Asus AC-RT68U, you have to login by ssh and run echo 0 > /sys/class/net/br0/bridge/multicast_snooping but it does not stay after a reboot.     
 
+## Delay when switching track or source
+
+I've received that question many times: why is there (sometimes) many seconds of delay when I switch track (or source) from my iPhone before I hear the change?
+
+To understand, it's better that you read the next paragraph, but as you probably won't, here is a quick summary of how AirPlay works. As far as the sender (e.g. your iPhone) is concerned, once the connection with an AirPlay 'speaker' is established, this connection is almost like a analogue wire with a delay (buffer) of 1 or 2 seconds. 
+
+What iOS does nowadays is that when you switch between tracks, instead of closing the connection and re-creating one, it just pushes the new audio through the existing connection, so you might have the 1~2 seconds of previous audio in the pipe before the new audio plays. Same thing when stopping/pausing playback, iOS simply stops pushing audio through the wire. 
+
+There is a function to "flush" the audio in the pipe so that new audio plays immediately, but I've seen that recent versions of iOS don't use it anymore (or some applicatiosn decide to not flush while they could). That's not a big deal with most AirPlay speakers, it's a 1~2 second delay.
+
+But with AirConnect, the AirPlay speaker is not a speaker, it's a UPnP or Chromecast player. They do not at all act like virtual wires, they instead expect to have the whole track available as a file and retrieve data from it as needed. In fact, one of the key functions that AirConnect does is looking like a wire to iPhone and looking like a file to the UPnP/CC. 
+
+Usually, UPnP/CC players consume a large chunk of that 'file' before they start to play to handle network congestion. As said in details below, that chunk/buffer does not exist for AirConnect, this is what `http latency` sets: create a fake silence when establishing a connection. So that creates a permanent delay between the iPhone and the player. In addition, as described above, UPnP/CC players can decide to wait to have buffered enough data before they start playing and because that data is built in real time by AirConnect, then this other delay adds up to the latency parameter (even if latency is 0). 
+
+When you switch between tracks or sources (or pause/stop), if your iPhone sends this "flush" command, then AirConnect immediately stops the UPnP/CC player. But if there is no flush command, it will play until that buffer of latency + own delay is consumed ... that can be more than a few seconds. Setting latency to 0 is a bad idea for some players (Sonos) that start to play as soon as they get the first audio. For the ones that do they own buffering, it can be set to 0, but one way or the other, there is a delay.
+
+In addition the delay can increase with time depending of clock speed difference between the iPhone and the UPnP/CC. Say that the iPhone clock is 1% faster than the player clock, then when it has produced 300s (5mins) of audio, the player has received it all but it has only played 297s, so there is an additional delay of 3s. If the iPhone moves track without the flush command, then the UPnP/CC player will start playing new audio (or stop) `http latency` + its own buffering length + 3 seconds later ... that can be a lot!
+
+Unfortunately, there is nothing I can do about that. By not using the "flush" command, iOS or application using AirPlay create the issue that AirConnect has no way to identify or avoid.
+
 ## Latency parameters explained:
 
 These bridges receive realtime "synchronous" audio from the AirPlay controller in the format of RTP frames and forward it to the Chromecast/UPnP/Sonos player in an HTTP "asynchronous" continuous audio binary format (notion of frames does not exist on that side). In other words, the AirPlay clients "push" the audio using RTP and the Chromecast/UPnP/Sonos players "pull" the audio using an HTTP GET request. 

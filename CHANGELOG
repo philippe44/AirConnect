@@ -1,3 +1,6 @@
+0.2.2.4 
+ - Group update could free NULL pointer (cast only)
+
 0.2.2.3
  - artwork was not a duplication, hence releasing metadata was failing (upnp only)
  

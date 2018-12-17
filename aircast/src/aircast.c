@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.2.2.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.2.4"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -412,7 +412,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 						} else {
 							struct sGroupMember *Member = Device->GroupMaster;
 							while (Member && (Member->Host.s_addr != s->host.s_addr)) Member = Member->Next;
-							free(remove_item((list_t*) Member, (list_t**) &Device->GroupMaster));
+							if (Member) free(remove_item((list_t*) Member, (list_t**) &Device->GroupMaster));
 						}
 					}
 				}

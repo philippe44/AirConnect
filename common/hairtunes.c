@@ -87,6 +87,7 @@ typedef struct audio_buffer_entry {   // decoded audio packets
 	u32_t rtptime;
 	u32_t last_resend;
 	s16_t *data;
+	int len;
 } abuf_t;
 
 typedef struct hairtunes_s {
@@ -96,6 +97,7 @@ typedef struct hairtunes_s {
 	bool running;
 	unsigned char aesiv[16];
 	AES_KEY aes;
+	bool decrypt;
 	int frame_size;
 	int in_frames, out_frames;
 	u32_t	resent_frames, silent_frames;
@@ -282,6 +284,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 
 	memset(ctx, 0, sizeof(hairtunes_t));
 	ctx->host = host;
+	ctx->decrypt = false;
 	ctx->rtp_host.sin_family = AF_INET;
 	ctx->rtp_host.sin_addr.s_addr = INADDR_ANY;
 	pthread_mutex_init(&ctx->ab_mutex, 0);
@@ -305,9 +308,10 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	ctx->rtp_sockets[CONTROL].rport = pCtrlPort;
 	ctx->rtp_sockets[TIMING].rport = pTimingPort;
 
-	if (aesiv && aeskey && *aesiv && *aeskey) {
+	if (aesiv && aeskey) {
 		memcpy(ctx->aesiv, aesiv, 16);
 		AES_set_decrypt_key((unsigned char*) aeskey, 128, &ctx->aes);
+		ctx->decrypt = true;
 	}
 
 	memset(fmtp, 0, sizeof(fmtp));
@@ -457,22 +461,19 @@ static int seq_order(seq_t a, seq_t b) {
 }
 
 /*---------------------------------------------------------------------------*/
-static void alac_decode(hairtunes_t *ctx, s16_t *dest, char *buf, int len) {
+static void alac_decode(hairtunes_t *ctx, s16_t *dest, char *buf, int len, int *outsize) {
 	unsigned char packet[MAX_PACKET];
 	unsigned char iv[16];
 	int aeslen;
-	int outsize;
 	assert(len<=MAX_PACKET);
 
-	if (*ctx->aesiv) {
+	if (ctx->decrypt) {
 		aeslen = len & ~0xf;
 		memcpy(iv, ctx->aesiv, sizeof(iv));
 		AES_cbc_encrypt((unsigned char*)buf, packet, aeslen, &ctx->aes, iv, AES_DECRYPT);
 		memcpy(packet+aeslen, buf+aeslen, len-aeslen);
-		decode_frame(ctx->alac_codec, packet, dest, &outsize);
-	} else decode_frame(ctx->alac_codec, (unsigned char*) buf, dest, &outsize);
-
-	assert(outsize == ctx->frame_size*4);
+		decode_frame(ctx->alac_codec, packet, dest, outsize);
+	} else decode_frame(ctx->alac_codec, (unsigned char*) buf, dest, outsize);
 }
 
 
@@ -529,15 +530,15 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 	}
 
 	if (abuf) {
-		alac_decode(ctx, abuf->data, data, len);
+		alac_decode(ctx, abuf->data, data, len, &abuf->len);
 		abuf->ready = 1;
 		// this is the local time when this frame is expected to play
 		abuf->rtptime = rtptime;
 #ifdef __RTP_STORE
 		fwrite(data, len, 1, ctx->rtpIN);
-		fwrite(abuf->data, ctx->frame_size*4, 1, ctx->rtpOUT);
+		fwrite(abuf->data, abuf->len, 1, ctx->rtpOUT);
 #endif
-		if (ctx->silence && memcmp(abuf->data, ctx->silence_frame, ctx->frame_size*4)) {
+		if (ctx->silence && memcmp(abuf->data, ctx->silence_frame, abuf->len)) {
 			ctx->callback(ctx->owner, HAIRTUNES_PLAY);
 			ctx->silence = false;
 		}
@@ -784,7 +785,7 @@ static bool rtp_request_resend(hairtunes_t *ctx, seq_t first, seq_t last) {
 
 /*---------------------------------------------------------------------------*/
 // get the next frame, when available. return 0 if underrun/stream reset.
-static short *_buffer_get_frame(hairtunes_t *ctx) {
+static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 	short buf_fill;
 	abuf_t *curframe = 0;
 	int i;
@@ -849,11 +850,13 @@ static short *_buffer_get_frame(hairtunes_t *ctx) {
 	if (!curframe->ready) {
 		LOG_INFO("[%p]: created zero frame (fill:%hu,  W:%hu R:%hu)", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read);
 		memset(curframe->data, 0, ctx->frame_size*4);
+		curframe->len = ctx->frame_size*4;
 		ctx->silent_frames++;
 	} else {
 		LOG_SDEBUG("[%p]: prepared frame (fill:%hu, W:%hu R:%hu)", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read);
 	}
 
+	*len = curframe->len;
 	curframe->ready = 0;
 	ctx->ab_read++;
 
@@ -898,6 +901,7 @@ static void *http_thread_func(void *arg) {
 		fd_set rfds;
 		int n;
 		bool res = true;
+		int size = 0;
 
 		if (sock == -1) {
 			struct timeval timeout = {0, 50*1000};
@@ -938,7 +942,7 @@ static void *http_thread_func(void *arg) {
 		}
 
 		// wait for session to be ready before sending (no need for mutex)
-		if (ctx->http_ready && (inbuf = _buffer_get_frame(ctx)) != NULL) {
+		if (ctx->http_ready && (inbuf = _buffer_get_frame(ctx, &size)) != NULL) {
 			int len;
 
 			if (ctx->encode.config.codec == CODEC_FLAC) {
@@ -951,15 +955,15 @@ static void *http_thread_func(void *arg) {
 				}
 
 				// now send body
-				for (len = 0; len < 2*ctx->frame_size; len++) flac_samples[len] = inbuf[len];
-				FLAC__stream_encoder_process_interleaved(ctx->encode.codec, flac_samples, ctx->frame_size);
+				for (len = 0; len < 2*size/4; len++) flac_samples[len] = inbuf[len];
+				FLAC__stream_encoder_process_interleaved(ctx->encode.codec, flac_samples, size/4);
 				inbuf = (void*) ctx->encode.buffer;
 				len = ctx->encode.len;
 				ctx->encode.len = 0;
 			} else if (ctx->encode.config.codec == CODEC_MP3) {
 				int block = shine_samples_per_pass(ctx->encode.codec) * 4;
-				memcpy(ctx->encode.buffer + ctx->encode.len, inbuf, ctx->frame_size * 4);
-				ctx->encode.len += ctx->frame_size * 4;
+				memcpy(ctx->encode.buffer + ctx->encode.len, inbuf, size);
+				ctx->encode.len += size;
 				if (ctx->encode.len >= block) {
 					inbuf = (s16_t*) shine_encode_buffer_interleaved(ctx->encode.codec, (s16_t*) ctx->encode.buffer, &len);
 					ctx->encode.len -= block;
@@ -968,9 +972,9 @@ static void *http_thread_func(void *arg) {
 			} else {
 				if (ctx->encode.config.codec == CODEC_PCM) {
 					s16_t *p = inbuf;
-					for (len = ctx->frame_size*2; len > 0; len--,p++) *p = (u8_t) *p << 8 | (u8_t) (*p >> 8);
+					for (len = size*2/4; len > 0; len--,p++) *p = (u8_t) *p << 8 | (u8_t) (*p >> 8);
 				}
-				len = ctx->frame_size*4;
+				len = size;
 			}
 
 			if (len) {

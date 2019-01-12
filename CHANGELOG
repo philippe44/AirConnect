@@ -1,3 +1,7 @@
+0.2.2.5
+ - handle variable size alac packets
+ - aesiv and aeskey can start with a '\0', use a decrypt explicit boolean
+
 0.2.2.4 
  - Group update could free NULL pointer (cast only)
 

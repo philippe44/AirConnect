@@ -795,7 +795,10 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 	if (!ctx->playing) return NULL;
 
 	// send silence if required to create enough buffering
-	if (ctx->silence_count && ctx->silence_count--)	return (short*) ctx->silence_frame;
+	if (ctx->silence_count && ctx->silence_count--)	{
+		*len = ctx->frame_size * 4;
+		return (short*) ctx->silence_frame;
+    }
 
 	// skip frames if we are running late and skip could not be done in SYNC
 	while (ctx->skip && ctx->ab_read != ctx->ab_write) {
@@ -850,7 +853,7 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 	if (!curframe->ready) {
 		LOG_INFO("[%p]: created zero frame (fill:%hu,  W:%hu R:%hu)", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read);
 		memset(curframe->data, 0, ctx->frame_size*4);
-		curframe->len = ctx->frame_size*4;
+		curframe->len = ctx->frame_size * 4;
 		ctx->silent_frames++;
 	} else {
 		LOG_SDEBUG("[%p]: prepared frame (fill:%hu, W:%hu R:%hu)", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read);

@@ -1,3 +1,6 @@
+0.2.2.6
+ - set length for silent frame now that length must be returned
+ 
 0.2.2.5
  - aesiv and aeskey can start with a '\0', use a decrypt explicit boolean
  - QueueFlush correction

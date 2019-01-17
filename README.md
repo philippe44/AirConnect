@@ -21,7 +21,7 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 Some Debian Stretch distributions (e.g. Raspian) only provide openssl1.0.2, but 1.0.0 is needed. Download the version for Jessie [here](http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u10_armhf.deb) or using `wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u10_armhf.deb` then install it with `sudo dpkg -i libssl1.0.0_1.0.1t-1+deb8u10_armhf.deb`. Note that these links are updated regularly, so use judgment to find the correct one using base URI ... (before opening an issue)
 
-On older Pi (based on BCM2835, i.e. the Pi Zero, and 1) using Stretch, I don't know where the openssl 1.0.0 for armv6 can be found, so you can use the "last resort" option to create symlinks to openssl 1.1 (in /usr/lib/arm-linux-gnueabihf)`sudo ln -s libcrypto.so.1.1 libcrypto.so.1.0.0` and `sudo ln -s libssl.so.1.1 libssl.so.1.0.0` (replace libcrypto.so.1.1 and libssl.so.1.1 by the actual name in /usr/lib/arm-linux-gnueabihf)
+On older Pi (based on BCM2835, i.e. the Pi Zero, and 1) using Stretch, I don't know where the openssl 1.0.0 for armv6 can be found, so you can use the "last resort" option to create symlinks to openssl 1.1 (in /usr/lib/arm-linux-gnueabihf)`sudo ln -s libcrypto.so.1.1 libcrypto.so.1.0.0` and `sudo ln -s libssl.so.1.1 libssl.so.1.0.0` (replace libcrypto.so.1.1 and libssl.so.1.1 by the actual names in /usr/lib/arm-linux-gnueabihf)
 	
 ## Running
 

@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.2.2.6"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.3.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -101,6 +101,7 @@ static char usage[] =
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -b <address>\t\tnetwork address to bind to\n"
+  		   "  -c <mp3[:<rate>]|flc[:0..9]|wav>\taudio format send to player\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
@@ -201,12 +202,15 @@ void callback(void *owner, raop_event_t event, void *param)
 
 			LOG_INFO("[%p]: Play", Device);
 			if (Device->RaopState != RAOP_PLAY) {
-				char *uri;
+				char *uri, *ContentType;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
 				asprintf(&uri, "http://%s:%u/stream", inet_ntoa(glHost), *((short unsigned*) param));
 #pragma GCC diagnostic pop
-				CastLoad(Device->CastCtx, uri, !strcasecmp(Device->Config.Codec, "flc") ? "audio/flac" : "audio/wav", &MetaData);
+				if (!strcasecmp(Device->Config.Codec, "mp3")) ContentType = "audio/mp3";
+				else if (!strcasecmp(Device->Config.Codec, "wav")) ContentType = "audio/wav";
+				else ContentType = "audio/flac";
+				CastLoad(Device->CastCtx, uri, ContentType, &MetaData);
 				free(uri);
 			}
 
@@ -273,7 +277,7 @@ static void *MRThread(void *args)
 					if (p->RaopState == RAOP_PLAY) raop_notify(p->Raop, RAOP_PAUSE, NULL);
 				}
 
-				if (state && !strcasecmp(state, "IDLE")  && p->State != STOPPED) {
+				if (state && !strcasecmp(state, "IDLE") && p->State != STOPPED) {
 					const char *cause = GetMediaItem_S(data, 0, "idleReason");
 					if (cause && !p->ExpectStop) {
 						LOG_INFO("[%p]: Cast stopped by other remote", p);
@@ -745,7 +749,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpifl", opt) && optind < argc - 1) {
+		if (strstr("bxdpiflc", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt)) {
@@ -760,6 +764,9 @@ bool ParseArgs(int argc, char **argv) {
 		switch (opt[0]) {
 		case 'f':
 			glLogFile = optarg;
+			break;
+		case 'c':
+			strcpy(glMRConfig.Codec, optarg);
 			break;
 		case 'b':
 			strcpy(glInterface, optarg);

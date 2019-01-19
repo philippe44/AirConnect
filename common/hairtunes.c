@@ -69,6 +69,7 @@ static log_level 	*loglevel = &raop_loglevel;
 #define FLAC_BLOCK_SIZE 1024
 #define MAX_FLAC_BYTES (FLAC_BLOCK_SIZE*4 + 1024)
 #define ENCODE_BUFFER_SIZE	(max(MAX_FLAC_BYTES, SHINE_MAX_SAMPLES*2*2*2))
+#define TAIL_SIZE (2048*1024)
 
 #define RTP_SYNC	(0x01)
 #define NTP_SYNC	(0x02)
@@ -80,6 +81,37 @@ static log_level 	*loglevel = &raop_loglevel;
 
 enum { DATA, CONTROL, TIMING };
 static char *mime_types[] = { "audio/mp3", "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav" };
+
+
+static struct wave_header_s {
+	u8_t 	chunk_id[4];
+	u8_t	chunk_size[4];
+	u8_t	format[4];
+	u8_t	subchunk1_id[4];
+	u8_t	subchunk1_size[4];
+	u8_t	audio_format[2];
+	u8_t	channels[2];
+	u8_t	sample_rate[4];
+	u8_t    byte_rate[4];
+	u8_t	block_align[2];
+	u8_t	bits_per_sample[2];
+	u8_t	subchunk2_id[4];
+	u8_t	subchunk2_size[4];
+} wave_header = {
+		{ 'R', 'I', 'F', 'F' },
+		{ 0x24, 0xff, 0xff, 0xff },
+		{ 'W', 'A', 'V', 'E' },
+		{ 'f','m','t',' ' },
+		{ 16, 0, 0, 0 },
+		{ 1, 0 },
+		{ 2, 0 },
+		{ 0x44, 0xac, 0x00, 0x00  },
+		{ 0x10, 0xb1, 0x02, 0x00 },
+		{ 4, 0 },
+		{ 16, 0 },
+		{ 'd', 'a', 't', 'a' },
+		{ 0x00, 0xff, 0xff, 0xff },
+	};
 
 typedef u16_t seq_t;
 typedef struct audio_buffer_entry {   // decoded audio packets
@@ -144,6 +176,8 @@ typedef struct hairtunes_s {
 	bool playing, silence, http_ready;
 	hairtunes_cb_t callback;
 	void *owner;
+	char *http_tail;
+	size_t http_count;
 } hairtunes_t;
 
 
@@ -277,12 +311,16 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	char *arg, *p;
 	int fmtp[12];
 	bool rc = true;
-	hairtunes_t *ctx = malloc(sizeof(hairtunes_t));
+	hairtunes_t *ctx = calloc(1, sizeof(hairtunes_t));
 	hairtunes_resp_t resp = { 0, 0, 0, 0, NULL };
 
 	if (!ctx) return resp;
 
-	memset(ctx, 0, sizeof(hairtunes_t));
+	ctx->http_tail = malloc(TAIL_SIZE);
+	if (!ctx->http_tail) {
+		free(ctx);
+		return resp;
+	}
 	ctx->host = host;
 	ctx->decrypt = false;
 	ctx->rtp_host.sin_family = AF_INET;
@@ -394,9 +432,9 @@ void hairtunes_end(hairtunes_t *ctx)
 
 	buffer_release(ctx->audio_buffer);
 	free(ctx->silence_frame);
-	free(ctx);
-
+	free(ctx->http_tail);
 	free_metadata(&ctx->metadata);
+	free(ctx);
 
 #ifdef __RTP_STORE
 	fclose(ctx->rtpIN);
@@ -494,8 +532,10 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 			ctx->silence = true;
 			ctx->synchro.first = false;
 			ctx->resent_frames = ctx->silent_frames = 0;
+			ctx->http_count = 0;
 			if (ctx->encode.config.codec == CODEC_FLAC) flac_init(ctx);
 			else if (ctx->encode.config.codec == CODEC_MP3) mp3_init(ctx);
+			else if (ctx->encode.config.codec == CODEC_WAV) ctx->encode.header = true;
 		} else {
 			pthread_mutex_unlock(&ctx->ab_mutex);
 			return;
@@ -871,12 +911,19 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 #ifdef CHUNKED
 int send_data(int sock, void *data, int len, int flags) {
 	char *chunk;
-	int sent;
+	int bytes = len;
 
 	asprintf(&chunk, "%x\r\n", len);
 	send(sock, chunk, strlen(chunk), flags);
 	free(chunk);
-	sent = send(sock, data, len, flags);
+	while (bytes) {
+		int sent = send(sock, data + len - bytes, bytes, flags);
+		if (sent < 0) {
+			LOG_ERROR("Error sending data %u", len);
+			return -1;
+		}
+		bytes -= sent;
+	}
 	send(sock, "\r\n", 2, flags);
 
 	return sent;
@@ -951,6 +998,12 @@ static void *http_thread_func(void *arg) {
 			if (ctx->encode.config.codec == CODEC_FLAC) {
 				// send streaminfo at beginning
 				if (ctx->encode.header && ctx->encode.len) {
+#ifdef __RTP_STORE
+					fwrite(ctx->encode.buffer, ctx->encode.len, 1, ctx->httpOUT);
+#endif
+					memcpy(ctx->http_tail, ctx->encode.buffer, ctx->encode.len);
+					ctx->http_count = ctx->encode.len;
+
 					// should be fast enough and can't release mutex anyway
 					send_data(sock, (void*) ctx->encode.buffer, ctx->encode.len, 0);
 					ctx->encode.len = 0;
@@ -976,17 +1029,30 @@ static void *http_thread_func(void *arg) {
 				if (ctx->encode.config.codec == CODEC_PCM) {
 					s16_t *p = inbuf;
 					for (len = size*2/4; len > 0; len--,p++) *p = (u8_t) *p << 8 | (u8_t) (*p >> 8);
+				} else if (ctx->encode.header) {
+#ifdef __RTP_STORE
+					fwrite(&wave_header, sizeof(wave_header), 1, ctx->httpOUT);
+#endif
+					ctx->http_count = sizeof(wave_header);
+					memcpy(ctx->http_tail, &wave_header, sizeof(wave_header));
+					send_data(sock, (void*) &wave_header, sizeof(wave_header), 0);
+					ctx->encode.header = false;
 				}
 				len = size;
 			}
 
 			if (len) {
-				u32_t gap = gettime_ms();
+				u32_t space, gap = gettime_ms();
 				int offset;
 
 #ifdef __RTP_STORE
 				fwrite(inbuf, len, 1, ctx->httpOUT);
 #endif
+				// store data for a potential re-send
+				space = min(len, TAIL_SIZE - ctx->http_count % TAIL_SIZE);
+				memcpy(ctx->http_tail + (ctx->http_count % TAIL_SIZE), inbuf, space);
+				memcpy(ctx->http_tail, inbuf + space, len - space);
+				ctx->http_count += len;
 
 				// check if ICY sending is active (len < ICY_INTERVAL)
 				if (ctx->icy.interval && len > ctx->icy.remain) {
@@ -1074,41 +1140,12 @@ static void mirror_header(key_data_t *src, key_data_t *rsp, char *key) {
 #endif
 
 
-static struct wave_header_s {
-	u8_t 	chunk_id[4];
-	u8_t	chunk_size[4];
-	u8_t	format[4];
-	u8_t	subchunk1_id[4];
-	u8_t	subchunk1_size[4];
-	u8_t	audio_format[2];
-	u8_t	channels[2];
-	u8_t	sample_rate[4];
-	u8_t    byte_rate[4];
-	u8_t	block_align[2];
-	u8_t	bits_per_sample[2];
-	u8_t	subchunk2_id[4];
-	u8_t	subchunk2_size[4];
-} wave_header = {
-		{ 'R', 'I', 'F', 'F' },
-		{ 0x24, 0xff, 0xff, 0xff },
-		{ 'W', 'A', 'V', 'E' },
-		{ 'f','m','t',' ' },
-		{ 16, 0, 0, 0 },
-		{ 1, 0 },
-		{ 2, 0 },
-		{ 0x44, 0xac, 0x00, 0x00  },
-		{ 0x10, 0xb1, 0x02, 0x00 },
-		{ 4, 0 },
-		{ 16, 0 },
-		{ 'd', 'a', 't', 'a' },
-		{ 0x00, 0xff, 0xff, 0xff },
-	};
-
 /*----------------------------------------------------------------------------*/
 static bool handle_http(hairtunes_t *ctx, int sock)
 {
-	char *body = NULL, method[16] = "", *str;
+	char *body = NULL, method[16] = "", *str, *head = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
+	size_t offset = 0;
 	int len;
 
 	if (!http_parse(sock, method, headers, &body, &len)) return false;
@@ -1117,6 +1154,24 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 
 	kd_add(resp, "Server", "HairTunes");
 	kd_add(resp, "Content-Type", mime_types[ctx->encode.config.codec]);
+
+	// is there a range request (chromecast non-compliance to HTTP !!!)
+	if ((str = kd_lookup(headers, "Range")) != NULL) {
+#if WIN
+		sscanf(str, "bytes=%u", &offset);
+#else
+		sscanf(str, "bytes=%zu", &offset);
+#endif
+		if (offset) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+			asprintf(&str, "bytes %zu-%zu/*", offset, ctx->http_count);
+#pragma GCC diagnostic pop            }
+			head = "HTTP/1.1 206 Partial Content";
+			kd_add(resp, "Content-Range", str);
+			free(str);
+		}
+	}
 
 	// check if add ICY metadata is needed (only on live stream)
 	if (ctx->encode.config.codec == CODEC_MP3 && ctx->encode.config.mp3.icy &&
@@ -1134,10 +1189,10 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	mirror_header(headers, resp, "Connection");
 	mirror_header(headers, resp, "transferMode.dlna.org");
 	kd_add(resp, "Transfer-Encoding", "chunked");
-	str = http_send(sock, "HTTP/1.1 200 OK", resp);
+	str = http_send(sock, head ? head : "HTTP/1.1 200 OK", resp);
 #else
 	kd_add(resp, "Connection", "close");
-	str = http_send(sock, "HTTP/1.0 200 OK", resp);
+	str = http_send(sock, head ? head : "HTTP/1.0 200 OK", resp);
 #endif
 
 	LOG_INFO("[%p]: responding:\n%s", ctx, str);
@@ -1147,11 +1202,35 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	kd_free(resp);
 	kd_free(headers);
 
-	if (ctx->encode.config.codec == CODEC_WAV) {
-#ifdef __RTP_STORE
-		fwrite(&wave_header, sizeof(wave_header), 1, ctx->httpOUT);
-#endif
-		send_data(sock, (void*) &wave_header, sizeof(wave_header), 0);
+	// need to re-send the range
+	if (offset) {
+		size_t count = 0;
+
+		LOG_INFO("[%p] re-sending offset %zu/%zu", ctx, offset, ctx->http_count);
+        ctx->silence_count = 0;
+		while (count != ctx->http_count - offset) {
+			size_t bytes = ctx->icy.interval ? ctx->icy.remain : ICY_INTERVAL;
+			int sent;
+
+			bytes = min(bytes, ctx->http_count - offset - count);
+			sent = send_data(sock, ctx->http_tail + ((offset + count) % TAIL_SIZE), bytes, 0);
+
+			if (sent < 0) {
+				LOG_ERROR("[%p]: error re-sending range %u", ctx, offset);
+				break;
+			}
+
+			count += sent;
+
+			// send ICY data if needed
+			if (ctx->icy.interval) {
+				ctx->icy.remain -= sent;
+				if (!ctx->icy.remain) {
+					send_data(sock, "\1", 1, 0);
+					ctx->icy.remain = ctx->icy.interval;
+				}
+			}
+		}
 	}
 
 	return true;

@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.2.6"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.3.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -73,7 +73,7 @@ tMRConfig			glMRConfig = {
 							true,		// SendMetaData
 							false,		// SendCoverArt
 							100,		// MaxVolume
-							"flac",	    // Codec
+							"flc",	    // Codec
 							true,		// Metadata
 							"",			// RTP:HTTP Latency (0 = use AirPlay requested)
 							{0, 0, 0, 0, 0, 0 }, // MAC
@@ -138,6 +138,7 @@ static char usage[] =
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -b <server>[:<port>]\tnetwork interface and UPnP port to use \n"
+   		   "  -c <mp3[:<rate>]|flc[:0..9]|wav|pcm>\taudio format send to player\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
@@ -1077,7 +1078,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpifml", opt) && optind < argc - 1) {
+		if (strstr("bxdpifmlc", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt)) {
@@ -1095,6 +1096,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'f':
 			glLogFile = optarg;
+			break;
+		case 'c':
+			strcpy(glMRConfig.Codec, optarg);
 			break;
 		case 'i':
 			strcpy(glConfigName, optarg);

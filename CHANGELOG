@@ -1,3 +1,10 @@
+0.2.3.0
+ - add -c <codec> command line
+ - work with CC that require a range request (buffer up to 2MB)
+ - metadata was freed after ctx was released
+ - silence frame shall be ignored when range requested
+ - default codec for upnp was 'flac' instead of 'flc'
+ 
 0.2.2.6
  - set length for silent frame now that length must be returned
  

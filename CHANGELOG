@@ -1,3 +1,6 @@
+0.2.3.1
+ - version mistake with 0.2.3.0
+ 
 0.2.3.0
  - add -c <codec> command line
  - work with CC that require a range request (buffer up to 2MB)

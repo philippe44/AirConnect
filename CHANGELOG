@@ -1,3 +1,6 @@
+0.2.4.0
+ - Detect main IP address change and restart
+ 
 0.2.3.1
  - version mistake with 0.2.3.0
  

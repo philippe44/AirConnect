@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.3.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.4.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -201,6 +201,8 @@ static 	void*	MRThread(void *args);
 static 	void*	UpdateThread(void *args);
 static 	bool 	AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	const char *location);
 static	bool 	isExcluded(char *Model);
+static bool 	Start(bool cold);
+static bool 	Stop(bool exit);
 
 // functions with _ prefix means that the device mutex is expected to be locked
 static bool 	_ProcessQueue(struct sMR *Device);
@@ -803,6 +805,18 @@ static void *MainThread(void *args)
 				}
 			}
 		}
+
+		// try to detect IP change when auto-detect
+		if (strstr(glUPnPSocket, "?")) {
+			struct in_addr Host;
+			Host.s_addr = get_localhost(NULL);
+			if (Host.s_addr != INADDR_ANY && Host.s_addr != glHost.s_addr) {
+				LOG_INFO("IP change detected %s", inet_ntoa(glHost));
+				Stop(false);
+				glMainRunning = true;
+				Start(false);
+			}
+		}
 	}
 
 	return NULL;
@@ -935,111 +949,126 @@ bool isExcluded(char *Model)
 
 
 /*----------------------------------------------------------------------------*/
-static bool Start(void)
+static bool Start(bool cold)
 {
 	char hostname[_STR_LEN_];
 	int i, rc;
 	char IP[16] = "";
 
-	// mutex should *always* be valid
-	memset(&glMRDevices, 0, sizeof(glMRDevices));
-	for (i = 0; i < MAX_RENDERERS; i++)	pthread_mutex_init(&glMRDevices[i].Mutex, 0);
-
+	glHost.s_addr = INADDR_ANY;
+	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", IP, &glPort);
+	if (!*IP) {
+		struct in_addr host;
+		host.s_addr = get_localhost(NULL);
+		strcpy(IP, inet_ntoa(host));
+	}
+
 	UpnpSetLogLevel(UPNP_ALL);
-
-	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", IP, &glPort);
-
-	rc = UpnpInit(*IP ? IP : NULL, glPort);
+	rc = UpnpInit(IP, glPort);
 
 	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("UPnP init failed: %d\n", rc);
-		UpnpFinish();
-		return false;
+		LOG_ERROR("UPnP init failed: %d", rc);
+		goto Error;
 	}
 
 	UpnpSetMaxContentLength(60000);
 
-	if (!*IP) strcpy(IP, UpnpGetServerIpAddress());
 	S_ADDR(glHost) = inet_addr(IP);
 	gethostname(glHostName, _STR_LEN_);
 	if (!glPort) glPort = UpnpGetServerPort();
 
 	LOG_INFO("Binding to %s:%d", IP, glPort);
 
-	rc = UpnpRegisterClient(MasterHandler, NULL, &glControlPointHandle);
+	if (cold) {
+		// mutex should *always* be valid
+		memset(&glMRDevices, 0, sizeof(glMRDevices));
+		for (i = 0; i < MAX_RENDERERS; i++)	pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
-	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("Error registering ControlPoint: %d", rc);
-		UpnpFinish();
-		return false;
+		/* start the main thread */
+		pthread_mutex_init(&glMainMutex, 0);
+		pthread_cond_init(&glMainCond, 0);
+		pthread_create(&glMainThread, NULL, &MainThread, NULL);
 	}
 
-	snprintf(hostname, _STR_LEN_, "%s.local", glHostName);
-	if ((glmDNSServer = mdnsd_start(glHost)) == NULL) {
-		UpnpFinish();
-		return false;
+	if (glHost.s_addr != INADDR_ANY) {
+		pthread_mutex_init(&glUpdateMutex, 0);
+		pthread_cond_init(&glUpdateCond, 0);
+		QueueInit(&glUpdateQueue, true, FreeUpdate);
+		pthread_create(&glUpdateThread, NULL, &UpdateThread, NULL);
+
+		rc = UpnpRegisterClient(MasterHandler, NULL, &glControlPointHandle);
+
+		if (rc != UPNP_E_SUCCESS) {
+			LOG_ERROR("Error registering ControlPoint: %d", rc);
+			goto Error;
+		}
+
+		snprintf(hostname, _STR_LEN_, "%s.local", glHostName);
+        if ((glmDNSServer = mdnsd_start(glHost)) == NULL) goto Error;
+		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
+
+		UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER, NULL);
 	}
-
-	/* start the main thread */
-	pthread_mutex_init(&glMainMutex, 0);
-	pthread_cond_init(&glMainCond, 0);
-	pthread_mutex_init(&glUpdateMutex, 0);
-	pthread_cond_init(&glUpdateCond, 0);
-	QueueInit(&glUpdateQueue, true, FreeUpdate);
-	pthread_create(&glMainThread, NULL, &MainThread, NULL);
-	pthread_create(&glUpdateThread, NULL, &UpdateThread, NULL);
-
-	mdnsd_set_hostname(glmDNSServer, hostname, glHost);
-
-	UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER, NULL);
 
 	return true;
+
+Error:
+	UpnpFinish();
+	return false;
+
 }
 
 
 /*----------------------------------------------------------------------------*/
-static bool Stop(void)
+static bool Stop(bool exit)
 {
 	int i;
 
 	glMainRunning = false;
 
-	// once main is finished, no risk to have new players created
-	LOG_INFO("terminate update thread ...", NULL);
-	pthread_cond_signal(&glUpdateCond);
-	pthread_join(glUpdateThread, NULL);
+	if (glHost.s_addr != INADDR_ANY) {
+		// once main is finished, no risk to have new players created
+		LOG_INFO("terminate update thread ...", NULL);
+		pthread_cond_signal(&glUpdateCond);
+		pthread_join(glUpdateThread, NULL);
 
-	// simple log size management thread ... should be remove done day
-	LOG_INFO("terminate main thread ...", NULL);
-	pthread_cond_signal(&glMainCond);
-	pthread_join(glMainThread, NULL);
+		// remove devices and make sure that they are stopped to avoid libupnp lock
+		LOG_INFO("flush renderers ...", NULL);
+		FlushMRDevices();
 
-	// remove devices and make sure that they are stopped to avoid libupnp lock
-	LOG_INFO("flush renderers ...", NULL);
-	FlushMRDevices();
+		LOG_INFO("terminate libupnp", NULL);
+		UpnpUnRegisterClient(glControlPointHandle);
+		UpnpFinish();
 
-	LOG_INFO("terminate libupnp", NULL);
-	UpnpUnRegisterClient(glControlPointHandle);
-	UpnpFinish();
+		pthread_mutex_destroy(&glUpdateMutex);
+		pthread_cond_destroy(&glUpdateCond);
 
-	// these are for sure unused now that libupnp cannot signal anything
-	pthread_mutex_destroy(&glUpdateMutex);
-	pthread_mutex_destroy(&glMainMutex);
-	pthread_cond_destroy(&glMainCond);
-	pthread_cond_destroy(&glUpdateCond);
-	for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
+		// remove discovered items
+		QueueFlush(&glUpdateQueue);
 
-	// remove discovered items
-	QueueFlush(&glUpdateQueue);
+		// stop broadcasting devices
+		mdnsd_stop(glmDNSServer);
+	} else {
+		LOG_INFO("terminate libupnp", NULL);
+		UpnpFinish();
+	}
 
-	// stop broadcasting devices
-	mdnsd_stop(glmDNSServer);
+	if (exit) {
+		// simple log size management thread
+		LOG_INFO("terminate main thread ...", NULL);
+		pthread_cond_signal(&glMainCond);
+		pthread_join(glMainThread, NULL);
 
-	if (glConfigID) ixmlDocument_free(glConfigID);
+		// these are for sure unused now that libupnp cannot signal anything
+		pthread_mutex_destroy(&glMainMutex);
+		pthread_cond_destroy(&glMainCond);
+		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
+		if (glConfigID) ixmlDocument_free(glConfigID);
 #if WIN
-	winsock_close();
+		winsock_close();
 #endif
+	}
 
 	return true;
 }
@@ -1057,7 +1086,7 @@ static void sighandler(int signum) {
 		exit(0);
 	}
 
-	Stop();
+	Stop(true);
 	exit(0);
 }
 
@@ -1220,9 +1249,9 @@ int main(int argc, char *argv[])
 
 	// just do discovery and exit
 	if (glDiscovery) {
-		Start();
+		Start(true);
 		sleep(DISCOVERY_TIME + 1);
-		Stop();
+		Stop(true);
 		return(0);
 	}
 
@@ -1246,7 +1275,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!Start()) {
+	if (!Start(true)) {
 		LOG_ERROR("Cannot start", NULL);
 		exit(1);
 	}
@@ -1319,7 +1348,7 @@ int main(int argc, char *argv[])
 
 	// must be protected in case this interrupts a UPnPEventProcessing
 	LOG_INFO("stopping devices ...", NULL);
-	Stop();
+	Stop(true);
 	LOG_INFO("all done", NULL);
 
 	return true;

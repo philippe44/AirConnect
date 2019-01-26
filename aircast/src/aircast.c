@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.2.3.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.4.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -160,6 +160,8 @@ static char license[] =
 static void *MRThread(void *args);
 static bool  AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool Group, struct in_addr ip, u16_t port);
 static void  RemoveCastDevice(struct sMR *Device);
+static bool	 Start(bool cold);
+static bool	 Stop(bool exit);
 
 void callback(void *owner, raop_event_t event, void *param)
 {
@@ -535,6 +537,18 @@ static void *MainThread(void *args)
 				}
 			}
 		}
+
+		// try to detect IP change when auto-detec
+		if (strstr(glInterface, "?")) {
+			struct in_addr host;
+			host.s_addr = get_localhost(NULL);
+			if (host.s_addr != INADDR_ANY && host.s_addr != glHost.s_addr) {
+				LOG_INFO("IP change detected %s", inet_ntoa(glHost));
+				Stop(false);
+				glMainRunning = true;
+				Start(false);
+			}
+		}
 	}
 
 	return NULL;
@@ -643,74 +657,80 @@ void RemoveCastDevice(struct sMR *Device)
 }
 
 /*----------------------------------------------------------------------------*/
-static bool Start(void)
+static bool Start(bool cold)
 {
 	int i;
 	char hostname[_STR_LEN_];
 
-	// mutexes must always be valid
-	memset(&glMRDevices, 0, sizeof(glMRDevices));
-	for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
-
-	InitSSL();
-
 	glHost.s_addr = get_localhost(&glHostName);
 	if (!strstr(glInterface, "?")) glHost.s_addr = inet_addr(glInterface);
+	snprintf(hostname, _STR_LEN_, "%s.local", glHostName);
 
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
 
-	snprintf(hostname, _STR_LEN_, "%s.local", glHostName);
-	if ((glmDNSServer = mdnsd_start(glHost)) == NULL) return false;
+	if (cold) {
+		// mutexes must always be valid
+		memset(&glMRDevices, 0, sizeof(glMRDevices));
+		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
-	// initialize mDNS broadcast
-	mdnsd_set_hostname(glmDNSServer, hostname, glHost);
+		InitSSL();
 
-	/* start the main thread */
-	pthread_mutex_init(&glMainMutex, 0);
-	pthread_cond_init(&glMainCond, 0);
-	pthread_create(&glMainThread, NULL, &MainThread, NULL);
+		/* start the main thread */
+		pthread_mutex_init(&glMainMutex, 0);
+		pthread_cond_init(&glMainCond, 0);
+		pthread_create(&glMainThread, NULL, &MainThread, NULL);
+	}
 
-	/* start the mDNS devices discovery thread */
-	glmDNSsearchHandle = init_mDNS(false, glHost);
-	pthread_create(&glmDNSsearchThread, NULL, &mDNSsearchThread, NULL);
+	if (glHost.s_addr != INADDR_ANY) {
+		// initialize mDNS broadcast
+		if ((glmDNSServer = mdnsd_start(glHost)) == NULL) return false;
+		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
+
+		/* start the mDNS devices discovery thread */
+		glmDNSsearchHandle = init_mDNS(false, glHost);
+		pthread_create(&glmDNSsearchThread, NULL, &mDNSsearchThread, NULL);
+	}
 
 	return true;
 }
 
-static bool Stop(void)
+static bool Stop(bool exit)
 {
 	int i;
 
 	glMainRunning = false;
 
-	LOG_DEBUG("terminate search thread ...", NULL);
-	// this forces an ongoing search to end
-	close_mDNS(glmDNSsearchHandle);
-	pthread_join(glmDNSsearchThread, NULL);
+	if (glHost.s_addr != INADDR_ANY) {
+		LOG_DEBUG("terminate search thread ...", NULL);
+		// this forces an ongoing search to end
+		close_mDNS(glmDNSsearchHandle);
+		pthread_join(glmDNSsearchThread, NULL);
 
-	LOG_DEBUG("flush renderers ...", NULL);
-	FlushCastDevices();
+		LOG_DEBUG("flush renderers ...", NULL);
+		FlushCastDevices();
 
-	// stop broadcasting devices
-	mdnsd_stop(glmDNSServer);
+		// stop broadcasting devices
+		mdnsd_stop(glmDNSServer);
+	}
 
-	LOG_DEBUG("terminate main thread ...", NULL);
-	pthread_cond_signal(&glMainCond);
-	pthread_join(glMainThread, NULL);
-	pthread_mutex_destroy(&glMainMutex);
-	pthread_cond_destroy(&glMainCond);
-	for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
+	if (exit) {
+		LOG_DEBUG("terminate main thread ...", NULL);
+		pthread_cond_signal(&glMainCond);
+		pthread_join(glMainThread, NULL);
+		pthread_mutex_destroy(&glMainMutex);
+		pthread_cond_destroy(&glMainCond);
+		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
-	LOG_DEBUG("terminate SSL ...", NULL);
-	EndSSL();
+		LOG_DEBUG("terminate SSL ...", NULL);
+		EndSSL();
 
-	NFREE(glHostName);
-
-	if (glConfigID) ixmlDocument_free(glConfigID);
+		NFREE(glHostName);
+		if (glConfigID) ixmlDocument_free(glConfigID);
 
 #if WIN
-	winsock_close();
+		winsock_close();
 #endif
+	}
 
 	return true;
 }
@@ -728,7 +748,7 @@ static void sighandler(int signum) {
 		exit(0);
 	}
 
-	Stop();
+	Stop(true);
 	exit(0);
 }
 
@@ -885,9 +905,9 @@ int main(int argc, char *argv[])
 
 	// just do device discovery and exit
 	if (glDiscovery) {
-		Start();
+		Start(true);
 		sleep(DISCOVERY_TIME + 1);
-		Stop();
+		Stop(true);
 		return(0);
 	}
 
@@ -911,7 +931,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!Start()) {
+	if (!Start(true)) {
 		LOG_ERROR("Cannot start", NULL);
 		exit(1);
 	}
@@ -986,7 +1006,7 @@ int main(int argc, char *argv[])
 	}
 
 	LOG_INFO("stopping Cast devices ...", NULL);
-	Stop();
+	Stop(true);
 	LOG_INFO("all done", NULL);
 
 	return true;

@@ -1,10 +1,10 @@
 # AirConnect: Send audio to UPnP/Sonos/Chromecast players using AirPlay
 
-Use these applications to add AirPlay capabilities to Chromecast and UPnP (like Sonos) players (make them look like an AirPlay device)
+Use these applications to add AirPlay capabilities to Chromecast and UPnP (like Sonos) players, to make them appear as AirPlay devices.
 
 AirConnect can run on any machine that has access to your local network (Windows, MacOS, Linux -x86, x64 and ARM, Solaris and FreeBSD). It does not need to be on your main computer. (For example, a Raspberry Pi works well). It will detect UPnP/Sonos/Chromecast players, create as many virtual AirPlay devices as needed, and act as a bridge/proxy between AirPlay clients (iPhone, iPad, iTunes, MacOS, AirFoil ...) and the real UPnP/Sonos/Chromecast players.
 
-The audio, after being decoded from alac, can be sent in plain, or re-encoded using mp3 or flac. Most player will not display metadata (artist, title, album ...) except when mp3 re-encoding is used and for UPnP/DLNA devices that support icy protocol. Chromecast do not support this (yet).
+The audio, after being decoded from alac, can be sent in plain, or re-encoded using mp3 or flac. Most players will not display metadata (artist, title, album ...) except when mp3 re-encoding is used and for UPnP/DLNA devices that support icy protocol. Chromecast players do not support this (yet).
 
 ## Installing
 
@@ -59,11 +59,11 @@ The default configuration file is `config.xml`, stored in the same directory as 
 	* [http]	: ms of buffering silence for HTTP audio (not needed normaly, except for Sonos)
 - `enabled <0|1>`	: in common section, enables new discovered players by default. In a dedicated section, enables the player
 - `name` 		: The name that will appear for the device in AirPlay. You can change the default name.
-- `log_limit <-1 | n>` 	: (default -1) when using log file, limits its size (-1 = no limit)
-- `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP)
+- `log_limit <-1 | n>` 	: (default -1) when using log file, limits its size to 'n' MB (-1 = no limit)
+- `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
 - `metadata <0|1>`	: send metadata to player (only for mp3 codec and if player supports ICY protocol)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
-- `artwork`		: an URL to an artwork to be displayed on player	
+- `artwork`		: an URL to an artwork to be displayed on player
 
 ## Start automatically in Linux
 
@@ -189,28 +189,19 @@ For example, if received RTP frames are numbered 1,2,3,6, this bridge will forwa
 
 Many have asked for a way to do video/audio synchronisation so that UPnP (Sonos) players can be used as speakers when playing video on a computer or tablet (YouTube for example). Due to this RTP-to-HTTP bridging, this cannot be done as the exact time when an audio frame is played cannot be controlled on the HTTP client. AirPlay speakers can achieve that because the iPhone/iPad/MAC player will  "delay" the video by a known amount, send the audio in advance (usually 2 sec) and then control the exact time when this audio is output by the speaker. But although AirConnect has the exact request timing and maintains synchronization with the player, it cannot "relay" that synchronization to the speakers. UPnP protocol does not allow this and Sonos has not made their protocol public. Sometimes you might get lucky because the video-to-audio delay will almost match the HTTP player delay, but it is not reproductible and will not be stable over time.
 
-NB: [rtp] and [http] could have been merged into a single [latency] parameter which would have set the max RTP frames holding time as well as the duration of the initial additional silence (delay), but because some UPnP players and all Chromecast devices do properly their own buffering of HTTP audio (i.e. they wait until they have received a certain amount of audio before starting to play), then adding silence would have introduced an extra un-necessary delay in playback. 
+NB: [rtp] and [http] could have been merged into a single [latency] parameter which would have set the max RTP frames holding time as well as the duration of the initial additional silence (delay), but because some UPnP players and all Chromecast devices do their own buffering of HTTP audio (i.e., they wait until they have received a certain amount of audio before starting to play), then adding silence would have introduced an unnecessary extra delay in playback. 
 
 ## Compiling from source
 
 If you want to recompile, you'll need:
 
-https://github.com/nanopb/nanopb
-
-https://github.com/akheron/jansson
-
-https://github.com/philippe44/mDNS-SD (use fork v2)
-
-https://github.com/philippe44/TinySVCmDNS
-
-https://github.com/macosforge/alac
-
-https://github.com/mrjimenez/pupnp (I'm using 1.6.19)
-
-https://xiph.org/flac/
-
-http://www.sourceware.org/pthreads-win32/
-
-http://https://github.com/toots/shine
-
-https://github.com/mattstevens/dmap-parser
+- https://github.com/nanopb/nanopb
+- https://github.com/akheron/jansson
+- https://github.com/philippe44/mDNS-SD (use fork v2)
+- https://github.com/philippe44/TinySVCmDNS
+- https://github.com/macosforge/alac
+- https://github.com/mrjimenez/pupnp (I'm using 1.6.19)
+- https://xiph.org/flac/
+- http://www.sourceware.org/pthreads-win32/
+- https://github.com/toots/shine
+- https://github.com/mattstevens/dmap-parser

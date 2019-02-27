@@ -613,7 +613,7 @@ void ProcessQueue(tCastCtx *Ctx) {
 		// version 1.24
 		if (Ctx->stopReceiver) {
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-						"{\"type\":\"STOP\",\"requestId\":%d,\"sessionId\":%s}", Ctx->waitId, Ctx->sessionId);
+						"{\"type\":\"STOP\",\"requestId\":%d}", Ctx->waitId);
 			Ctx->Status = CAST_CONNECTED;
 
 		}
@@ -728,7 +728,7 @@ static void *CastSocketThread(void *args)
 				if (Ctx->stopReceiver) {
 					json_decref(root);
 					forward = false;
-                }
+				}
 			}
 
 			// respond to device ping

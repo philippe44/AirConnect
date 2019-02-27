@@ -1,3 +1,7 @@
+0.2.5.0
+  - backport some squeeze2upnp/cast changes with no impact
+  - add -n option in airupnp to exclude model number
+  
 0.2.4.0
  - Detect main IP address change and restart
  

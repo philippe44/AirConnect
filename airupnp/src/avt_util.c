@@ -405,6 +405,17 @@ char *GetProtocolInfo(struct sMR *Device)
 
 	XMLAddAttribute(doc, node, "protocolInfo", ProtoInfo);
 
+	// set optional parameters if we have them all (only happens with pcm)
+	if (MetaData->sample_rate && MetaData->sample_size && MetaData->channels) {
+		XMLAddAttribute(doc, node, "sampleFrequency", "%u", MetaData->sample_rate);
+		XMLAddAttribute(doc, node, "bitsPerSample", "%hhu", MetaData->sample_size);
+		XMLAddAttribute(doc, node, "nrAudioChannels", "%hhu", MetaData->channels);
+		if (MetaData->duration)
+			XMLAddAttribute(doc, node, "size", "%u", (u32_t) ((MetaData->sample_rate *
+							MetaData->sample_size / 8 * MetaData->channels *
+							(u64_t) MetaData->duration) / 1000));
+	}
+
 	s = ixmlNodetoString((IXML_Node*) doc);
 
 	ixmlDocument_free(doc);

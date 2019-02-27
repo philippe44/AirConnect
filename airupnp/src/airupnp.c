@@ -1,7 +1,7 @@
 /*
  * AirUPnP - AirPlay to uPNP gateway
  *
- *	(c) Philippe 2015-2017, philippe_44@outlook.com
+ *	(c) Philippe 2015-2019, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.4.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.5.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -117,8 +117,9 @@ static struct in_addr 	glHost;
 static char				glHostName[_STR_LEN_];
 static struct mdnsd*	glmDNSServer = NULL;
 static char*			glExcluded = NULL;
+static char*			glExcludedModelNumber = NULL;
 static char				*glPidFile = NULL;
-static bool				glAutoSaveConfigFile = false;
+static bool	 			glAutoSaveConfigFile = false;
 static bool				glGracefullShutdown = true;
 static bool				glDrift = false;
 static bool				glDiscovery = false;
@@ -134,7 +135,8 @@ static void				*glConfigID = NULL;
 static char				glConfigName[_STR_LEN_] = "./config.xml";
 
 static char usage[] =
-			VERSION "\n"
+
+			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -b <server>[:<port>]\tnetwork interface and UPnP port to use \n"
@@ -147,6 +149,7 @@ static char usage[] =
 		   "  -f <logfile>\t\twrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
+		   "  -n <name1,name2...>\texclude from search devices whose model number contains name1 or name 2 ...\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|raop|main|util|upnp, level: error|warn|info|debug|sdebug\n"
 
 #if LINUX || FREEBSD
@@ -200,12 +203,14 @@ static char license[] =
 static 	void*	MRThread(void *args);
 static 	void*	UpdateThread(void *args);
 static 	bool 	AddMRDevice(struct sMR *Device, char * UDN, IXML_Document *DescDoc,	const char *location);
-static	bool 	isExcluded(char *Model);
+static	bool 	isExcluded(char *Model, char *ModelNumber);
 static bool 	Start(bool cold);
 static bool 	Stop(bool exit);
 
 // functions with _ prefix means that the device mutex is expected to be locked
 static bool 	_ProcessQueue(struct sMR *Device);
+
+
 
 /*----------------------------------------------------------------------------*/
 #define TRACK_POLL  (1000)
@@ -305,8 +310,10 @@ void callback(void *owner, raop_event_t event, void *param)
 						LOG_INFO("[%p]: Sonos live stream", Device);
 					}
 					ProtoInfo = "http-get:*:audio/mp3:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
-				} else
-					ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+
+				} else
+
+					ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
@@ -380,13 +387,19 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 
 	if (!Device->Raop || !LastChange) {
 		LOG_SDEBUG("no RAOP device (yet) or not change for %s", Event->Sid);
-		pthread_mutex_unlock(&Device->Mutex);
-		NFREE(LastChange);
-		return;
-	}
 
-	// Feedback volume to AirPlay controller
-	r = XMLGetChangeItem(VarDoc, "Volume", "channel", "Master", "val");
+		pthread_mutex_unlock(&Device->Mutex);
+
+		NFREE(LastChange);
+
+		return;
+
+	}
+
+
+	// Feedback volume to AirPlay controller
+
+	r = XMLGetChangeItem(VarDoc, "Volume", "channel", "Master", "val");
 	if (r) {
 		double Volume;
 		int GroupVolume = GetGroupVolume(Device);
@@ -683,20 +696,25 @@ static void *UpdateThread(void *args)
 			// device keepalive or search response
 			} else if (Update->Type == DISCOVERY) {
 				IXML_Document *DescDoc = NULL;
-				char *UDN = NULL, *ModelName = NULL;
+				char *UDN = NULL, *ModelName = NULL, *ModelNumber = NULL;
 				int i, rc;
 
-				// it's a Sonos group announce, just do a targeted search and exit
-				if (strstr(Update->Data, "group_description")) {
-					for (i = 0; i < MAX_RENDERERS; i++) {
-						Device = glMRDevices + i;
+
+				// it's a Sonos group announce, just do a targeted search and exit
+
+				if (strstr(Update->Data, "group_description")) {
+
+					for (i = 0; i < MAX_RENDERERS; i++) {
+
+						Device = glMRDevices + i;
 						if (Device->Running && *Device->Service[TOPOLOGY_IDX].ControlURL)
 							UpnpSearchAsync(glControlPointHandle, 5, Device->UDN, Device);
 					}
 					continue;
 				}
 
-				// existing device ?
+
+				// existing device ?
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running && !strcmp(Device->DescDocURL, Update->Data)) {
@@ -726,10 +744,11 @@ static void *UpdateThread(void *args)
 				}
 
 				ModelName = XMLGetFirstDocumentItem(DescDoc, "modelName");
+				ModelNumber = XMLGetFirstDocumentItem(DescDoc, "modelNumber");
 				UDN = XMLGetFirstDocumentItem(DescDoc, "UDN");
 
 				// excluded device
-				if (isExcluded(ModelName)) {
+				if (isExcluded(ModelName, ModelNumber)) {
 					goto cleanup;
 				}
 
@@ -764,6 +783,7 @@ static void *UpdateThread(void *args)
 cleanup:
 				NFREE(UDN);
 				NFREE(ModelName);
+				NFREE(ModelNumber);
 				if (DescDoc) ixmlDocument_free(DescDoc);
 			}
 		}
@@ -835,7 +855,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
 	LoadMRConfig(glConfigID, UDN, &Device->Config);
 
-	if (!Device->Config.Enabled) return false;
+
+	if (!Device->Config.Enabled) return false;
 
 	// Read key elements from description document
 	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName");
@@ -931,38 +952,55 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 
 /*----------------------------------------------------------------------------*/
-bool isExcluded(char *Model)
+bool isExcluded(char *Model, char *ModelNumber)
 {
 	char item[_STR_LEN_];
 	char *p = glExcluded;
+	char *q = glExcludedModelNumber;
 
-	if (!glExcluded) return false;
-
-	do {
-		sscanf(p, "%[^,]", item);
-		if (stristr(Model, item)) return true;
-		p += strlen(item);
-	} while (*p++);
+	if (glExcluded) {
+	    do {
+		    sscanf(p, "%[^,]", item);
+		    if (stristr(Model, item)) return true;
+		    p += strlen(item);
+	    } while (*p++);
+	}
+	
+	if (glExcludedModelNumber) {
+	    do {
+		    sscanf(q, "%[^,]", item);
+		    if (stristr(ModelNumber, item)) return true;
+		    q += strlen(item);
+	    } while (*q++);
+	}
 
 	return false;
 }
 
 
-/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 static bool Start(bool cold)
 {
 	char hostname[_STR_LEN_];
 	int i, rc;
 	char IP[16] = "";
 
-	glHost.s_addr = INADDR_ANY;
-	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", IP, &glPort);
-	if (!*IP) {
-		struct in_addr host;
-		host.s_addr = get_localhost(NULL);
-		strcpy(IP, inet_ntoa(host));
-	}
-
+
+	glHost.s_addr = INADDR_ANY;
+
+	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", IP, &glPort);
+
+	if (!*IP) {
+
+		struct in_addr host;
+
+		host.s_addr = get_localhost(NULL);
+
+		strcpy(IP, inet_ntoa(host));
+
+	}
+
+
 	UpnpSetLogLevel(UPNP_ALL);
 	rc = UpnpInit(IP, glPort);
 
@@ -1107,7 +1145,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpifmlc", opt) && optind < argc - 1) {
+		if (strstr("bxdpifmnlc", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt)) {
@@ -1150,6 +1188,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'm':
 			glExcluded = optarg;
+			break;
+		case 'n':
+			glExcludedModelNumber = optarg;
 			break;
 		case 'l':
 			strcpy(glMRConfig.Latency, optarg);
@@ -1276,7 +1317,8 @@ int main(int argc, char *argv[])
 	}
 
 	if (!Start(true)) {
-		LOG_ERROR("Cannot start", NULL);
+
+		LOG_ERROR("Cannot start", NULL);
 		exit(1);
 	}
 
@@ -1353,4 +1395,3 @@ int main(int argc, char *argv[])
 
 	return true;
 }
-

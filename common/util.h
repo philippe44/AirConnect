@@ -54,6 +54,9 @@ typedef struct metadata_s {
 	u32_t track;
 	u32_t duration;
 	u32_t track_hash;
+	u32_t sample_rate;
+	u8_t  sample_size;
+	u8_t  channels;
 } metadata_t;
 
 

@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.2.5.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.6.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -84,8 +84,6 @@ static pthread_t 			glMainThread, glmDNSsearchThread;
 static char					*glLogFile;
 static char					*glHostName = NULL;
 static bool					glDiscovery = false;
-static pthread_mutex_t		glMainMutex;
-static pthread_cond_t		glMainCond;
 static bool					glInteractive = true;
 static char					*glPidFile = NULL;
 static bool					glAutoSaveConfigFile = false;
@@ -241,7 +239,7 @@ void callback(void *owner, raop_event_t event, void *param)
 #define MAX_ACTION_ERRORS (5)
 static void *MRThread(void *args)
 {
-	int elapsed;
+	int elapsed, wakeTimer = TRACK_POLL;
 	unsigned last = gettime_ms();
 	struct sMR *p = (struct sMR*) args;
 	json_t *data;
@@ -250,13 +248,14 @@ static void *MRThread(void *args)
 		double Volume = -1;
 
 		// context is valid until this thread ends, no deletion issue
-		data = GetTimedEvent(p->CastCtx, 250);
+		data = GetTimedEvent(p->CastCtx, wakeTimer);
 		elapsed = gettime_ms() - last;
 
 		// need to protect against events from CC threads, not from deletion
 		pthread_mutex_lock(&p->Mutex);
 
-		LOG_SDEBUG("Cast thread timer %d", elapsed);
+		wakeTimer = (p->State != STOPPED) ? TRACK_POLL : TRACK_POLL * 10;
+		LOG_SDEBUG("[%p]: Cast thread timer %d %d", p, elapsed, wakeTimer);
 
 		// a message has been received
 		if (data) {
@@ -320,10 +319,9 @@ static void *MRThread(void *args)
 			json_decref(data);
 		}
 
-
 		// get track position & CurrentURI
 		p->TrackPoll += elapsed;
-		if (p->TrackPoll > TRACK_POLL) {
+		if (p->TrackPoll >= TRACK_POLL) {
 			p->TrackPoll = 0;
 			if (p->State != STOPPED) CastGetMediaStatus(p->CastCtx);
 		}
@@ -510,9 +508,8 @@ static void *MainThread(void *args)
 {
 	while (glMainRunning) {
 
-		pthread_mutex_lock(&glMainMutex);
-		pthread_cond_reltimedwait(&glMainCond, &glMainMutex, 30*1000);
-		pthread_mutex_unlock(&glMainMutex);
+		WakeableSleep(30*1000);
+		if (!glMainRunning) break;
 
 		if (glLogFile && glLogLimit != - 1) {
 			u32_t size = ftell(stderr);
@@ -538,7 +535,7 @@ static void *MainThread(void *args)
 			}
 		}
 
-		// try to detect IP change when auto-detec
+		// try to detect IP change when auto-detect
 		if (strstr(glInterface, "?")) {
 			struct in_addr host;
 			host.s_addr = get_localhost(NULL);
@@ -647,6 +644,9 @@ void RemoveCastDevice(struct sMR *Device)
 	pthread_mutex_lock(&Device->Mutex);
 	Device->Running = false;
 	pthread_mutex_unlock(&Device->Mutex);
+
+	// need to wakeup CC so that it wakes up MRThread in return
+	WakeCastDevice(Device->CastCtx);
 	pthread_join(Device->Thread, NULL);
 
 	clear_list((list_t**) &Device->GroupMaster, free);
@@ -673,11 +673,10 @@ static bool Start(bool cold)
 		memset(&glMRDevices, 0, sizeof(glMRDevices));
 		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
+		InitUtils();
 		InitSSL();
 
-		/* start the main thread */
-		pthread_mutex_init(&glMainMutex, 0);
-		pthread_cond_init(&glMainCond, 0);
+		// start the main thread
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
 	}
 
@@ -686,7 +685,7 @@ static bool Start(bool cold)
 		if ((glmDNSServer = mdnsd_start(glHost)) == NULL) return false;
 		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
-		/* start the mDNS devices discovery thread */
+		// start the mDNS devices discovery thread
 		glmDNSsearchHandle = init_mDNS(false, glHost);
 		pthread_create(&glmDNSsearchThread, NULL, &mDNSsearchThread, NULL);
 	}
@@ -715,14 +714,12 @@ static bool Stop(bool exit)
 
 	if (exit) {
 		LOG_DEBUG("terminate main thread ...", NULL);
-		pthread_cond_signal(&glMainCond);
+		WakeAll();
 		pthread_join(glMainThread, NULL);
-		pthread_mutex_destroy(&glMainMutex);
-		pthread_cond_destroy(&glMainCond);
 		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
-		LOG_DEBUG("terminate SSL ...", NULL);
 		EndSSL();
+		EndUtils();
 
 		NFREE(glHostName);
 		if (glConfigID) ixmlDocument_free(glConfigID);

@@ -66,8 +66,47 @@ extern log_level	util_loglevel;
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-extern log_level 	util_loglevel;
-static log_level 	*loglevel = &util_loglevel;
+extern log_level 		util_loglevel;
+static log_level 		*loglevel = &util_loglevel;
+static pthread_mutex_t	wakeMutex;
+static pthread_cond_t	wakeCond;
+
+/*----------------------------------------------------------------------------*/
+void InitUtils(void)
+{
+	pthread_mutex_init(&wakeMutex, 0);
+	pthread_cond_init(&wakeCond, 0);
+}
+
+/*----------------------------------------------------------------------------*/
+void EndUtils(void)
+{
+	pthread_mutex_destroy(&wakeMutex);
+	pthread_cond_destroy(&wakeCond);
+}
+
+
+/*----------------------------------------------------------------------------*/
+/* 																			  */
+/* system-wide sleep & wakeup												  */
+/* 																			  */
+/*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
+void WakeableSleep(u32_t ms) {
+	pthread_mutex_lock(&wakeMutex);
+	if (ms) pthread_cond_reltimedwait(&wakeCond, &wakeMutex, ms);
+	else pthread_cond_wait(&wakeCond, &wakeMutex);
+	pthread_mutex_unlock(&wakeMutex);
+}
+
+/*----------------------------------------------------------------------------*/
+void WakeAll(void) {
+	pthread_mutex_lock(&wakeMutex);
+	pthread_cond_broadcast(&wakeCond);
+	pthread_mutex_unlock(&wakeMutex);
+}
+
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */
@@ -140,8 +179,8 @@ int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
 }
 #endif
 
-/*----------------------------------------------------------------------------*/
-/* 																			  */
+/*----------------------------------------------------------------------------*/
+/* 																			  */
 /* QUEUE management															  */
 /* 																			  */
 /*----------------------------------------------------------------------------*/
@@ -952,6 +991,8 @@ char *strndup(const char *s, size_t n) {
 	char *p = malloc(n + 1);
 	strncpy(p, s, n);
 	p[n] = '\0';
+
+	return p;
 }
 #endif
 
@@ -1310,35 +1351,40 @@ IXML_Node *XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, ch
 
 
 /*----------------------------------------------------------------------------*/
-char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item)
+char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict)
 {
 	IXML_NodeList *nodeList = NULL;
 	IXML_Node *textNode = NULL;
 	IXML_Node *tmpNode = NULL;
 	char *ret = NULL;
+	int i;
 
 	nodeList = ixmlDocument_getElementsByTagName(doc, (char *)item);
-	if (nodeList) {
-		tmpNode = ixmlNodeList_item(nodeList, 0);
+
+	for (i = 0; nodeList && i < (int) ixmlNodeList_length(nodeList); i++) {
+		tmpNode = ixmlNodeList_item(nodeList, i);
+
 		if (tmpNode) {
 			textNode = ixmlNode_getFirstChild(tmpNode);
-			if (!textNode) {
-				LOG_WARN("(BUG) ixmlNode_getFirstChild(tmpNode) returned NULL", NULL);
-				ret = strdup("");
-			}
-			else {
+			if (textNode) {
 				ret = strdup(ixmlNode_getNodeValue(textNode));
-				if (!ret) {
-					LOG_WARN("ixmlNode_getNodeValue returned NULL", NULL);
-					ret = strdup("");
-				}
+				if (ret) break;
+				LOG_WARN("ixmlNode_getNodeValue returned NULL", NULL);
+			} else {
+				LOG_WARN("(BUG) ixmlNode_getFirstChild(tmpNode) returned NULL", NULL);
 			}
-		} else
-			LOG_WARN("ixmlNodeList_item(nodeList, 0) returned NULL", NULL);
-	} else
-		LOG_SDEBUG("Error finding %s in XML Node", item);
+		} else {
+			LOG_WARN("ixmlNodeList_item(nodeList, %d) returned NULL", i, NULL);
+		}
 
-	if (nodeList) ixmlNodeList_free(nodeList);
+		if (strict) break;
+	}
+
+	if (nodeList) {
+		ixmlNodeList_free(nodeList);
+    } else {
+		LOG_SDEBUG("Error finding %s in XML Node", item);
+    }
 
 	return ret;
 }

@@ -64,6 +64,12 @@ typedef struct list_s {
 	struct list_s *next;
 } list_t;
 
+void 		InitUtils(void);
+void		EndUtils(void);
+
+void		WakeableSleep(u32_t ms);
+void		WakeAll(void);
+
 void 		QueueInit(tQueue *queue, bool mutex, void (*f)(void*));
 void 		QueueInsert(tQueue *queue, void *item);
 void 		*QueueExtract(tQueue *queue);
@@ -86,7 +92,7 @@ const char 	*XMLGetLocalName(IXML_Document *doc, int Depth);
 IXML_Node  	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
-char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item);
+char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict);
 char 		*XMLGetFirstElementItem(IXML_Element *element, const char *item);
 bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s);
 #endif

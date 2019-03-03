@@ -314,7 +314,7 @@ int GetGroupVolume(struct sMR *Device)
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
-	Item = XMLGetFirstDocumentItem(Response, "CurrentVolume");
+	Item = XMLGetFirstDocumentItem(Response, "CurrentVolume", true);
 	if (Response) ixmlDocument_free(Response);
 
 	if (Item) {
@@ -342,7 +342,7 @@ char *GetProtocolInfo(struct sMR *Device)
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	if (Response) {
-		ProtocolInfo = XMLGetFirstDocumentItem(Response, "Sink");
+		ProtocolInfo = XMLGetFirstDocumentItem(Response, "Sink", false);
 		ixmlDocument_free(Response);
 		LOG_DEBUG("[%p]: ProtocolInfo %s", Device, ProtocolInfo);
 	}

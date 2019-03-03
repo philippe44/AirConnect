@@ -49,7 +49,7 @@ bool isMaster(char *UDN, struct sService *Service, char **Name)
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
-	Body = XMLGetFirstDocumentItem(Response, "ZoneGroupState");
+	Body = XMLGetFirstDocumentItem(Response, "ZoneGroupState", true);
 	if (Response) ixmlDocument_free(Response);
 
 	Response = ixmlParseBuffer(Body);
@@ -132,6 +132,9 @@ void DelMRDevice(struct sMR *p)
 	}
 
 	p->Running = false;
+
+	// kick-up all sleepers
+	WakeAll();
 
 	pthread_mutex_unlock(&p->Mutex);
 	pthread_join(p->Thread, NULL);
@@ -324,7 +327,7 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 	IXML_Element *service = NULL;
 	bool contd = true;
 
-	baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase");
+	baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase", true);
 	if (baseURL) base = baseURL;
 	else base = location;
 

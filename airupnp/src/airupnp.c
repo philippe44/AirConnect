@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.5.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.6.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -123,8 +123,8 @@ static bool	 			glAutoSaveConfigFile = false;
 static bool				glGracefullShutdown = true;
 static bool				glDrift = false;
 static bool				glDiscovery = false;
-static pthread_mutex_t 	glMainMutex, glUpdateMutex;
-static pthread_cond_t  	glMainCond, glUpdateCond;
+static pthread_mutex_t 	glUpdateMutex;
+static pthread_cond_t  	glUpdateCond;
 static pthread_t 		glMainThread, glUpdateThread;
 static tQueue			glUpdateQueue;
 static bool				glInteractive = true;
@@ -216,19 +216,23 @@ static bool 	_ProcessQueue(struct sMR *Device);
 #define TRACK_POLL  (1000)
 #define STATE_POLL  (500)
 #define MAX_ACTION_ERRORS (5)
+#define MIN_POLL (min(TRACK_POLL, STATE_POLL))
 static void *MRThread(void *args)
 {
-	int elapsed;
+	int elapsed, wakeTimer = MIN_POLL;
 	unsigned last;
 	struct sMR *p = (struct sMR*) args;
 
 	last = gettime_ms();
 
-	for (; p->Running; usleep(250000)) {
+	for (; p->Running; WakeableSleep(wakeTimer)) {
 		elapsed = gettime_ms() - last;
 
 		// context is valid as long as thread runs
 		pthread_mutex_lock(&p->Mutex);
+		
+		wakeTimer = (p->State != STOPPED) ? MIN_POLL : MIN_POLL * 10;
+		LOG_SDEBUG("[%p]: UPnP thread timer %d %d", p, elapsed, wakeTimer);
 
 		p->StatePoll += elapsed;
 		p->TrackPoll += elapsed;
@@ -383,7 +387,7 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 	// this is async, so need to check context's validity
 	if (!CheckAndLock(Device)) return;
 
-	LastChange = XMLGetFirstDocumentItem(VarDoc, "LastChange");
+	LastChange = XMLGetFirstDocumentItem(VarDoc, "LastChange", true);
 
 	if (!Device->Raop || !LastChange) {
 		LOG_SDEBUG("no RAOP device (yet) or not change for %s", Event->Sid);
@@ -471,7 +475,7 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (Cookie < p->StartCookie) break;
 
 			// transport state response
-			if ((r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentTransportState")) != NULL) {
+			if ((r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentTransportState", true)) != NULL) {
 				if (!strcmp(r, "TRANSITIONING") && p->State != TRANSITIONING) {
 					p->State = TRANSITIONING;
 					LOG_INFO("[%p]: uPNP transition", p);
@@ -743,9 +747,9 @@ static void *UpdateThread(void *args)
 					goto cleanup;
 				}
 
-				ModelName = XMLGetFirstDocumentItem(DescDoc, "modelName");
-				ModelNumber = XMLGetFirstDocumentItem(DescDoc, "modelNumber");
-				UDN = XMLGetFirstDocumentItem(DescDoc, "UDN");
+				ModelName = XMLGetFirstDocumentItem(DescDoc, "modelName", true);
+				ModelNumber = XMLGetFirstDocumentItem(DescDoc, "modelNumber", true);
+				UDN = XMLGetFirstDocumentItem(DescDoc, "UDN", true);
 
 				// excluded device
 				if (isExcluded(ModelName, ModelNumber)) {
@@ -798,9 +802,8 @@ static void *MainThread(void *args)
 {
 	while (glMainRunning) {
 
-		pthread_mutex_lock(&glMainMutex);
-		pthread_cond_reltimedwait(&glMainCond, &glMainMutex, 30*1000);
-		pthread_mutex_unlock(&glMainMutex);
+		WakeableSleep(30*1000);				
+		if (!glMainRunning) break;
 
 		if (glLogFile && glLogLimit != - 1) {
 			u32_t size = ftell(stderr);
@@ -859,7 +862,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	if (!Device->Config.Enabled) return false;
 
 	// Read key elements from description document
-	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName");
+	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
 	if (!friendlyName || !*friendlyName) friendlyName = strdup(UDN);
 
 	LOG_SDEBUG("UDN:\t%s\nFriendlyName:\t%s", UDN,  friendlyName);
@@ -991,15 +994,10 @@ static bool Start(bool cold)
 	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", IP, &glPort);
 
 	if (!*IP) {
-
 		struct in_addr host;
-
 		host.s_addr = get_localhost(NULL);
-
 		strcpy(IP, inet_ntoa(host));
-
 	}
-
 
 	UpnpSetLogLevel(UPNP_ALL);
 	rc = UpnpInit(IP, glPort);
@@ -1018,13 +1016,14 @@ static bool Start(bool cold)
 	LOG_INFO("Binding to %s:%d", IP, glPort);
 
 	if (cold) {
+		// initialize MR utils
+		InitUtils();
+
 		// mutex should *always* be valid
 		memset(&glMRDevices, 0, sizeof(glMRDevices));
 		for (i = 0; i < MAX_RENDERERS; i++)	pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
 		/* start the main thread */
-		pthread_mutex_init(&glMainMutex, 0);
-		pthread_cond_init(&glMainCond, 0);
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
 	}
 
@@ -1042,7 +1041,7 @@ static bool Start(bool cold)
 		}
 
 		snprintf(hostname, _STR_LEN_, "%s.local", glHostName);
-        if ((glmDNSServer = mdnsd_start(glHost)) == NULL) goto Error;
+		if ((glmDNSServer = mdnsd_start(glHost)) == NULL) goto Error;
 		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
 		UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER, NULL);
@@ -1094,18 +1093,19 @@ static bool Stop(bool exit)
 	if (exit) {
 		// simple log size management thread
 		LOG_INFO("terminate main thread ...", NULL);
-		pthread_cond_signal(&glMainCond);
+		WakeAll();
 		pthread_join(glMainThread, NULL);
 
 		// these are for sure unused now that libupnp cannot signal anything
-		pthread_mutex_destroy(&glMainMutex);
-		pthread_cond_destroy(&glMainCond);
 		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
+		EndUtils();
+		
 		if (glConfigID) ixmlDocument_free(glConfigID);
 #if WIN
 		winsock_close();
 #endif
+
 	}
 
 	return true;

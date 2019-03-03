@@ -37,6 +37,7 @@ json_t*	GetTimedEvent(void *p, u32_t msWait);
 void*	CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, u16_t port, double MediaVolume);
 bool 	UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, u16_t port);
 void 	DeleteCastDevice(struct sCastCtx *Ctx);
+void 	WakeCastDevice(struct sCastCtx *Ctx);
 bool	CastIsConnected(struct sCastCtx *Ctx);
 bool 	CastIsMediaSession(struct sCastCtx *Ctx);
 struct in_addr GetAddr(struct sCastCtx *Ctx);

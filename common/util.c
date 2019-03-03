@@ -72,15 +72,13 @@ static pthread_mutex_t	wakeMutex;
 static pthread_cond_t	wakeCond;
 
 /*----------------------------------------------------------------------------*/
-void InitUtils(void)
-{
+void InitUtils(void) {
 	pthread_mutex_init(&wakeMutex, 0);
 	pthread_cond_init(&wakeCond, 0);
 }
 
 /*----------------------------------------------------------------------------*/
-void EndUtils(void)
-{
+void EndUtils(void) {
 	pthread_mutex_destroy(&wakeMutex);
 	pthread_cond_destroy(&wakeCond);
 }

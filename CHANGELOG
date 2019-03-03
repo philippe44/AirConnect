@@ -1,3 +1,6 @@
+0.2.6.1
+ - (cast) simplify device removal (no explicit wakeup call)
+ 
 0.2.6.0
  - move RTSP server back to using accept() instead of select() and use connect() to close the connection
  - remove usage of sleep() to redeuce CPU consumption in idle

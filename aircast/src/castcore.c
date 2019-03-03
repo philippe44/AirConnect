@@ -485,15 +485,6 @@ struct in_addr GetAddr(struct sCastCtx *Ctx)
 
 
 /*----------------------------------------------------------------------------*/
-void WakeCastDevice(struct sCastCtx *Ctx) {
-	// wake up client if it needs to do something
-	pthread_mutex_lock(&Ctx->eventMutex);
-	pthread_cond_signal(&Ctx->eventCond);
-	pthread_mutex_unlock(&Ctx->eventMutex);
-}
-
-
-/*----------------------------------------------------------------------------*/
 void DeleteCastDevice(struct sCastCtx *Ctx)
 {
 	pthread_mutex_lock(&Ctx->Mutex);
@@ -507,6 +498,11 @@ void DeleteCastDevice(struct sCastCtx *Ctx)
 
 	pthread_join(Ctx->PingThread, NULL);
 	pthread_join(Ctx->Thread, NULL);
+
+	// wake-up threads locked on GetTimedEvent
+	pthread_mutex_lock(&Ctx->eventMutex);
+	pthread_cond_signal(&Ctx->eventCond);
+	pthread_mutex_unlock(&Ctx->eventMutex);
 
 	// cleanup mutexes & conds
 	pthread_cond_destroy(&Ctx->eventCond);

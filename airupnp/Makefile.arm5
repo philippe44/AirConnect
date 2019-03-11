@@ -6,6 +6,7 @@ LDFLAGS ?= -s -lpthread -lssl -lcrypto -ldl -lm -lrt -L.
 
 OBJ					= bin/arm5
 EXECUTABLE 			= ../bin/airupnp-arm5
+#EXECUTABLE_STATIC	= ../bin/airupnp-arm5-static
 
 include Makefile
 

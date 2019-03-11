@@ -47,13 +47,18 @@ SOURCES = avt_util.c airupnp.c mr_util.c config_upnp.c  \
 SOURCES_LIBS = 
 		
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
+OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
 LIBRARY 		= $(OBJ)/libixml.a $(OBJ)/libFLAC.a  $(OBJ)/libupnp.a  $(OBJ)/libthreadutil.a $(OBJ)/libshine.a
+LIBRARY_STATIC 	= $(LIBRARY)
 
-all: $(EXECUTABLE) 
+all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
+	
+$(EXECUTABLE_STATIC): $(OBJECTS_STATIC)
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) -static -o $@	
 
 $(OBJECTS): $(DEPS) | bin $(OBJ) 
 
@@ -66,5 +71,8 @@ bin:
 $(OBJ)/%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
 
+$(OBJ)/%-static.o : %.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DLINKALL $(INCLUDE) $< -c -o $(OBJ)/$*-static.o	
+	
 clean:
-	rm -f $(OBJECTS) $(EXECUTABLE)
+	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) 

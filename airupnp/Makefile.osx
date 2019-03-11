@@ -5,6 +5,7 @@ OS		 = Darwin
 
 OBJ					= bin/osx
 EXECUTABLE 			= ../bin/airupnp-osx-multi
+#EXECUTABLE_STATIC	= ../bin/airupnp-osx-static
 
 include Makefile
 

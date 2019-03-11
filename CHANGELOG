@@ -1,3 +1,10 @@
+0.2.7.0
+ - add parameter to disable range acceptance in hairtunes (needed for shairtunes2)
+ - send silence frames as soon as playtime reached to ensure continuous HTTP stream
+ - reduce initial silence frames by number of already received frames
+ - discriminate FLUSH send at start to clean pipe from FLUSH used to stop playback using RECORD values and timer
+ - STILL NEED TO KNOW WHY AIRCAST LOCKS
+
 0.2.6.1
  - (cast) simplify device removal (no explicit wakeup call)
  

@@ -129,7 +129,7 @@ typedef struct hairtunes_s {
 	bool running;
 	unsigned char aesiv[16];
 	AES_KEY aes;
-	bool decrypt;
+	bool decrypt, range;
 	int frame_size;
 	int in_frames, out_frames;
 	u32_t	resent_frames, silent_frames;
@@ -150,6 +150,11 @@ typedef struct hairtunes_s {
 		u8_t  	status;
 		bool	first, required;
 	} synchro;
+	struct {
+		u32_t time;
+		seq_t seqno;
+		u32_t rtptime;
+	} record;
 	int latency;
 	abuf_t audio_buffer[BUFFER_FRAMES];
 	int http_listener;
@@ -302,7 +307,7 @@ static alac_file* alac_init(int fmtp[32]) {
 
 /*---------------------------------------------------------------------------*/
 hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
-								bool sync, bool drift, char *latencies,
+								bool sync, bool drift, bool range, char *latencies,
 								char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
 								void *owner, hairtunes_cb_t callback)
@@ -335,7 +340,11 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	ctx->owner = owner;
 	ctx->synchro.required = sync;
 	ctx->timing.drift = drift;
+	ctx->range = range;
 	ctx->http_ready = false;
+
+	// write pointer = last written, read pointer = next to read so fill = w-r+1
+	ctx->ab_read = ctx->ab_write + 1;
 
 #ifdef __RTP_STORE
 	ctx->rtpIN = fopen("airplay.rtpin", "wb");
@@ -444,27 +453,38 @@ void hairtunes_end(hairtunes_t *ctx)
 }
 
 /*---------------------------------------------------------------------------*/
-bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtpframe)
+bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtptime)
 {
 	bool rc = true;
+	u32_t now = gettime_ms();
 
-	pthread_mutex_lock(&ctx->ab_mutex);
-
-	if (seq_order(seqno, ctx->ab_read) || seqno == ctx->ab_read) {
+	if (now < ctx->record.time + 500 || (ctx->record.seqno == seqno && ctx->record.rtptime == rtptime)) {
 		rc = false;
-		LOG_ERROR("[%p]: FLUSH ignored as seqno (%hu) <= ab_read (%hu)", ctx, seqno, ctx->ab_read);
+		LOG_ERROR("[%p]: FLUSH ignored as same as RECORD (%hu - %u)", ctx, seqno, rtptime);
 	} else {
+		pthread_mutex_lock(&ctx->ab_mutex);
 		buffer_reset(ctx->audio_buffer);
 		ctx->playing = false;
 		ctx->flush_seqno = seqno;
 		ctx->synchro.first = false;
 		ctx->http_ready = false;
 		encoder_close(ctx);
+		pthread_mutex_unlock(&ctx->ab_mutex);
 	}
 
-	pthread_mutex_unlock(&ctx->ab_mutex);
+	LOG_INFO("[%p]: flush %hu %u", ctx, seqno, rtptime);
 
 	return rc;
+}
+
+/*---------------------------------------------------------------------------*/
+void hairtunes_record(hairtunes_t *ctx, unsigned short seqno, unsigned rtptime)
+{
+	ctx->record.seqno = seqno;
+	ctx->record.rtptime = rtptime;
+	ctx->record.time = gettime_ms();
+
+	LOG_INFO("[%p]: record %hu %u", ctx, seqno, rtptime);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -542,10 +562,6 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 		}
 	}
 
-	if (!(ctx->in_frames++ & 0x1ff)) {
-		LOG_INFO("[%p]: fill status [level:%hu] [W:%hu R:%hu]", ctx, (seq_t) (ctx->ab_write - ctx->ab_read), ctx->ab_write, ctx->ab_read);
-	}
-
 	if (seqno == (seq_t)(ctx->ab_write+1)) {                  // expected packet
 		abuf = ctx->audio_buffer + BUFIDX(seqno);
 		ctx->ab_write = seqno;
@@ -567,6 +583,10 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 		LOG_DEBUG("[%p]: packet recovered seqno:%hu rtptime:%u (W:%hu R:%hu)", ctx, seqno, rtptime, ctx->ab_write, ctx->ab_read);
 	} else {    // too late.
 		LOG_DEBUG("[%p]: packet too late seqno:%hu rtptime:%u (W:%hu R:%hu)", ctx, seqno, rtptime, ctx->ab_write, ctx->ab_read);
+	}
+
+	if (!(ctx->in_frames++ & 0x1ff)) {
+		LOG_INFO("[%p]: fill status [level:%hu] [W:%hu R:%hu]", ctx, (seq_t) (ctx->ab_write - ctx->ab_read + 1), ctx->ab_write, ctx->ab_read);
 	}
 
 	if (abuf) {
@@ -719,23 +739,26 @@ static void *rtp_thread_func(void *arg) {
 					pthread_mutex_lock(&ctx->ab_mutex);
 
 					/*
-					  if expected time is more than remote, then our time is
-					  running faster and we are transmitting frames too quickly,
-					  so we'll run out of frames, need to add one
+					 if expected time is more than remote, then our time is
+					 running faster and we are transmitting frames too quickly,
+					 so we'll run out of frames, need to add one
 					*/
 					if (ctx->timing.gap_sum > GAP_THRES && ctx->timing.gap_count++ > GAP_COUNT) {
 						LOG_INFO("[%p]: Sending packets too fast %Ld", ctx, ctx->timing.gap_sum);
 						ctx->ab_read--;
+						ctx->audio_buffer[BUFIDX(ctx->ab_read)].ready = 1;
 						ctx->timing.gap_sum -= GAP_THRES;
 						ctx->timing.gap_adjust -= GAP_THRES;
 					/*
-					  if expected time is less than remote, then our time is
-					  running slower and we are transmitting frames too slowly,
-					  so we'll overflow frames buffer, need to remove one
+					 if expected time is less than remote, then our time is
+					 running slower and we are transmitting frames too slowly,
+					 so we'll overflow frames buffer, need to remove one
 					*/
 					} else if (ctx->timing.gap_sum < -GAP_THRES && ctx->timing.gap_count++ > GAP_COUNT) {
-						if (ctx->ab_read != ctx->ab_write) ctx->ab_read++;
-						else ctx->skip++;
+						if (ctx->ab_read != ctx->ab_write + 1) {
+							ctx->audio_buffer[BUFIDX(ctx->ab_read)].ready = 0;
+							ctx->ab_read++;
+						} else ctx->skip++;
 						ctx->timing.gap_sum += GAP_THRES;
 						ctx->timing.gap_adjust += GAP_THRES;
 						LOG_INFO("[%p]: Sending packets too slow %Ld (skip: %d)", ctx, ctx->timing.gap_sum, ctx->skip);
@@ -838,35 +861,44 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 	if (ctx->silence_count && ctx->silence_count--)	{
 		*len = ctx->frame_size * 4;
 		return (short*) ctx->silence_frame;
-    }
+	}
 
 	// skip frames if we are running late and skip could not be done in SYNC
-	while (ctx->skip && ctx->ab_read != ctx->ab_write) {
+	while (ctx->skip && ctx->ab_read != ctx->ab_write + 1) {
+		ctx->audio_buffer[BUFIDX(ctx->ab_read)].ready = 0;
 		ctx->ab_read++;
 		ctx->skip--;
 	}
 
-	buf_fill = ctx->ab_write - ctx->ab_read;
+	buf_fill = ctx->ab_write - ctx->ab_read + 1;
 
 	if (buf_fill >= BUFFER_FRAMES) {
 		LOG_ERROR("[%p]: Buffer overrun %hu", ctx, buf_fill);
 		ctx->ab_read = ctx->ab_write - (BUFFER_FRAMES - 64);
+		buf_fill = ctx->ab_write - ctx->ab_read + 1;
 	}
 
+	/*
+	 Last RTP sync might have happen recently and buffer frames have an RTP
+	 older than sync.rtp, so difference will be negative, need to treat that
+	 as a signed number. This works even in case of 32 bits rollover
+	*/
 	now = gettime_ms();
 	curframe = ctx->audio_buffer + BUFIDX(ctx->ab_read);
 
 	/*
-	  Last RTP sync might have happen recently and buffer frames have an RTP
-	  older than sync.rtp, so difference will be negative, need to treat that
-	  as a signed number. This works even in case of 32 bits rollover
+	 If buffer is empty, use previous frame rtptime and add one frame. Note
+	 that buf_fill can < 0 as ab_read increases above ab_write
 	*/
-	playtime = ctx->synchro.time + (((s32_t)(curframe->rtptime - ctx->synchro.rtp))*1000)/44100;
+	if (buf_fill <= 0) curframe->rtptime = ctx->audio_buffer[BUFIDX(ctx->ab_read - 1)].rtptime + ctx->frame_size;
 
-	if (!ctx->playing || !buf_fill || ctx->synchro.status != (RTP_SYNC | NTP_SYNC) || (now < playtime && !curframe->ready)) {
-		LOG_SDEBUG("[%p]: waiting (fill:%hu, W:%hu R:%hu) now:%u, playtime:%u, wait:%d", ctx, buf_fill, ctx->ab_write, ctx->ab_read, now, playtime, playtime - now);
+	playtime = ctx->synchro.time + (((s32_t)(curframe->rtptime - ctx->synchro.rtp)) * 1000) / 44100;
+
+	// wait if not ready but have time, otherwise send silence
+	if (ctx->synchro.status != (RTP_SYNC | NTP_SYNC) || (now < playtime && !curframe->ready)) {
+		LOG_SDEBUG("[%p]: waiting (fill:%hd, W:%hu R:%hu) now:%u, playtime:%u, wait:%d", ctx, buf_fill, ctx->ab_write, ctx->ab_read, now, playtime, playtime - now);
 		// look for "blocking" frames at the top of the queue and try to catch-up
-		for (i = 0; i < min(16, buf_fill); i++) {
+		for (i = 0; buf_fill > 0 && i < min(16, buf_fill); i++) {
 			abuf_t *frame = ctx->audio_buffer + BUFIDX(ctx->ab_read + i);
 			if (!frame->ready && (frame->last_resend + RESEND_TO) - now > RESEND_TO) {
 				rtp_request_resend(ctx, ctx->ab_read + i, ctx->ab_read + i);
@@ -877,8 +909,8 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 	}
 
 	if (!(ctx->out_frames++ & 0x1ff)) {
-		LOG_INFO("[%p]: drain status [level:%hu] [W:%hu R:%hu] [R:%u S:%u]",
-					ctx, buf_fill, ctx->ab_write, ctx->ab_read, ctx->resent_frames, ctx->silent_frames);
+		LOG_INFO("[%p]: drain status [level:%hd] [W:%hu R:%hu] [R:%u S:%u]",
+					ctx, buf_fill-1, ctx->ab_write, ctx->ab_read, ctx->resent_frames, ctx->silent_frames);
 	}
 
 	// each missing packet will be requested up to (latency_frames / 16) times
@@ -891,12 +923,12 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 	}
 
 	if (!curframe->ready) {
-		LOG_INFO("[%p]: created zero frame (fill:%hu,  W:%hu R:%hu)", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read);
+		LOG_DEBUG("[%p]: created zero frame (W:%hu R:%hu)", ctx, ctx->ab_write, ctx->ab_read);
 		memset(curframe->data, 0, ctx->frame_size*4);
 		curframe->len = ctx->frame_size * 4;
 		ctx->silent_frames++;
 	} else {
-		LOG_SDEBUG("[%p]: prepared frame (fill:%hu, W:%hu R:%hu)", ctx, buf_fill - 1, ctx->ab_write, ctx->ab_read);
+		LOG_SDEBUG("[%p]: prepared frame (fill:%hd, W:%hu R:%hu)", ctx, buf_fill-1, ctx->ab_write, ctx->ab_read);
 	}
 
 	*len = curframe->len;
@@ -905,7 +937,6 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 
 	return curframe->data;
 }
-
 
 /*---------------------------------------------------------------------------*/
 #ifdef CHUNKED
@@ -966,7 +997,15 @@ static void *http_thread_func(void *arg) {
 			if (sock != -1 && ctx->running) {
 				int on = 1;
 				setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *) &on, sizeof(on));
+
 				ctx->silence_count = (ctx->delay * 44100) / (ctx->frame_size * 1000);
+				pthread_mutex_lock(&ctx->ab_mutex);
+				if (ctx->playing) {
+					ctx->silence_count -= ctx->ab_write - ctx->ab_read + 1;
+					if (ctx->silence_count < 0) ctx->silence_count = 0;
+				}
+				pthread_mutex_unlock(&ctx->ab_mutex);
+
 				LOG_INFO("[%p]: got HTTP connection %u (silent frames %d)", ctx, sock, ctx->silence_count);
 			} else continue;
 		}
@@ -1156,7 +1195,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	kd_add(resp, "Content-Type", mime_types[ctx->encode.config.codec]);
 
 	// is there a range request (chromecast non-compliance to HTTP !!!)
-	if ((str = kd_lookup(headers, "Range")) != NULL) {
+	if (ctx->range && (str = kd_lookup(headers, "Range")) != NULL) {
 #if WIN
 		sscanf(str, "bytes=%u", &offset);
 #else
@@ -1207,7 +1246,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 		size_t count = 0;
 
 		LOG_INFO("[%p] re-sending offset %zu/%zu", ctx, offset, ctx->http_count);
-        ctx->silence_count = 0;
+		ctx->silence_count = 0;
 		while (count != ctx->http_count - offset) {
 			size_t bytes = ctx->icy.interval ? ctx->icy.remain : ICY_INTERVAL;
 			int sent;

@@ -5,6 +5,7 @@ LDFLAGS ?= -s -lpthread -lssl -lcrypto -lm -lrt -lz -L.
 
 OBJ					= bin/bsd-x64
 EXECUTABLE 			= ../bin/aircast-bsd-x64
+EXECUTABLE_STATIC 			= ../bin/aircast-bsd-x64-static
 
 include Makefile
 

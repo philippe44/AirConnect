@@ -4,6 +4,7 @@ LDFLAGS ?= -s -lpthread -lssl -lcrypto -lm -lrt -L.
 
 OBJ					= bin/bsd-x64
 EXECUTABLE 			= ../bin/airupnp-bsd-x64
+#EXECUTABLE_STATIC	= ../bin/airupnp-bsd-x64-static
 
 include Makefile
 

@@ -35,7 +35,6 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.2.6.1"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 

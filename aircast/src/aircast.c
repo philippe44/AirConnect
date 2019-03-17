@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.2.7.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.8.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -58,6 +58,7 @@ tMRConfig			glMRConfig = {
 							0.5,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 							"",		// rtp/http_latency (0 = use client's request)
+							false,	// drift
 							"", 	// artwork
 					};
 
@@ -92,7 +93,6 @@ static char 				glInterface[16] = "?";
 static void					*glConfigID = NULL;
 static char					glConfigName[_STR_LEN_] = "./config.xml";
 static struct mdnsd*		glmDNSServer = NULL;
-static bool 				glDrift = false;
 
 static char usage[] =
 			VERSION "\n"
@@ -103,7 +103,7 @@ static char usage[] =
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
-		   "  -l <[rtp][:http]>\tset RTP and HTTP latency (ms)\n"
+		   "  -l <[rtp][:http][:f]>\tRTP and HTTP latency (ms), ':f' forces silence fill\n"
 		   "  -r \t\t\tlet timing reference drift (no click)\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
@@ -477,7 +477,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		if (AddCastDevice(Device, Name, UDN, Group, s->addr, s->port) && !glDiscovery) {
 			Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 										"aircast", Device->Config.mac, Device->Config.Codec,
-										Device->Config.Metadata, glDrift, Device->Config.Latency,
+										Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
 										Device, callback);
 			if (!Device->Raop) {
 				LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
@@ -808,7 +808,7 @@ bool ParseArgs(int argc, char **argv) {
 			glGracefullShutdown = false;
 			break;
 		case 'r':
-			glDrift = true;
+			glMRConfig.Drift = true;
 			break;
 		case 'l':
 			strcpy(glMRConfig.Latency, optarg);

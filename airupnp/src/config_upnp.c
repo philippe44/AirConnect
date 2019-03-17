@@ -84,6 +84,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "metadata", "%d", glMRConfig.Metadata);
 	XMLUpdateNode(doc, common, false, "artwork", glMRConfig.ArtWork);
 	XMLUpdateNode(doc, common, false, "latency", glMRConfig.Latency);
+	XMLUpdateNode(doc, common, false, "drift", "%d", glMRConfig.Drift);
 
 	// mutex is locked here so no risk of a player being destroyed in our back
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -142,6 +143,7 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 	if (!strcmp(name, "metadata")) Conf->Metadata = atoi(val);
 	if (!strcmp(name, "artwork")) strcpy(Conf->ArtWork, val);
 	if (!strcmp(name, "latency")) strcpy(Conf->Latency, val);
+	if (!strcmp(name, "drift")) Conf->Drift = atoi(val);
 	if (!strcmp(name, "name")) strcpy(Conf->Name, val);
 	if (!strcmp(name, "mac"))  {
 		unsigned mac[6];

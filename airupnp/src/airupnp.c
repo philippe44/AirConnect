@@ -37,7 +37,7 @@
 #include "mr_util.h"
 #include "log_util.h"
 
-#define VERSION "v0.2.7.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.8.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -76,6 +76,7 @@ tMRConfig			glMRConfig = {
 							"flc",	    // Codec
 							true,		// Metadata
 							"",			// RTP:HTTP Latency (0 = use AirPlay requested)
+							false,		// drift
 							{0, 0, 0, 0, 0, 0 }, // MAC
 							"",			// artwork
 					};
@@ -121,7 +122,6 @@ static char*			glExcludedModelNumber = NULL;
 static char				*glPidFile = NULL;
 static bool	 			glAutoSaveConfigFile = false;
 static bool				glGracefullShutdown = true;
-static bool				glDrift = false;
 static bool				glDiscovery = false;
 static pthread_mutex_t 	glUpdateMutex;
 static pthread_cond_t  	glUpdateCond;
@@ -144,7 +144,7 @@ static char usage[] =
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
-		   "  -l <[rtp][:http]>\tset RTP and HTTP latency (ms)\n"
+		   "  -l <[rtp][:http][:f]>\tRTP and HTTP latency (ms), ':f' forces silence fill\n"
    		   "  -r \t\t\tlet timing reference drift (no click)\n"
 		   "  -f <logfile>\t\twrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
@@ -772,7 +772,7 @@ static void *UpdateThread(void *args)
 					// create a new AirPlay
 					Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 									   "airupnp", Device->Config.mac, Device->Config.Codec,
-									   Device->Config.Metadata, glDrift, Device->Config.Latency,
+									   Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
 									   Device, callback);
 					if (!Device->Raop) {
 						LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
@@ -1184,7 +1184,7 @@ bool ParseArgs(int argc, char **argv) {
 			glGracefullShutdown = false;
 			break;
 		case 'r':
-			glDrift = true;
+			glMRConfig.Drift = true;
 			break;
 		case 'm':
 			glExcluded = optarg;

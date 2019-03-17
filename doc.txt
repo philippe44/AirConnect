@@ -1,0 +1,113 @@
+a1/Steady mode
+<--------------------------------- HTTP latency -------------------------------------> 
+											 <------------ RTP latency --------------> 
+											 |                                       WR
+|--------------------------------------------|---------------------------------------|
+DAC  				                      	now 	 	                           playtime
+
+
+a2/holding frame
+		<----------------------------- HTTP latency --------------------------------> 
+											         <--------- RTP latency --------> 
+													 |					            H (held) W
+        |--------------------------------------------|------------------------------|--------|
+		DAC  				                      	now 	 	                    playtime
+
+a3/limit
+                                        <--------------- HTTP latency ---------------> 
+																			< no RTP latency > 
+																		            H/R                (held)                 W
+                                        |--------------------------------------------|----------------------------------------|
+		                                 DAC  				                      now/playtime
+		
+a4/insert silence				        <--------------- HTTP latency ---------------> 
+																	                S/R              (sending)                W
+                                        |--------------------------------------------|----------------------------------------|
+		                                 DAC  				                      now/playtime
+		
+a5/catchup		
+                                         <--------------------------------- HTTP latency -------------------------------------> 
+											                                          <------------ RTP latency --------------> 
+		                                                                              |                                       WR
+                                         |--------------------------------------------|---------------------------------------|
+		                                 DAC  				                         now                                    playtime
+		
+
+b1/Steady mode
+<--------------------------------- HTTP latency -------------------------------------> 
+											 <------------ RTP latency --------------> 
+											 |                                       WR
+|--------------------------------------------|---------------------------------------|
+DAC  				                      	now 	 	                           playtime
+		
+b2/starving RTP
+        <------------------------------ HTTP latency ---------------------------------> 
+											         <---------- RTP latency ---------> 
+                                                     |                                WR
+        |--------------------------------------------|--------------------------------|
+		DAC  				                      	now 	 	                    playtime
+
+b3.1/limit
+                                        <-------------- HTTP latency ----------------> 
+                                                                              < no RTP latency >         
+														                             WR
+                                        |--------------------------------------------|
+		                                 DAC  				                      now/playtime
+										 
+If nothing done, then when DAC reaches playtime, player stops
+
+OPTION-1: wait for frames
+
+b4/frame arrives
+                                                <---------------- HTTP latency --------------> 
+																					< no RTP latency >         
+                                                                                             H/R   (to be recovered)      W
+                                                |--------------------------------------------|----------------------------|
+		                                         DAC  				                      now/playtime
+b5/ frames arrive to catch-up wih real time
+                                                    <--------------------------------- HTTP latency -------------------------------------> 
+											                                                     <------------ RTP latency --------------> 
+											                                                     |         (all recovered)               WR
+                                                    |--------------------------------------------|---------------------------------------|
+                                                    DAC  				                      	now 	 	                           playtime
+													
+b6/ frame arrives too late													
+                                                                                         <---------------------------  HTTP latency -------------------------> 
+																													 <------------ RTP latency --------------> 
+                                                                                         R     (don't recover)       |         (to be recovered)             W
+                                                                                         |===========================|---------------------------------------|
+		                                                                                 playtime                   now         
+OPTIONS-2: insert silence
+b3.2/limit, inserting silence on empty buffer
+                                        <-------------- HTTP latency ----------------> 
+                                                                              < no RTP latency >         
+														                             WR/S
+                                        |--------------------------------------------|
+		                                 DAC  				                      now/playtime
+
+b4/silence addition, no catchup
+                                                <-------------- HTTP latency ----------------> 
+                                                                              < no RTP latency >         
+														                             W      R/S
+                                                |------------------------------------|-------|
+		                                        DAC  				                      now/playtime
+
+b5/finally a frame arrives in time
+                                                    <-------------- HTTP latency ----------------> 
+                                                                              < no RTP latency >      
+                                                                                                R/S     (to be recovered)     W
+                                                    |--------------------------------------------|----------------------------|
+		                                            DAC  				                      now/playtime																			  
+													
+											        |------------------------------------|---------|----------------------------------------|
+                                                    DAC                                           now                                    playtime
+
+5/frame arrives too late
+                                                                                                        <-------------- HTTP latency ----------------> 
+                                                                                                        < no RTP latency >      
+                                                                                                                                                   R/S     (to be recovered)     W
+                                                                                                       |--------------------------------------------|----------------------------|
+		                                                                                               DAC  				                      now/playtime															  
+													
+											        
+											 

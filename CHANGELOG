@@ -1,9 +1,20 @@
+0.2.8.0
+ - silence frames count on http reconnect shall be 0 when already sending silence
+ - limit packet recovery to max of rtp latency and http delay
+ - misc network congestion corrections
+ - forced fill http moved to :f option on latencies
+ - add <drift> parameter
+ - STILL NEED TO KNOW WHY AIRCAST LOCKS ON EXIT 
+
 0.2.7.0
  - add parameter to disable range acceptance in hairtunes (needed for shairtunes2)
  - send silence frames as soon as playtime reached to ensure continuous HTTP stream
  - reduce initial silence frames by number of already received frames
  - discriminate FLUSH send at start to clean pipe from FLUSH used to stop playback using RECORD values and timer
- - STILL NEED TO KNOW WHY AIRCAST LOCKS
+ - resend timeout was wrong (in http thread)
+ - silence frames count on http reconnect shall be 0 when already sending silence
+ - discard NTP sync that have a larger roundtrip (100ms)
+ - RTP latency can be negative to force filling of silence frame when buffer is empty but playtime has elapsed (continuous stream)
 
 0.2.6.1
  - (cast) simplify device removal (no explicit wakeup call)

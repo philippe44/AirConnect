@@ -31,7 +31,7 @@ Double click the [executable] or launch it by typing `./[executable]` in the sam
 
 You should start to see lots of log messages on screen. Using your iOS/Mac/iTunes/Airfoil/other client, you should now see new AirPlay devices and can try to play audio to them. 
 
-If it works, type `exit`, which terminates the executable, and then, on non-Windows/MacOS machines, relaunch it with `-z` so that it can run in the background and you can close the command line window. You can also start it automatically using any startup script or a a Linux service as explained below. Nothing else should be required, no library or anything to install.
+If it works, type `exit`, which terminates the executable, and then, on non-Windows/MacOS machines, relaunch it with `-z` so that it can run in the background and you can close the command line window. You can also start it automatically using any startup script or a Linux service as explained below. Nothing else should be required, no library or anything to install.
 
 ## Common information:
 
@@ -54,7 +54,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 
 The default configuration file is `config.xml`, stored in the same directory as the [executable]. Each of parameters below can be set in the `<common>` section to apply to all devices. It can also be set in any `<device>` section to apply only to a specific device and overload the value set in `<common>`
 
-- `latency <[[-]rtp][:http][:f]>` 	: (default: (0:0))buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
+- `latency <[rtp][:http][:f]>` 	: (default: (0:0))buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
 	* [rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay. A negative value force sending of silence frames when no AirPlay audio has been received after 'RTP' ms, to force a continuous stream. If not, the UPnP/CC player will be not receive audio and some might close the connection after a while, although most players will simply be silent until stream restarts. This shall not be necessary in most of the case.
 	* [http]	: ms of buffering silence for HTTP audio (not needed normaly, except for Sonos)
 	* [f]		: when network congestion happens, source frames will not be received at all. Set this parameter to force sending silence frame then. Otherwise, no HTTP data will be sent and player might close the connection

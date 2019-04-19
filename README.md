@@ -95,9 +95,7 @@ To disable the service, type `sudo systemctl disable airupnp.service`
 
 To view the log, `journalctl -u airupnp.service`
 
-Obviously, from the above example, on use -x if you want a custom configuration.
-
-Thanks [@cactus](https://github.com/cactus) for systemd cleaning
+Obviously, from the above example, only use -x if you want a custom configuration. Thanks [@cactus](https://github.com/cactus) for systemd cleaning
 
 ## Start automatically in MacOS (credits @aiwipro)
 

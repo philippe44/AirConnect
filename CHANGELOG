@@ -1,3 +1,6 @@
+0.2.9.0
+ - (aircast) authorize "on behalf" announces as long as they are not from a group member
+
 0.2.8.0
  - silence frames count on http reconnect shall be 0 when already sending silence
  - limit packet recovery to max of rtp latency and http delay

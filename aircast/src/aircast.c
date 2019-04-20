@@ -35,7 +35,7 @@
 #include "raopcore.h"
 #include "config_cast.h"
 
-#define VERSION "v0.2.8.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.9.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -368,6 +368,17 @@ static struct sMR *SearchUDN(char *UDN)
 
 
 /*----------------------------------------------------------------------------*/
+static bool isMember(struct in_addr host) {
+	int i;
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		 if (glMRDevices[i].Running && GetAddr(glMRDevices[i].CastCtx).s_addr == host.s_addr)
+			return true;
+	}
+	return false;
+}
+
+
+/*----------------------------------------------------------------------------*/
 bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 {
 	struct sMR *Device;
@@ -402,7 +413,8 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		int j;
 
 		// is the mDNS record usable or announce made on behalf
-		if ((UDN = GetmDNSAttribute(s->attr, s->attr_count, "id")) == NULL || s->host.s_addr != s->addr.s_addr) continue;
+		if ((UDN = GetmDNSAttribute(s->attr, s->attr_count, "id")) == NULL ||
+			(s->host.s_addr != s->addr.s_addr && isMember(s->host))) continue;
 
 		// is that device already here
 		if ((Device = SearchUDN(UDN)) != NULL) {

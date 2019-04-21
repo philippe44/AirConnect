@@ -97,7 +97,7 @@ To view the log, `journalctl -u airupnp.service`
 
 Obviously, from the above example, only use -x if you want a custom configuration. Thanks [@cactus](https://github.com/cactus) for systemd cleaning
 
-@1activegeek has made a docker container [here](https://github.com/1activegeek/docker-airconnect) that follows the update of this repository - thanks!
+[@1activegeek](https://github.com/1activegeek) has made a docker container [here](https://github.com/1activegeek/docker-airconnect) that follows the update of this repository - thanks!
 
 ## Start automatically in MacOS (credits @aiwipro)
 

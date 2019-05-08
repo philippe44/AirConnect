@@ -19,10 +19,6 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x [executable]`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
-Some Debian Stretch distributions (e.g. Raspian) only provide openssl1.0.2 or above, but 1.0.0 is needed. Download the version for Jessie [here](http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u10_armhf.deb) or using `wget http://security-cdn.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u11_armhf.deb` then install it with `sudo dpkg -i libssl1.0.0_1.0.1t-1+deb8u11_armhf.deb`. Note that these links are updated regularly, so use judgment to find the correct one using base URI ... (before opening an issue)
-
-On older Pi (based on BCM2835, i.e. the Pi Zero, and 1) using Stretch, you need armv6 openssl 1.0.0 libraries and I don't know where to find them, so you can use the "last resort" option to create symlinks from your existing openssl library (see the exact file names in /usr/lib/arm-linux-gnueabihf) by doing `sudo ln -s libcrypto.so.[version] libcrypto.so.1.0.0` and `sudo ln -s libssl.so.[version] libssl.so.1.0.0`
-	
 ## Running
 
 Double click the [executable] or launch it by typing `./[executable]` in the same command line window. 

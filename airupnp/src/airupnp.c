@@ -36,8 +36,9 @@
 #include "config_upnp.h"
 #include "mr_util.h"
 #include "log_util.h"
+#include "sslsym.h"
 
-#define VERSION "v0.2.9.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.10.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -1016,6 +1017,12 @@ static bool Start(bool cold)
 	LOG_INFO("Binding to %s:%d", IP, glPort);
 
 	if (cold) {
+		// manually load openSSL symbols to accept multiple versions
+		if (!load_ssl_symbols()) {
+			LOG_ERROR("Cannot load SSL libraries", NULL);
+			goto Error;
+		}
+
 		// initialize MR utils
 		InitUtils();
 
@@ -1105,6 +1112,8 @@ static bool Stop(bool exit)
 #if WIN
 		winsock_close();
 #endif
+
+		free_ssl_symbols();
 
 	}
 

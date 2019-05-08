@@ -1,6 +1,6 @@
 CC=o64-gcc
 CFLAGS  ?= -Wall -fPIC -O2 $(OPTS) $(INCLUDE) $(DEFINES) -arch x86_64
-LDFLAGS ?= -lpthread -lssl -lcrypto -ldl -lm -L. -arch x86_64 -mmacosx-version-min=10.10
+LDFLAGS ?= -lpthread -ldl -lm -L. -arch x86_64 -mmacosx-version-min=10.10
 OS	 = Darwin
 
 OBJ					= bin/osx

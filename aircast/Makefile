@@ -46,7 +46,8 @@ SOURCES = castcore.c castmessage.pb.c aircast.c cast_util.c cast_parse.c config_
 		  hashtable_seed.c load.c memory.c pack_unpack.c strbuffer.c utf.c value.c \
 		  dmap_parser.c \
 	  	  mdnssd-min.c \
-		  mdns.c mdnsd.c
+		  mdns.c mdnsd.c \
+		  sslsym.c
 		
 SOURCES_LIBS = 
 		

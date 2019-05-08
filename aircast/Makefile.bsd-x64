@@ -1,6 +1,6 @@
 CC=x86_64-cross-freebsd11-gcc
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
-LDFLAGS ?= -s -lpthread -lssl -lcrypto -lm -lrt -lz -L. 
+LDFLAGS ?= -s -lpthread -lm -lrt -lz -L. 
 # for LD debug -s
 
 OBJ					= bin/bsd-x64

@@ -1,6 +1,6 @@
 CC	 	= armv5te-cross-linux-gnueabi-gcc
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -s -lpthread -lssl -lcrypto -ldl -lm -lrt -L. 
+LDFLAGS ?= -s -lpthread -ldl -lm -lrt -L. 
 
 # for LD debug -s
 

@@ -1,7 +1,7 @@
 # DEFINES =-D_POSIX_PTHREAD_EXTENSIONS -D__EXTENSIONS__
 CC	= i386-cross-solaris2.10-gcc
 CFLAGS  = -Wall -fPIC -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS = -s -L-lpthread -lssl -lcrypto -ldl -lm -lrt -lsocket -lnsl -lz -L.
+LDFLAGS = -s -L-lpthread -ldl -lm -lrt -lsocket -lnsl -lz -L.
 	
 OBJ					= bin/i86pc-solaris
 EXECUTABLE 			= ../bin/airupnp-i86pc-solaris

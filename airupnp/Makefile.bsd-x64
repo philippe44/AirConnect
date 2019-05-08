@@ -1,6 +1,6 @@
 CC=x86_64-cross-freebsd11-gcc
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -s -lpthread -lssl -lcrypto -lm -lrt -L. 
+LDFLAGS ?= -s -lpthread -lm -lrt -L. 
 
 OBJ					= bin/bsd-x64
 EXECUTABLE 			= ../bin/airupnp-bsd-x64

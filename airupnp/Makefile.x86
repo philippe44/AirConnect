@@ -1,6 +1,6 @@
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
-LDFLAGS ?= -s -lpthread -lssl -lcrypto -ldl -lm -lrt -lz -L. 
-#LDFLAGS ?= -s -lpthread -l:libssl.a -l:libcrypto.a -ldl -lm -lrt -lz -L. 
+LDFLAGS ?= -s -lpthread -ldl -lm -lrt -lz -L. 
+# -l:libssl.a -l:libcrypto.a to force link with static version
 # for LD debug -s
 
 OBJ					= bin/x86

@@ -42,15 +42,16 @@ SOURCES = avt_util.c airupnp.c mr_util.c config_upnp.c  \
 		  alac.c base64.c hairtunes.c raopcore.c util.c log_util.c \
 		  dmap_parser.c \
 		  mdnssd-min.c \
-		  mdns.c mdnsd.c
-		
+		  mdns.c mdnsd.c \
+		  sslsym.c
+
 SOURCES_LIBS = 
 		
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
 LIBRARY 		= $(OBJ)/libixml.a $(OBJ)/libFLAC.a  $(OBJ)/libupnp.a  $(OBJ)/libthreadutil.a $(OBJ)/libshine.a
-LIBRARY_STATIC 	= $(LIBRARY)
+LIBRARY_STATIC 	= $(LIBRARY) 
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 

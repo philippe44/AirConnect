@@ -34,8 +34,9 @@
 #include "mdnsd.h"
 #include "raopcore.h"
 #include "config_cast.h"
+#include "sslsym.h"
 
-#define VERSION "v0.2.9.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.10.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -684,6 +685,12 @@ static bool Start(bool cold)
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
 
 	if (cold) {
+		// manually load openSSL symbols to accept multiple versions
+		if (!load_ssl_symbols()) {
+			LOG_ERROR("Cannot load SSL libraries", NULL);
+			return false;
+		}
+
 		// mutexes must always be valid
 		memset(&glMRDevices, 0, sizeof(glMRDevices));
 		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
@@ -742,6 +749,8 @@ static bool Stop(bool exit)
 #if WIN
 		winsock_close();
 #endif
+
+		free_ssl_symbols();
 	}
 
 	return true;

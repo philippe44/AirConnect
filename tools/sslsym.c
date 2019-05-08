@@ -74,10 +74,12 @@ static char *LIBCRYPTO[] 	= {	"libcrypto.so",
 #define V(n, ...) V##n(__VA_ARGS__)
 
 #ifdef LINKALL
+#define SYM(fn)
 #define SYMDECL(fn, ret, n, ...)
 #define SYMDECLVOID(fn, n, ...)
 #define SYMLOAD(h, fn)
 #else
+#define SYM(fn) dlsym_##fn
 #define SYMDECL(fn, ret, n, ...) 			\
 	static ret (*dlsym_##fn)(P(n,__VA_ARGS__));		\
 	ret fn(P(n,__VA_ARGS__)) {				\
@@ -167,9 +169,11 @@ static void *dlopen_try(char **filenames, int flag) {
 	return handle;
 }
 
+#ifndef LINKALL
 static int return_true(void) {
-    return true;
+	return true;
 }
+#endif
 
 bool load_ssl_symbols(void) {
 #ifdef LINKALL
@@ -222,8 +226,8 @@ bool load_ssl_symbols(void) {
 
 #ifndef LINKALL
 	// managed deprecated functions
-	if (!dlsym_SSLv23_client_method) dlsym_SSLv23_client_method = dlsym_TLS_client_method;
-	if (!dlsym_SSL_library_init) dlsym_SSL_library_init = &return_true;
+	if (!SYM(SSLv23_client_method)) SYM(SSLv23_client_method) = SYM(TLS_client_method);
+	if (!SYM(SSL_library_init)) SYM(SSL_library_init) = &return_true;
 #endif
 
 	return true;

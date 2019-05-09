@@ -36,6 +36,8 @@
 static void *SSLhandle = NULL;
 static void *CRYPThandle = NULL;
 
+#ifndef LINKALL
+
 #if WIN
 static char *LIBSSL[] 		= { "ssleay32.dll", NULL };
 static char *LIBCRYPTO[] 	= { "libeay32.dll", NULL };
@@ -73,12 +75,6 @@ static char *LIBCRYPTO[] 	= {	"libcrypto.so",
 #define P(n, ...) P##n(__VA_ARGS__)
 #define V(n, ...) V##n(__VA_ARGS__)
 
-#ifdef LINKALL
-#define SYM(fn)
-#define SYMDECL(fn, ret, n, ...)
-#define SYMDECLVOID(fn, n, ...)
-#define SYMLOAD(h, fn)
-#else
 #define SYM(fn) dlsym_##fn
 #define SYMDECL(fn, ret, n, ...) 			\
 	static ret (*dlsym_##fn)(P(n,__VA_ARGS__));		\
@@ -99,7 +95,6 @@ static char *LIBCRYPTO[] 	= {	"libcrypto.so",
 }
 #else
 #define SYMLOAD(h, fn) dlsym_##fn = dlsym(h, #fn)
-#endif
 #endif
 
 SYMDECL(SSL_read, int, 3, SSL*, s, void*, buf, int, len);
@@ -169,16 +164,11 @@ static void *dlopen_try(char **filenames, int flag) {
 	return handle;
 }
 
-#ifndef LINKALL
 static int return_true(void) {
 	return true;
 }
-#endif
 
 bool load_ssl_symbols(void) {
-#ifdef LINKALL
-	return true;
-#endif
 	CRYPThandle = dlopen_try(LIBCRYPTO, RTLD_NOW);
 	SSLhandle = dlopen_try(LIBSSL, RTLD_NOW);
 
@@ -224,14 +214,18 @@ bool load_ssl_symbols(void) {
 	SYMLOAD(CRYPThandle, BIO_free);
 	SYMLOAD(CRYPThandle, PEM_read_bio_RSAPrivateKey);
 
-#ifndef LINKALL
 	// managed deprecated functions
 	if (!SYM(SSLv23_client_method)) SYM(SSLv23_client_method) = SYM(TLS_client_method);
 	if (!SYM(SSL_library_init)) SYM(SSL_library_init) = &return_true;
-#endif
 
 	return true;
 }
+
+#else
+bool load_ssl_symbols(void) {
+	return true;
+}
+#endif
 
 void free_ssl_symbols(void) {
 	if (SSLhandle) dlclose(SSLhandle);

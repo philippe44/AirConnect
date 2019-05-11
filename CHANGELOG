@@ -3,7 +3,7 @@
  - do not crash when SSL not found
  
 0.2.10.0
- - openSSL loaded manually for compatibility 
+ - openSSL loaded manually for compatibility => no need any more to deal with various openssl versions!
  
 0.2.9.0
  - (aircast) authorize "on behalf" announces as long as they are not from a group member

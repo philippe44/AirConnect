@@ -1,3 +1,7 @@
+0.2.10.1
+ - Windows 10 does has renamed libeay32.dll to libcrypto.dll and ssleay32.dll to libssl.dll (and does not even include it)
+ - do not crash when SSL not found
+ 
 0.2.10.0
  - openSSL loaded manually for compatibility 
  

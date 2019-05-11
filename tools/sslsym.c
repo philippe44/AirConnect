@@ -39,22 +39,30 @@ static void *CRYPThandle = NULL;
 #ifndef LINKALL
 
 #if WIN
-static char *LIBSSL[] 		= { "ssleay32.dll", NULL };
-static char *LIBCRYPTO[] 	= { "libeay32.dll", NULL };
+static char *LIBSSL[] = {
+			"libssl.dll",
+			"ssleay32.dll", NULL };
+static char *LIBCRYPTO[] = {
+			"libcrypto.dll",
+			"libeay32.dll", NULL };
 #elif OSX
-static char *LIBSSL[] 		= { "libssl.dylib", NULL };
-static char *LIBCRYPTO[] 	= { "libcrypto.dylib", NULL };
+static char *LIBSSL[] = {
+			"libssl.dylib", NULL };
+static char *LIBCRYPTO[] 	= {
+			"libcrypto.dylib", NULL };
 #else
-static char *LIBSSL[] 		= {	"libssl.so",
-							"libssl.so.1.1",
-							"libssl.so.1.0.2",
-							"libssl.so.1.0.1",
-							"libssl.so.1.0.0", NULL };
-static char *LIBCRYPTO[] 	= {	"libcrypto.so",
-							"libcrypto.so.1.1",
-							"libcrypto.so.1.0.2",
-							"libcrypto.so.1.0.1",
-							"libcrypto.so.1.0.0", NULL };
+static char *LIBSSL[] 		= {
+			"libssl.so",
+			"libssl.so.1.1",
+			"libssl.so.1.0.2",
+			"libssl.so.1.0.1",
+			"libssl.so.1.0.0", NULL };
+static char *LIBCRYPTO[] 	= {
+			"libcrypto.so",
+			"libcrypto.so.1.1",
+			"libcrypto.so.1.0.2",
+			"libcrypto.so.1.0.1",
+			"libcrypto.so.1.0.0", NULL };
 #endif
 
 #define P0() void
@@ -144,7 +152,7 @@ SYMDECLVOID(ERR_remove_state, 1, unsigned long, pid);
 #if WIN
 static void *dlopen(const char *filename, int flag) {
 	SetLastError(0);
-	return LoadLibraryA((LPCTSTR)filename);
+	return LoadLibrary((LPCTSTR)filename);
 }
 
 static void dlclose(void *handle) {
@@ -164,13 +172,18 @@ static void *dlopen_try(char **filenames, int flag) {
 	return handle;
 }
 
-static int return_true(void) {
+static int lambda(void) {
 	return true;
 }
 
 bool load_ssl_symbols(void) {
 	CRYPThandle = dlopen_try(LIBCRYPTO, RTLD_NOW);
 	SSLhandle = dlopen_try(LIBSSL, RTLD_NOW);
+
+	if (!SSLhandle || !CRYPThandle) {
+		free_ssl_symbols();
+		return false;
+    }
 
 	SYMLOAD(SSLhandle, SSL_CTX_new);
 	SYMLOAD(SSLhandle, SSL_CTX_ctrl);
@@ -216,7 +229,7 @@ bool load_ssl_symbols(void) {
 
 	// managed deprecated functions
 	if (!SYM(SSLv23_client_method)) SYM(SSLv23_client_method) = SYM(TLS_client_method);
-	if (!SYM(SSL_library_init)) SYM(SSL_library_init) = &return_true;
+	if (!SYM(SSL_library_init)) SYM(SSL_library_init) = &lambda;
 
 	return true;
 }

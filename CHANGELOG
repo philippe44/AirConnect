@@ -1,3 +1,6 @@
+0.2.10.2
+ - update built-in dll version to ones that do not need VS
+ 
 0.2.10.1
  - Windows 10 does has renamed libeay32.dll to libcrypto.dll and ssleay32.dll to libssl.dll (and does not even include it)
  - do not crash when SSL not found

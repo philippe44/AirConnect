@@ -917,7 +917,8 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 	// use next frame when buffer is empty or silence continues to be sent
 	if (!buf_fill) curframe->rtptime = ctx->audio_buffer[BUFIDX(ctx->ab_read - 1)].rtptime + ctx->frame_size;
 
-	playtime = ctx->synchro.time + (((s32_t)(curframe->rtptime - ctx->synchro.rtp))*1000)/44100;
+	// watch out for 32 bits overflow
+	playtime = ctx->synchro.time + (((s32_t)(curframe->rtptime - ctx->synchro.rtp))*10)/441;
 
 	LOG_SDEBUG("playtime %u %d [W:%hu R:%hu] %d", playtime, playtime - now, ctx->ab_write, ctx->ab_read, curframe->ready);
 

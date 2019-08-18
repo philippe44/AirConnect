@@ -1,3 +1,6 @@
+0.2.10.3
+ - ancient 32 bits overflow bug in expected playtime calculation
+ 
 0.2.10.2
  - update built-in dll version to ones that do not need VS
  - add x86_64 static version

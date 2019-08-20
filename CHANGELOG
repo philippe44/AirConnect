@@ -1,3 +1,7 @@
+0.2.11.0
+ - revert previous change but force short int promotio in buf_fill calculation
+ - add protocolInfo as a parameter
+ 
 0.2.10.3
  - ancient 32 bits overflow bug in expected playtime calculation
  

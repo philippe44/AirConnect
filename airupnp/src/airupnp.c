@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.10.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.11.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -80,6 +80,10 @@ tMRConfig			glMRConfig = {
 							false,		// drift
 							{0, 0, 0, 0, 0, 0 }, // MAC
 							"",			// artwork
+							"http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
+							"http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
+							"http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
+							"http-get:*:audio/mp3:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
 					};
 
 /*----------------------------------------------------------------------------*/
@@ -306,19 +310,17 @@ void callback(void *owner, raop_event_t event, void *param)
 
 			if (Device->RaopState != RAOP_PLAY) {
 				if (!strcasecmp(Device->Config.Codec, "pcm"))
-					ProtoInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+					ProtoInfo = Device->Config.ProtocolInfo.pcm;
 				else if (!strcasecmp(Device->Config.Codec, "wav"))
-					ProtoInfo = "http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+					ProtoInfo = Device->Config.ProtocolInfo.wav;
 				else if (stristr(Device->Config.Codec, "mp3")) {
 					if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
 						mp3radio = "x-rincon-mp3radio://";
 						LOG_INFO("[%p]: Sonos live stream", Device);
 					}
-					ProtoInfo = "http-get:*:audio/mp3:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
-
+					ProtoInfo = Device->Config.ProtocolInfo.mp3;
 				} else
-
-					ProtoInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+					ProtoInfo = Device->Config.ProtocolInfo.flac;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"

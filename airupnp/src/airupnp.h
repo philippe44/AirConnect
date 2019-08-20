@@ -67,6 +67,12 @@ struct sService {
 	bool		Drift;
 	u8_t		mac[6];
 	char		ArtWork[4*_STR_LEN_];
+	struct {
+		char pcm[_STR_LEN_];
+		char wav[_STR_LEN_];
+		char flac[_STR_LEN_];
+		char mp3[_STR_LEN_];
+	} ProtocolInfo;
 } tMRConfig;
 
 struct sMR {

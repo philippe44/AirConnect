@@ -903,12 +903,12 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 		LOG_INFO("[%p]: Sending packets too slow (skip: %d) [W:%hu R:%hu]", ctx, ctx->skip, ctx->ab_write, ctx->ab_read);
 	}
 
-	buf_fill = ctx->ab_write - ctx->ab_read + 1;
+	buf_fill = (s16_t) (ctx->ab_write - ctx->ab_read + 1);
 
 	if (buf_fill >= BUFFER_FRAMES) {
 		LOG_ERROR("[%p]: Buffer overrun %hu", ctx, buf_fill);
 		ctx->ab_read = ctx->ab_write - (BUFFER_FRAMES - 64);
-		buf_fill = ctx->ab_write - ctx->ab_read + 1;
+		buf_fill = (s16_t) (ctx->ab_write - ctx->ab_read + 1);
 	}
 
 	now = gettime_ms();
@@ -918,7 +918,7 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 	if (!buf_fill) curframe->rtptime = ctx->audio_buffer[BUFIDX(ctx->ab_read - 1)].rtptime + ctx->frame_size;
 
 	// watch out for 32 bits overflow
-	playtime = ctx->synchro.time + (((s32_t)(curframe->rtptime - ctx->synchro.rtp))*10)/441;
+	playtime = ctx->synchro.time + (((s32_t)(curframe->rtptime - ctx->synchro.rtp)) * 1000) / 44100;
 
 	LOG_SDEBUG("playtime %u %d [W:%hu R:%hu] %d", playtime, playtime - now, ctx->ab_write, ctx->ab_read, curframe->ready);
 

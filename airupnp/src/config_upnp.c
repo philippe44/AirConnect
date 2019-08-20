@@ -43,7 +43,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
 	IXML_Document *old_doc = ref;
-	IXML_Node	 *root, *common;
+	IXML_Node	 *root, *common, *proto;
 	IXML_NodeList *list;
 	IXML_Element *old_root;
 	char *s;
@@ -66,10 +66,12 @@ void SaveConfig(char *name, void *ref, bool full)
 		}
 		if (list) ixmlNodeList_free(list);
 		common = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) root, "common");
+		proto = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) common, "protocolInfo");
 	}
 	else {
 		root = XMLAddNode(doc, NULL, "airupnp", NULL);
 		common = (IXML_Node*) XMLAddNode(doc, root, "common", NULL);
+		proto = (IXML_Node*) XMLAddNode(doc, common, "protocolInfo", NULL);
 	}
 
 	XMLUpdateNode(doc, root, false, "main_log",level2debug(main_loglevel));
@@ -85,6 +87,11 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "artwork", glMRConfig.ArtWork);
 	XMLUpdateNode(doc, common, false, "latency", glMRConfig.Latency);
 	XMLUpdateNode(doc, common, false, "drift", "%d", glMRConfig.Drift);
+
+	XMLUpdateNode(doc, proto, false, "pcm", glMRConfig.ProtocolInfo.pcm);
+	XMLUpdateNode(doc, proto, false, "wav", glMRConfig.ProtocolInfo.wav);
+	XMLUpdateNode(doc, proto, false, "flac", glMRConfig.ProtocolInfo.flac);
+	XMLUpdateNode(doc, proto, false, "mp3", glMRConfig.ProtocolInfo.mp3);
 
 	// mutex is locked here so no risk of a player being destroyed in our back
 	for (i = 0; i < MAX_RENDERERS; i++) {
@@ -152,6 +159,10 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 		sscanf(val,"%2x:%2x:%2x:%2x:%2x:%2x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
 		for (i = 0; i < 6; i++) Conf->mac[i] = mac[i];
 	}
+	if (!strcmp(name, "pcm")) strcpy(Conf->ProtocolInfo.pcm, val);
+	if (!strcmp(name, "wav")) strcpy(Conf->ProtocolInfo.wav, val);
+	if (!strcmp(name, "flac")) strcpy(Conf->ProtocolInfo.flac, val);
+	if (!strcmp(name, "mp3")) strcpy(Conf->ProtocolInfo.mp3, val);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -261,6 +272,24 @@ void *LoadConfig(char *name, tMRConfig *Conf)
 		}
 		if (l1_node_list) ixmlNodeList_free(l1_node_list);
 	}
+
+	elm = ixmlDocument_getElementById((IXML_Document	*)elm, "protocolInfo");
+	if (elm) {
+		char *n, *v;
+		IXML_NodeList *l1_node_list;
+		unsigned i;
+		l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
+		for (i = 0; i < ixmlNodeList_length(l1_node_list); i++) {
+			IXML_Node *l1_node, *l1_1_node;
+			l1_node = ixmlNodeList_item(l1_node_list, i);
+			n = (char*) ixmlNode_getNodeName(l1_node);
+			l1_1_node = ixmlNode_getFirstChild(l1_node);
+			v = (char*) ixmlNode_getNodeValue(l1_1_node);
+			LoadConfigItem(&glMRConfig, n, v);
+		}
+		if (l1_node_list) ixmlNodeList_free(l1_node_list);
+	}
+
 
 	return doc;
 }

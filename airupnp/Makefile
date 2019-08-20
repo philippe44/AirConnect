@@ -43,15 +43,14 @@ SOURCES = avt_util.c airupnp.c mr_util.c config_upnp.c  \
 		  dmap_parser.c \
 		  mdnssd-min.c \
 		  mdns.c mdnsd.c \
-		  sslsym.c
 
-SOURCES_LIBS = 
+SOURCES_LIBS = sslsym.c
 		
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
 LIBRARY 		= $(OBJ)/libixml.a $(OBJ)/libFLAC.a  $(OBJ)/libupnp.a  $(OBJ)/libthreadutil.a $(OBJ)/libshine.a
-LIBRARY_STATIC 	= $(LIBRARY) 
+LIBRARY_STATIC 	= $(LIBRARY) -lcrypto
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 

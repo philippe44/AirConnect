@@ -47,15 +47,14 @@ SOURCES = castcore.c castmessage.pb.c aircast.c cast_util.c cast_parse.c config_
 		  dmap_parser.c \
 	  	  mdnssd-min.c \
 		  mdns.c mdnsd.c \
-		  sslsym.c
 		
-SOURCES_LIBS = 
+SOURCES_LIBS = sslsym.c
 		
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
 LIBRARY 		= $(OBJ)/libixml.a $(OBJ)/libFLAC.a $(OBJ)/libshine.a
-LIBRARY_STATIC 	= $(LIBRARY)
+LIBRARY_STATIC 	= $(LIBRARY) -lssl -lcrypto
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 

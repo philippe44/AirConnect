@@ -435,7 +435,7 @@ void hairtunes_end(hairtunes_t *ctx)
 	}
 
 	shutdown_socket(ctx->http_listener);
-	for (i = 0; i < 3; i++) shutdown_socket(ctx->rtp_sockets[i].sock);
+	for (i = 0; i < 3; i++) closesocket(ctx->rtp_sockets[i].sock);
 
 	delete_alac(ctx->alac_codec);
 	if (ctx->encode.codec) {
@@ -447,6 +447,7 @@ void hairtunes_end(hairtunes_t *ctx)
 		}
 	}
 
+	pthread_mutex_destroy(&ctx->ab_mutex);
 	buffer_release(ctx->audio_buffer);
 	free(ctx->silence_frame);
 	free(ctx->http_tail);

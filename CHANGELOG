@@ -1,5 +1,9 @@
+0.2.12.1
+ - UDP sockets don't need shutdown
+ - destroy ab_mutex on thread termination
+ 
 0.2.12.0
- - static versions now include full static openssl 
+- static versions now include full static openssl 
  
 0.2.11.0
  - revert previous change but force short int promotio in buf_fill calculation

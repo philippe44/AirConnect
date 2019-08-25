@@ -1,3 +1,7 @@
+0.2.12.2
+ - correct a key problem with circula buffer management and fill estimation
+ - integer promotion caused u16 comparisons to be wrong
+ 
 0.2.12.1
  - UDP sockets don't need shutdown
  - destroy ab_mutex on thread termination

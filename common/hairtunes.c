@@ -347,8 +347,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	ctx->range = range;
 	ctx->http_ready = false;
 
-	// write pointer = last written, read pointer = next to read so fill = w-r+1
-	ctx->ab_read = ctx->ab_write + 1;
+	ctx->ab_read = ctx->ab_write = 0;
 
 #ifdef __RTP_STORE
 	ctx->rtpIN = fopen("airplay.rtpin", "wb");
@@ -571,19 +570,19 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 		}
 	}
 
-	if (seqno == ctx->ab_write+1) {
+	if (seqno == (u16_t) (ctx->ab_write + 1)) {
 		// expected packet
 		abuf = ctx->audio_buffer + BUFIDX(seqno);
 		ctx->ab_write = seqno;
 		LOG_SDEBUG("packet expected seqno:%hu rtptime:%u (W:%hu R:%hu)", seqno, rtptime, ctx->ab_write, ctx->ab_read);
 	} else if (seq_order(ctx->ab_write, seqno)) {
 		// newer than expected
-		if (seqno - ctx->ab_write - 1 > ctx->latency / ctx->frame_size) {
+		if (ctx->latency && seq_order(ctx->latency / ctx->frame_size, seqno - ctx->ab_write - 1)) {
 			// only get rtp latency-1 frames back (last one is seqno)
 			LOG_WARN("[%p] too many missing frames %hu", ctx, seqno - ctx->ab_write - 1);
 			ctx->ab_write = seqno - ctx->latency / ctx->frame_size;
 		}
-		if (seqno - ctx->ab_read + 1 > ctx->delay) {
+		if (ctx->delay && seq_order(ctx->delay, seqno - ctx->ab_read)) {
 			// if ab_read is lagging more than http latency, advance it
 			LOG_WARN("[%p] on hold for too long %hu", ctx, seqno - ctx->ab_read + 1);
 			ctx->ab_read = seqno - ctx->delay + 1;
@@ -591,7 +590,7 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 		if (rtp_request_resend(ctx, ctx->ab_write + 1, seqno-1)) {
 			seq_t i;
 			u32_t now = gettime_ms();
-			for (i = ctx->ab_write + 1; i <= seqno-1; i++) {
+			for (i = ctx->ab_write + 1; seq_order(i, seqno); i++) {
 				ctx->audio_buffer[BUFIDX(i)].rtptime = rtptime - (seqno-i)*ctx->frame_size;
 				ctx->audio_buffer[BUFIDX(i)].last_resend = now;
 			}
@@ -609,7 +608,7 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 	}
 
 	if (!(ctx->in_frames++ & 0x1ff)) {
-		LOG_INFO("[%p]: fill [level:%hd] [W:%hu R:%hu]", ctx, (seq_t) (ctx->ab_write - ctx->ab_read + 1), ctx->ab_write, ctx->ab_read);
+		LOG_INFO("[%p]: fill [level:%hu] [W:%hu R:%hu]", ctx, (seq_t) ctx->ab_write - ctx->ab_read, ctx->ab_write, ctx->ab_read);
 	}
 
 	if (abuf) {
@@ -789,7 +788,7 @@ static void *rtp_thread_func(void *arg) {
 					 so we'll overflow frames buffer, need to remove one
 					*/
 					} else if (ctx->timing.gap_sum < -GAP_THRES && ctx->timing.gap_count++ > GAP_COUNT) {
-						if (seq_order(ctx->ab_read, ctx->ab_write + 1)) {
+						if (seq_order(ctx->ab_read, ctx->ab_write)) {
 							ctx->audio_buffer[BUFIDX(ctx->ab_read)].ready = 0;
 							ctx->ab_read++;
 						} else ctx->skip++;
@@ -897,25 +896,25 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 	}
 
 	// skip frames if we are running late and skip could not be done in SYNC
-	while (ctx->skip && seq_order(ctx->ab_read, ctx->ab_write + 1)) {
+	while (ctx->skip && seq_order(ctx->ab_read, ctx->ab_write)) {
 		ctx->audio_buffer[BUFIDX(ctx->ab_read)].ready = 0;
 		ctx->ab_read++;
 		ctx->skip--;
 		LOG_INFO("[%p]: Sending packets too slow (skip: %d) [W:%hu R:%hu]", ctx, ctx->skip, ctx->ab_write, ctx->ab_read);
 	}
 
-	buf_fill = (s16_t) (ctx->ab_write - ctx->ab_read + 1);
+	buf_fill = ctx->ab_write - ctx->ab_read;
 
 	if (buf_fill >= BUFFER_FRAMES) {
 		LOG_ERROR("[%p]: Buffer overrun %hu", ctx, buf_fill);
 		ctx->ab_read = ctx->ab_write - (BUFFER_FRAMES - 64);
-		buf_fill = (s16_t) (ctx->ab_write - ctx->ab_read + 1);
+		buf_fill = ctx->ab_write - ctx->ab_read;
 	}
 
 	now = gettime_ms();
 	curframe = ctx->audio_buffer + BUFIDX(ctx->ab_read);
 
-	// use next frame when buffer is empty or silence continues to be sent
+	// use previous frame when buffer is empty or silence continues to be sent
 	if (!buf_fill) curframe->rtptime = ctx->audio_buffer[BUFIDX(ctx->ab_read - 1)].rtptime + ctx->frame_size;
 
 	// watch out for 32 bits overflow
@@ -1041,7 +1040,7 @@ static void *http_thread_func(void *arg) {
 				pthread_mutex_lock(&ctx->ab_mutex);
 
 				if (ctx->playing) {
-					short buf_fill = ctx->ab_write - ctx->ab_read + 1;
+					short buf_fill = ctx->ab_write - ctx->ab_read;
 					if (buf_fill > 0) ctx->silence_count -= min(ctx->silence_count, buf_fill);
 					else ctx->silence_count = 0;
 				}

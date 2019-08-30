@@ -729,15 +729,14 @@ static void *UpdateThread(void *args)
 							raop_delete(Device->Raop);
 							DelMRDevice(Device);
 						} else {
-							char *friendlyName;
-							int fuck;
+							char *friendlyName = NULL;
 							Device->LastSeen = now;
 							LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->Config.Name);
 
 							// check for name change
 							UpnpDownloadXmlDoc(Update->Data, &DescDoc);
-							if (!isMaster(Device->UDN, &Device->Service[TOPOLOGY_IDX], &friendlyName))
-								friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
+							isMaster(Device->UDN, &Device->Service[TOPOLOGY_IDX], &friendlyName);
+							if (!friendlyName) friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
 							if (friendlyName && strcmp(friendlyName, Device->friendlyName) &&
 								!strncmp(Device->friendlyName, Device->Config.Name, strlen(Device->friendlyName)) &&
 								Device->Config.Name[strlen(Device->Config.Name) - 1] == '+') {

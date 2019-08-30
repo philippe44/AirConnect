@@ -81,6 +81,7 @@ struct sMR {
 	tMRConfig Config;
 	char UDN			[RESOURCE_LENGTH];
 	char DescDocURL		[RESOURCE_LENGTH];
+	char friendlyName	[_STR_LEN_];
 	enum eMRstate 	State;
 	bool			ExpectStop;
 	struct raop_ctx_s *Raop;

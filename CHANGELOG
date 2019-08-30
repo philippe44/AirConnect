@@ -1,3 +1,6 @@
+0.2.13.0
+ - follow original name change
+
 0.2.12.2
  - correct a key problem with circula buffer management and fill estimation
  - integer promotion caused u16 comparisons to be wrong

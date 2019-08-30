@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.12.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.13.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -446,6 +446,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 				}
 			// device update - when playing ChromeCast update their TXT records
 			} else {
+				char *Name = GetmDNSAttribute(s->attr, s->attr_count, "fn");
 				// new master in election, update and put it in the queue
 				if (Device->Group && Device->GroupMaster->Host.s_addr != s->addr.s_addr) {
 					struct sGroupMember *Member = calloc(1, sizeof(struct sGroupMember));
@@ -453,7 +454,19 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 					Member->Port = s->port;
 					push_item((list_t*) Member, (list_t**) &Device->GroupMaster);
 				}
+				
 				UpdateCastDevice(Device->CastCtx, s->addr, s->port);
+				
+				// update Device name if needed
+				if (Name && strcmp(Name, Device->Name) && 
+					!strncmp(Device->Name, Device->Config.Name, strlen(Device->Name)) &&
+					Device->Config.Name[strlen(Device->Config.Name) - 1] == '+') {
+					LOG_INFO("[%p]: Device name change %s %s", Device, Name, Device->Name);
+					raop_update(Device->Raop, Name, "aircast");
+					strcpy(Device->Name, Name);
+					sprintf(Device->Config.Name, "%s+", Name);
+				}
+				NFREE(Name);
 			}
 			NFREE(UDN);
 			continue;
@@ -486,7 +499,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 
 		Name = GetmDNSAttribute(s->attr, s->attr_count, "fn");
 		if (!Name) Name = strdup(s->hostname);
-
+		
 		if (AddCastDevice(Device, Name, UDN, Group, s->addr, s->port) && !glDiscovery) {
 			Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 										"aircast", Device->Config.mac, Device->Config.Codec,
@@ -618,6 +631,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 	} else Device->GroupMaster = NULL;
 
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", Name);
+	strcpy(Device->Name, Name);
 
 	LOG_INFO("[%p]: adding renderer (%s)", Device, Name);
 

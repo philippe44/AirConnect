@@ -30,6 +30,7 @@ typedef void (*raop_cb_t)(void *owner, raop_event_t event, void *param);
 struct raop_ctx_s*   raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 						  char *model, unsigned char mac[6], char *codec, bool metadata,
 						  bool drift, char *latencies, void *owner, raop_cb_t callback);
+void		  raop_update(struct raop_ctx_s *ctx, char *name, char *model);
 void  		  raop_delete(struct raop_ctx_s *ctx);
 void		  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param);
 

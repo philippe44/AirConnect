@@ -168,6 +168,34 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	return ctx;
 }
 
+/*----------------------------------------------------------------------------*/
+void raop_update(struct raop_ctx_s *ctx, char *name, char *model) {
+	char *id;
+	int i;
+	char *txt[] = { NULL, "tp=UDP", "sm=false", "sv=false", "ek=1",
+					"et=0,1", "md=0,1,2", "cn=0,1", "ch=2",
+					"ss=16", "sr=44100", "vn=3", "txtvers=1",
+					NULL };
+
+	mdns_service_remove(ctx->svr, ctx->svc);
+	
+	// set model
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+	asprintf(&(txt[0]), "am=%s", model);
+#pragma GCC diagnostic pop
+	id = malloc(strlen(name) + 12 + 1 + 1);
+	for (i = 0; i < 6; i++) sprintf(id + i*2, "%02X", ctx->mac[i]);
+	// mDNS instance name length cannot be more than 63
+	sprintf(id + 12, "@%s", name);
+	// Windows snprintf does not add NULL if string is larger than n ...
+	if (strlen(id) > 63) id[63] = '\0';
+
+	ctx->svc = mdnsd_register_svc(ctx->svr, id, "_raop._tcp.local", ctx->port, NULL, (const char**) txt);
+
+	free(txt[0]);
+	free(id);
+}
 
 /*----------------------------------------------------------------------------*/
 void raop_delete(struct raop_ctx_s *ctx) {

@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.12.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.13.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -708,20 +708,15 @@ static void *UpdateThread(void *args)
 				char *UDN = NULL, *ModelName = NULL, *ModelNumber = NULL;
 				int i, rc;
 
-
 				// it's a Sonos group announce, just do a targeted search and exit
-
 				if (strstr(Update->Data, "group_description")) {
-
 					for (i = 0; i < MAX_RENDERERS; i++) {
-
-						Device = glMRDevices + i;
+   						Device = glMRDevices + i;
 						if (Device->Running && *Device->Service[TOPOLOGY_IDX].ControlURL)
 							UpnpSearchAsync(glControlPointHandle, 5, Device->UDN, Device);
 					}
 					continue;
 				}
-
 
 				// existing device ?
 				for (i = 0; i < MAX_RENDERERS; i++) {
@@ -734,8 +729,24 @@ static void *UpdateThread(void *args)
 							raop_delete(Device->Raop);
 							DelMRDevice(Device);
 						} else {
+							char *friendlyName;
+							int fuck;
 							Device->LastSeen = now;
 							LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->Config.Name);
+
+							// check for name change
+							UpnpDownloadXmlDoc(Update->Data, &DescDoc);
+							if (!isMaster(Device->UDN, &Device->Service[TOPOLOGY_IDX], &friendlyName))
+								friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
+							if (friendlyName && strcmp(friendlyName, Device->friendlyName) &&
+								!strncmp(Device->friendlyName, Device->Config.Name, strlen(Device->friendlyName)) &&
+								Device->Config.Name[strlen(Device->Config.Name) - 1] == '+') {
+								LOG_INFO("[%p]: Device name change %s %s", Device, friendlyName, Device->friendlyName);
+								raop_update(Device->Raop, friendlyName, "airupnp");
+								strcpy(Device->friendlyName, friendlyName);
+								sprintf(Device->Config.Name, "%s+", friendlyName);
+							}
+							NFREE(friendlyName);
 						}
 						goto cleanup;
 					}
@@ -868,6 +879,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	// Read key elements from description document
 	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
+	if (friendlyName) strcpy(Device->friendlyName, friendlyName);
 	if (!friendlyName || !*friendlyName) friendlyName = strdup(UDN);
 
 	LOG_SDEBUG("UDN:\t%s\nFriendlyName:\t%s", UDN,  friendlyName);
@@ -929,6 +941,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->MetaData.title = strdup("Streaming from AirConnect");
 	if (*Device->Config.ArtWork) Device->MetaData.artwork = strdup(Device->Config.ArtWork);
 	Device->Running 	= true;
+	if (friendlyName) strcpy(Device->friendlyName, friendlyName);
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", friendlyName);
 	QueueInit(&Device->ActionQueue, false, NULL);
 

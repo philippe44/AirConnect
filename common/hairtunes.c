@@ -347,7 +347,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	ctx->range = range;
 	ctx->http_ready = false;
 
-	ctx->ab_read = ctx->ab_write = 0;
+	// write pointer = last written, read pointer = next to read so fill = w-r+1
+	ctx->ab_read = ctx->ab_write + 1;
 
 #ifdef __RTP_STORE
 	ctx->rtpIN = fopen("airplay.rtpin", "wb");
@@ -608,7 +609,7 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 	}
 
 	if (!(ctx->in_frames++ & 0x1ff)) {
-		LOG_INFO("[%p]: fill [level:%hu] [W:%hu R:%hu]", ctx, (seq_t) ctx->ab_write - ctx->ab_read, ctx->ab_write, ctx->ab_read);
+		LOG_INFO("[%p]: fill [level:%hu] [W:%hu R:%hu]", ctx, (seq_t) ctx->ab_write - ctx->ab_read + 1, ctx->ab_write, ctx->ab_read);
 	}
 
 	if (abuf) {
@@ -903,12 +904,12 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 		LOG_INFO("[%p]: Sending packets too slow (skip: %d) [W:%hu R:%hu]", ctx, ctx->skip, ctx->ab_write, ctx->ab_read);
 	}
 
-	buf_fill = ctx->ab_write - ctx->ab_read;
+	buf_fill = ctx->ab_write - ctx->ab_read + 1;
 
 	if (buf_fill >= BUFFER_FRAMES) {
 		LOG_ERROR("[%p]: Buffer overrun %hu", ctx, buf_fill);
 		ctx->ab_read = ctx->ab_write - (BUFFER_FRAMES - 64);
-		buf_fill = ctx->ab_write - ctx->ab_read;
+		buf_fill = ctx->ab_write - ctx->ab_read + 1;
 	}
 
 	now = gettime_ms();
@@ -1040,7 +1041,7 @@ static void *http_thread_func(void *arg) {
 				pthread_mutex_lock(&ctx->ab_mutex);
 
 				if (ctx->playing) {
-					short buf_fill = ctx->ab_write - ctx->ab_read;
+					short buf_fill = ctx->ab_write - ctx->ab_read + 1;
 					if (buf_fill > 0) ctx->silence_count -= min(ctx->silence_count, buf_fill);
 					else ctx->silence_count = 0;
 				}

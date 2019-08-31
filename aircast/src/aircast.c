@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.13.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.13.1"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 

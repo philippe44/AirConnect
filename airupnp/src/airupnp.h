@@ -95,9 +95,10 @@ struct sMR {
 	unsigned		TrackPoll, StatePoll;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
+	struct sMR		*Master;
 	pthread_mutex_t Mutex;
 	pthread_t 		Thread;
-	u8_t			Volume;
+	double			Volume;		// to avoid int volume being stuck at 0
 	bool			Muted;
 	u16_t			ErrorCount;
 	bool			TimeOut;

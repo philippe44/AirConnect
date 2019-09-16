@@ -52,7 +52,7 @@ typedef struct raop_ctx_s {
 	bool drift;
 	pthread_t thread, search_thread;
 	unsigned char mac[6];
-	unsigned int volume_stamp;
+	unsigned int param_stamp, notify_stamp;
 	struct {
 		char *aesiv, *aeskey;
 		char *fmtp;
@@ -107,7 +107,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	ctx->callback = callback;
 	ctx->latencies = latencies;
 	ctx->owner = owner;
-	ctx->volume_stamp = gettime_ms() - 1000;
+	ctx->param_stamp = ctx->notify_stamp = gettime_ms() - 2000;
 	ctx->drift = drift;
 	if (!strcasecmp(codec, "pcm")) ctx->encode.codec = CODEC_PCM;
 	else if (!strcasecmp(codec, "wav")) ctx->encode.codec = CODEC_WAV;
@@ -176,6 +176,8 @@ void raop_update(struct raop_ctx_s *ctx, char *name, char *model) {
 					"et=0,1", "md=0,1,2", "cn=0,1", "ch=2",
 					"ss=16", "sr=44100", "vn=3", "txtvers=1",
 					NULL };
+
+	if (!ctx) return;
 
 	mdns_service_remove(ctx->svr, ctx->svc);
 	
@@ -246,6 +248,8 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 	int sock;
 	char *command = NULL;
 
+	if (!ctx) return;
+
 	switch(event) {
 		case RAOP_PAUSE:
 			command = strdup("pause");
@@ -257,8 +261,9 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 			command = strdup("stop");
 			break;
 		case RAOP_VOLUME: {
-			// feedback that is less than aecond old is an echo, ignore it
-			if ((ctx->volume_stamp + 1000) - gettime_ms() > 1000) {
+			u32_t now = gettime_ms();
+			// feedback that is less than a second old is an echo, ignore it
+			if (now > ctx->param_stamp + 1000) {
 				double Volume = *((double*) param);
 
 				Volume = Volume ? (Volume - 1) * 30 : -144;
@@ -266,6 +271,7 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 #pragma GCC diagnostic ignored "-Wunused-result"
 				asprintf(&command,"setproperty?dmcp.device-volume=%0.4lf", Volume);
 #pragma GCC diagnostic pop
+				ctx->notify_stamp = now;
 			}
 			break;
 		}
@@ -533,11 +539,12 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 	} if (!strcmp(method, "SET_PARAMETER")) {
 		char *p;
+		u32_t now = gettime_ms();
 
-		if ((p = stristr(body, "volume")) != NULL) {
+		if ((p = stristr(body, "volume")) != NULL && now > ctx->notify_stamp + 1000) {
 			double volume;
 
-			ctx->volume_stamp = gettime_ms();
+			ctx->param_stamp = now;
 			sscanf(p, "%*[^:]:%lf", &volume);
 			LOG_INFO("[%p]: SET PARAMETER volume %lf", ctx, volume);
 			volume = (volume == -144.0) ? 0 : (1 + volume / 30);

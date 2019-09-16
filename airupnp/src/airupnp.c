@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.13.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.20.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -257,7 +257,7 @@ static void *MRThread(void *args)
 		}
 
 		// get track position & CurrentURI
-		if (p->TrackPoll > TRACK_POLL) {
+		if (!p->Master && p->TrackPoll > TRACK_POLL) {
 			p->TrackPoll = 0;
 			if (p->State != STOPPED && p->State != PAUSED) {
 				AVTCallAction(p, "GetPositionInfo", p->seqN++);
@@ -265,7 +265,7 @@ static void *MRThread(void *args)
 		}
 
 		// do polling as event is broken in many uPNP devices
-		if (p->StatePoll > STATE_POLL) {
+		if (!p->Master && p->StatePoll > STATE_POLL) {
 			p->StatePoll = 0;
 			AVTCallAction(p, "GetTransportInfo", p->seqN++);
 		}
@@ -337,14 +337,43 @@ void callback(void *owner, raop_event_t event, void *param)
 
 			AVTPlay(Device);
 
-			CtrlSetVolume(Device, Device->Volume, Device->seqN++);
+			// don't set volume, a RAOP_VOLUME will be sent by the controller
 			Device->RaopState = event;
 			break;
 		}
 		case RAOP_VOLUME: {
-			Device->Volume = *((double*) param) * Device->Config.MaxVolume;
-			CtrlSetVolume(Device, Device->Volume, Device->seqN++);
-			LOG_INFO("[%p]: Volume[0..100] %d", Device, Device->Volume);
+			// Volume sent by raop is normalized 0..1
+			double RaopVolume = *(double*) param;
+			struct sMR *Master = Device->Master ? Device->Master : Device;
+			int GroupVolume, i, count = 0;
+
+			GroupVolume = GetGroupVolume(Master);
+
+			if (GroupVolume == -1) {
+				Device->Volume = RaopVolume * Device->Config.MaxVolume;
+				CtrlSetVolume(Device, Device->Volume + 0.5, Device->seqN++);
+				LOG_INFO("[%p]: Volume[0..100] %d", Device, (int) Device->Volume);
+			} else {
+				// set volume for slaves
+				for (i = 0; i < MAX_RENDERERS; i++) {
+					struct sMR *p = glMRDevices + i;
+					if (!p->Running || p == Device || p->Master != Device) continue;
+
+					if (!GroupVolume) p->Volume = RaopVolume * p->Config.MaxVolume;
+					else p->Volume *= min((RaopVolume * p->Config.MaxVolume) / GroupVolume, 100);
+
+					count++;
+
+					CtrlSetVolume(p, p->Volume + 0.5, p->seqN++);
+					LOG_INFO("[%p]: Volume[0..100] for slave %d:%d", p, (int) p->Volume, GroupVolume);
+				}
+
+				// and now for master (if standalone, don't do ratio)
+				if (count && GroupVolume) Master->Volume *= min((RaopVolume * Master->Config.MaxVolume) / GroupVolume, 100);
+				else Master->Volume = RaopVolume * Master->Config.MaxVolume;
+				CtrlSetVolume(Master, Master->Volume + 0.5, Master->seqN++);
+				LOG_INFO("[%p]: Volume[0..100] for master %d", Device, (int) Device->Volume);
+			}
 			break;
 		}
 		default:
@@ -394,32 +423,28 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 
 	LastChange = XMLGetFirstDocumentItem(VarDoc, "LastChange", true);
 
-	if (!Device->Raop || !LastChange) {
+	if ((!Device->Raop && !Device->Master) || !LastChange) {
 		LOG_SDEBUG("no RAOP device (yet) or not change for %s", Event->Sid);
-
 		pthread_mutex_unlock(&Device->Mutex);
-
 		NFREE(LastChange);
-
 		return;
-
 	}
 
-
 	// Feedback volume to AirPlay controller
-
 	r = XMLGetChangeItem(VarDoc, "Volume", "channel", "Master", "val");
 	if (r) {
-		double Volume;
-		int GroupVolume = GetGroupVolume(Device);
+		struct sMR *Master = Device->Master ? Device->Master : Device;
+		double Volume = atoi(r);
+		int GroupVolume;
 
-		Volume = (GroupVolume > 0) ? GroupVolume : atof(r);
-
-		if ((int) Volume != Device->Volume) {
-			LOG_INFO("[%p]: UPnP Volume local change %d", Device, (int) Volume);
-			Volume /=  Device->Config.MaxVolume;
-			raop_notify(Device->Raop, RAOP_VOLUME, &Volume);
+		if (Volume != Device->Volume) {
+			GroupVolume = GetGroupVolume(Master);
+			Device->Volume = Volume;
+			LOG_INFO("[%p]: UPnP Volume local change %d:%d (%s)", Device, (int) Volume, (int) GroupVolume, Device->Master ? "slave": "master");
+			Volume = GroupVolume != -1 ? (double) GroupVolume / Master->Config.MaxVolume : (Volume / Device->Config.MaxVolume);
+			raop_notify(Master->Raop, RAOP_VOLUME, &Volume);
 		}
+
 	}
 
 	NFREE(r);
@@ -722,31 +747,46 @@ static void *UpdateThread(void *args)
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running && !strcmp(Device->DescDocURL, Update->Data)) {
-						// special case for Sonos: remove non-master players
-						if (!isMaster(Device->UDN, &Device->Service[TOPOLOGY_IDX], NULL)) {
-							pthread_mutex_lock(&Device->Mutex);
-							LOG_INFO("[%p]: remove Sonos slave: %s", Device, Device->Config.Name);
-							raop_delete(Device->Raop);
-							DelMRDevice(Device);
-						} else {
-							char *friendlyName = NULL;
-							Device->LastSeen = now;
-							LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->Config.Name);
+						char *friendlyName = NULL;
+						struct sMR *Master = GetMaster(Device, &friendlyName);
 
-							// check for name change
-							UpnpDownloadXmlDoc(Update->Data, &DescDoc);
-							isMaster(Device->UDN, &Device->Service[TOPOLOGY_IDX], &friendlyName);
-							if (!friendlyName) friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
-							if (friendlyName && strcmp(friendlyName, Device->friendlyName) &&
-								!strncmp(Device->friendlyName, Device->Config.Name, strlen(Device->friendlyName)) &&
-								Device->Config.Name[strlen(Device->Config.Name) - 1] == '+') {
-								LOG_INFO("[%p]: Device name change %s %s", Device, friendlyName, Device->friendlyName);
-								raop_update(Device->Raop, friendlyName, "airupnp");
-								strcpy(Device->friendlyName, friendlyName);
-								sprintf(Device->Config.Name, "%s+", friendlyName);
-							}
-							NFREE(friendlyName);
+						Device->LastSeen = now;
+						LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->Config.Name);
+
+						// check for name change
+						UpnpDownloadXmlDoc(Update->Data, &DescDoc);
+						if (!friendlyName) friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
+
+						if (friendlyName && strcmp(friendlyName, Device->friendlyName) &&
+							!strncmp(Device->friendlyName, Device->Config.Name, strlen(Device->friendlyName)) &&
+							Device->Config.Name[strlen(Device->Config.Name) - 1] == '+') {
+							LOG_INFO("[%p]: Device name change %s %s", Device, friendlyName, Device->friendlyName);
+							raop_update(Device->Raop, friendlyName, "airupnp");
+							strcpy(Device->friendlyName, friendlyName);
+							sprintf(Device->Config.Name, "%s+", friendlyName);
 						}
+
+						// we are a master (or not a Sonos)
+						if (!Master && Device->Master) {
+							// slave becoming master again
+							LOG_INFO("[%p]: Sonos %s is now master", Device, Device->Config.Name);
+							pthread_mutex_lock(&Device->Mutex);
+							Device->Master = NULL;
+							Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
+								   "airupnp", Device->Config.mac, Device->Config.Codec,
+								   Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
+								   Device, callback);
+							pthread_mutex_unlock(&Device->Mutex);
+						} else if (Master && (!Device->Master || Device->Master == Device)) {
+							pthread_mutex_lock(&Device->Mutex);
+							LOG_INFO("[%p]: Sonos %s is now slave", Device, Device->Config.Name);
+							Device->Master = Master;
+							raop_delete(Device->Raop);
+							Device->Raop = NULL;
+							pthread_mutex_unlock(&Device->Mutex);
+						}
+
+						NFREE(friendlyName);
 						goto cleanup;
 					}
 				}
@@ -927,13 +967,14 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(ControlURL);
 	}
 
-	if (!isMaster(UDN, &Device->Service[TOPOLOGY_IDX], &friendlyName) ) {
-		LOG_DEBUG("[%p] skipping Sonos slave %s", Device, friendlyName);
-		NFREE(friendlyName);
-		return false;
-	}
 
-	LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
+	Device->Master = GetMaster(Device, &friendlyName);
+
+	if (Device->Master) {
+		LOG_INFO("[%p] skipping Sonos slave %s", Device, friendlyName);
+	} else {
+		LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
+	}
 
 	// set remaining items now that we are sure
 	if (*Device->Service[TOPOLOGY_IDX].ControlURL) Device->MetaData.duration = 1;
@@ -967,7 +1008,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 						   Device->Service[i].TimeOut, MasterHandler,
 						   (void*) strdup(UDN));
 
-	return true;
+	return (Device->Master == NULL);
 }
 
 

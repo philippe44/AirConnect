@@ -234,6 +234,7 @@ bool AVTStop(struct sMR *Device)
 
 
 /*----------------------------------------------------------------------------*/
+#if 0
 int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
@@ -269,6 +270,34 @@ int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 
 	return rc;
 }
+#else
+int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
+{
+	IXML_Document *ActionNode = NULL;
+	struct sService *Service = &Device->Service[REND_SRV_IDX];
+	char params[8];
+	int rc;
+
+	LOG_INFO("[%p]: uPNP volume %d (cookie %p)", Device, Volume, Cookie);
+
+	ActionNode =  UpnpMakeAction("SetVolume", Service->Type, 0, NULL);
+	UpnpAddToAction(&ActionNode, "SetVolume", Service->Type, "InstanceID", "0");
+	UpnpAddToAction(&ActionNode, "SetVolume", Service->Type, "Channel", "Master");
+	sprintf(params, "%d", (int) Volume);
+	UpnpAddToAction(&ActionNode, "SetVolume", Service->Type, "DesiredVolume", params);
+
+	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
+							 ActionNode, ActionHandler, Cookie);
+
+	if (ActionNode) ixmlDocument_free(ActionNode);
+
+	if (rc != UPNP_E_SUCCESS) {
+		LOG_ERROR("[%p]: Error in UpnpSendActionAsync -- %d", Device, rc);
+	}
+
+	return rc;
+}
+#endif
 
 
 /*----------------------------------------------------------------------------*/
@@ -301,11 +330,13 @@ int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie)
 int GetGroupVolume(struct sMR *Device)
 {
 	IXML_Document *ActionNode, *Response = NULL;
-	struct sService *Service = &Device->Service[GRP_REND_SRV_IDX];
+	struct sService *Service;
 	char *Item;
 	int Volume = -1;
 
-	if (!*Service->ControlURL) return Volume;
+	if (!Device->Service[GRP_REND_SRV_IDX].ControlURL) return Volume;
+
+	Service = Device->Master ? &Device->Master->Service[GRP_REND_SRV_IDX] : &Device->Service[GRP_REND_SRV_IDX];
 
 	ActionNode = UpnpMakeAction("GetGroupVolume", Service->Type, 0, NULL);
 	UpnpAddToAction(&ActionNode, "GetGroupVolume", Service->Type, "InstanceID", "0");
@@ -317,6 +348,7 @@ int GetGroupVolume(struct sMR *Device)
 	Item = XMLGetFirstDocumentItem(Response, "CurrentVolume", true);
 	if (Response) ixmlDocument_free(Response);
 
+	// master / slave relation might not be set yet, so GetGroupVolume will fail
 	if (Item) {
 		Volume = atoi(Item);
 		free(Item);

@@ -1,4 +1,4 @@
-/*
+/*                                                         		// slave becoming master again
  *  AirUPnP - AirPlay to uPNP gateway
  *
  *	(c) Philippe 2015-2017, philippe_44@outlook.com
@@ -34,17 +34,20 @@ static log_level 	*loglevel = &util_loglevel;
 static IXML_Node*	_getAttributeNode(IXML_Node *node, char *SearchAttr);
 int 				_voidHandler(Upnp_EventType EventType, void *_Event, void *Cookie) { return 0; }
 
+
 /*----------------------------------------------------------------------------*/
-bool isMaster(char *UDN, struct sService *Service, char **Name)
+struct sMR *GetMaster(struct sMR *Device, char **Name)
 {
 	IXML_Document *ActionNode = NULL, *Response;
 	char *Body;
-	bool Master = false;
+	struct sMR *Master = NULL;
+	struct sService *Service = &Device->Service[TOPOLOGY_IDX];
+	bool done = false;
 
-	if (!*Service->ControlURL) return true;
+	if (!*Service->ControlURL) return NULL;
 
-	ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
-	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
+	ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
+	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
 								 NULL, ActionNode, &Response);
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
@@ -60,44 +63,57 @@ bool isMaster(char *UDN, struct sService *Service, char **Name)
 		IXML_NodeList *GroupList = ixmlDocument_getElementsByTagName(Response, "ZoneGroup");
 		int i;
 
-		sscanf(UDN, "uuid:%s", myUUID);
+		sscanf(Device->UDN, "uuid:%s", myUUID);
 
 		// list all ZoneGroups
-		for (i = 0; GroupList && i < (int) ixmlNodeList_length(GroupList); i++) {
+		for (i = 0; !done && GroupList && i < (int) ixmlNodeList_length(GroupList); i++) {
 			IXML_Node *Group = ixmlNodeList_item(GroupList, i);
 			const char *Coordinator = ixmlElement_getAttribute((IXML_Element*) Group, "Coordinator");
+			IXML_NodeList *MemberList = ixmlDocument_getElementsByTagName((IXML_Document*) Group, "ZoneGroupMember");
+			int j;
 
-			// are we the coordinator of that Zone
-			if (!strcasecmp(myUUID, Coordinator)) {
-				IXML_NodeList *MemberList = ixmlDocument_getElementsByTagName((IXML_Document*) Group, "ZoneGroupMember");
-				int j;
+			// list all ZoneMembers
+			for (j = 0; !done && j < (int) ixmlNodeList_length(MemberList); j++) {
+				IXML_Node *Member = ixmlNodeList_item(MemberList, j);
+				const char *UUID = ixmlElement_getAttribute((IXML_Element*) Member, "UUID");
+				int k;
 
-				// list all ZoneMembers to find ZoneName
-				for (j = 0; Name && j < (int) ixmlNodeList_length(MemberList); j++) {
-					IXML_Node *Member = ixmlNodeList_item(MemberList, j);
-					const char *UUID = ixmlElement_getAttribute((IXML_Element*) Member, "UUID");
-
-					if (!strcasecmp(myUUID, UUID)) {
-						NFREE(*Name);
-						*Name = strdup(ixmlElement_getAttribute((IXML_Element*) Member, "ZoneName"));
-					}
+				// get ZoneName
+				if (!strcasecmp(myUUID, UUID)) {
+					NFREE(*Name);
+					*Name = strdup(ixmlElement_getAttribute((IXML_Element*) Member, "ZoneName"));
+					if (!strcasecmp(myUUID, Coordinator)) done = true;
 				}
 
-				Master = true;
-				ixmlNodeList_free(MemberList);
+				// look for our master (if we are not)
+				for (k = 0; !done && k < MAX_RENDERERS; k++) {
+					if (glMRDevices[k].Running && stristr(glMRDevices[k].UDN, (char*) Coordinator)) {
+						Master = glMRDevices + k;
+						LOG_DEBUG("Found Master %s %s", myUUID, Master->UDN);
+						done = true;
+					}
+				}
 			}
+
+			ixmlNodeList_free(MemberList);
+		}
+
+		// our master is not yet discovered, refer to self then
+		if (!done) {
+			Master = Device;
+			LOG_INFO("[%p]: Master not discovered yet, assigning to self", Device);
 		}
 
 		ixmlNodeList_free(GroupList);
 		ixmlDocument_free(Response);
-	} else Master = true;
+	}
 
 	return Master;
 }
 
 
-/*----------------------------------------------------------------------------*/
-void FlushMRDevices(void)
+/*----------------------------------------------------------------------------*/
+void FlushMRDevices(void)
 {
 	int i;
 
@@ -213,20 +229,19 @@ struct sMR* UDN2Device(char *UDN)
 /*----------------------------------------------------------------------------*/
 bool CheckAndLock(struct sMR *Device)
 {
-	bool Checked = false;
-
 	if (!Device) {
 		LOG_INFO("device is NULL", NULL);
 		return false;
 	}
 
 	pthread_mutex_lock(&Device->Mutex);
-	if (Device->Running) Checked = true;
-	else { LOG_INFO("[%p]: device has been removed", Device); }
 
+	if (Device->Running) return true;
+
+	LOG_INFO("[%p]: device has been removed", Device);
 	pthread_mutex_unlock(&Device->Mutex);
 
-	return Checked;
+	return false;
 }
 
 

@@ -25,8 +25,9 @@
 
 void 		FlushMRDevices(void);
 void 		DelMRDevice(struct sMR *p);
-bool 		isMaster(char *UDN, struct sService *Service, char **Name);
+struct sMR *GetMaster(struct sMR *Device, char **Name);
 bool		CheckAndLock(struct sMR *Device);
+double		GetLocalGroupVolume(struct sMR *Member, int *count);
 
 struct sMR*  SID2Device(Upnp_SID Sid);
 struct sMR*  CURL2Device(char *CtrlURL);

@@ -1,3 +1,9 @@
+0.2.20.0 
+ - modify libupnp to search using unicast, but not device seems to support uPnP 1.1
+ - CheckAndLock waqs not locking device
+ - double timestamp to handle fast volume changes
+ - do not delete UPnP context when a Sonos player becomes a slave to manage volume for Sonos groups
+ 
 0.2.13.1
  - revert buffer indexing modifications
 

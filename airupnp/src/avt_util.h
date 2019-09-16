@@ -47,6 +47,7 @@ bool 	AVTStop(struct sMR *Device);
 void	AVTActionFlush(tQueue *Queue);
 int 	CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie);
 int 	CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie);
+int 	CtrlSetGroupVolume(struct sMR *Device, u8_t Volume, void *Cookie);
 int 	GetGroupVolume(struct sMR *Device);
 char*	GetProtocolInfo(struct sMR *Device);
 

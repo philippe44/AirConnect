@@ -937,6 +937,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->TrackPoll 	= Device->StatePoll = 0;
 	Device->Volume 		= 0;
 	Device->Actions 	= NULL;
+	Device->Master		= NULL;
 
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);

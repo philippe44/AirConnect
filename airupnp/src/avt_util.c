@@ -234,8 +234,7 @@ bool AVTStop(struct sMR *Device)
 
 
 /*----------------------------------------------------------------------------*/
-#if 0
-int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
+int CtrlSetGroupVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service;
@@ -270,7 +269,8 @@ int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 
 	return rc;
 }
-#else
+
+/*----------------------------------------------------------------------------*/
 int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
@@ -297,7 +297,6 @@ int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
 
 	return rc;
 }
-#endif
 
 
 /*----------------------------------------------------------------------------*/

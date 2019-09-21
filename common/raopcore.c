@@ -52,7 +52,6 @@ typedef struct raop_ctx_s {
 	bool drift;
 	pthread_t thread, search_thread;
 	unsigned char mac[6];
-	unsigned int param_stamp, notify_stamp;
 	struct {
 		char *aesiv, *aeskey;
 		char *fmtp;
@@ -107,7 +106,6 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	ctx->callback = callback;
 	ctx->latencies = latencies;
 	ctx->owner = owner;
-	ctx->param_stamp = ctx->notify_stamp = gettime_ms() - 2000;
 	ctx->drift = drift;
 	if (!strcasecmp(codec, "pcm")) ctx->encode.codec = CODEC_PCM;
 	else if (!strcasecmp(codec, "wav")) ctx->encode.codec = CODEC_WAV;
@@ -261,18 +259,13 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 			command = strdup("stop");
 			break;
 		case RAOP_VOLUME: {
-			u32_t now = gettime_ms();
-			// feedback that is less than a second old is an echo, ignore it
-			if (now > ctx->param_stamp + 1000) {
-				double Volume = *((double*) param);
+			double Volume = *((double*) param);
 
-				Volume = Volume ? (Volume - 1) * 30 : -144;
+			Volume = Volume ? (Volume - 1) * 30 : -144;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
-				asprintf(&command,"setproperty?dmcp.device-volume=%0.4lf", Volume);
+			asprintf(&command,"setproperty?dmcp.device-volume=%0.4lf", Volume);
 #pragma GCC diagnostic pop
-				ctx->notify_stamp = now;
-			}
 			break;
 		}
 		default:
@@ -539,12 +532,10 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 	} if (!strcmp(method, "SET_PARAMETER")) {
 		char *p;
-		u32_t now = gettime_ms();
 
-		if ((p = stristr(body, "volume")) != NULL && now > ctx->notify_stamp + 1000) {
+		if ((p = stristr(body, "volume")) != NULL) {
 			double volume;
 
-			ctx->param_stamp = now;
 			sscanf(p, "%*[^:]:%lf", &volume);
 			LOG_INFO("[%p]: SET PARAMETER volume %lf", ctx, volume);
 			volume = (volume == -144.0) ? 0 : (1 + volume / 30);

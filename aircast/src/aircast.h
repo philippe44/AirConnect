@@ -77,6 +77,7 @@ struct sMR {
 	pthread_mutex_t Mutex;
 	pthread_t 		Thread;
 	double			Volume;
+	u32_t			VolumeStampRx, VolumeStampTx;
 	bool			Group;
 	struct sGroupMember {
 		struct sGroupMember	*Next;

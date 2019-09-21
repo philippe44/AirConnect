@@ -335,6 +335,7 @@ int GetGroupVolume(struct sMR *Device)
 
 	if (!Device->Service[GRP_REND_SRV_IDX].ControlURL) return Volume;
 
+	// TOOD verifier que c'est necesssaire et que tout membre de sort pas le groupvolume
 	Service = Device->Master ? &Device->Master->Service[GRP_REND_SRV_IDX] : &Device->Service[GRP_REND_SRV_IDX];
 
 	ActionNode = UpnpMakeAction("GetGroupVolume", Service->Type, 0, NULL);

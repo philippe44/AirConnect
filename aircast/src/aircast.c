@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.20.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.20.1"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 20
 
@@ -222,9 +222,14 @@ void callback(void *owner, raop_event_t event, void *param)
 			break;
 		}
 		case RAOP_VOLUME: {
-			Device->Volume = *((double*) param);
-			CastSetDeviceVolume(Device->CastCtx, Device->Volume, false);
-			LOG_INFO("[%p]: Volume[0..1] %0.4lf", Device, Device->Volume);
+			u32_t now = gettime_ms();
+
+			if (now > Device->VolumeStampRx + 1000) {
+				Device->Volume = *((double*) param);
+				Device->VolumeStampTx = now;
+				CastSetDeviceVolume(Device->CastCtx, Device->Volume, false);
+				LOG_INFO("[%p]: Volume[0..1] %0.4lf", Device, Device->Volume);
+			}
 			break;
 		}
 		default:
@@ -268,6 +273,7 @@ static void *MRThread(void *args)
 		if (data) {
 			json_t *val = json_object_get(data, "type");
 			const char *type = json_string_value(val);
+			u32_t now = gettime_ms();
 
 			// a mediaSessionId has been acquired
 			if (type && !strcasecmp(type, "MEDIA_STATUS")) {
@@ -307,7 +313,8 @@ static void *MRThread(void *args)
 			}
 
 			// now apply the volume change if any
-			if (Volume != -1 && fabs(Volume - p->Volume) >= 0.01) {
+			if (Volume != -1 && fabs(Volume - p->Volume) >= 0.01 && now > p->VolumeStampTx + 1000) {
+				p->VolumeStampRx = now;
 				LOG_INFO("[%p]: Volume local change %0.4lf", p, Volume);
 				raop_notify(p->Raop, RAOP_VOLUME, &Volume);
 				Volume = -1;
@@ -623,6 +630,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 	Device->Raop 		= NULL;
 	Device->RaopState	= RAOP_STOP;
 	Device->Group 		= group;
+	Device->VolumeStampRx = Device->VolumeStampTx = gettime_ms() - 2000;
 
 	if (group) {
 		Device->GroupMaster	= calloc(1, sizeof(struct sGroupMember));

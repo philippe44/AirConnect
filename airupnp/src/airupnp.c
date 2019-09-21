@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.20.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.20.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -237,7 +237,7 @@ static void *MRThread(void *args)
 
 		// context is valid as long as thread runs
 		pthread_mutex_lock(&p->Mutex);
-		
+
 		wakeTimer = (p->State != STOPPED) ? MIN_POLL : MIN_POLL * 10;
 		LOG_SDEBUG("[%p]: UPnP thread timer %d %d", p, elapsed, wakeTimer);
 
@@ -246,18 +246,13 @@ static void *MRThread(void *args)
 
 		/*
 		should not request any status update if we are stopped, off or waiting
-		for an action to be performed
+		for an action to be performed or slave
 		*/
-		if ((p->RaopState != RAOP_PLAY && p->State == STOPPED) ||
-			 p->ErrorCount > MAX_ACTION_ERRORS ||
-			 p->WaitCookie) {
-			last = gettime_ms();
-			pthread_mutex_unlock(&p->Mutex);
-			continue;
-		}
+		if (p->Master || (p->RaopState != RAOP_PLAY && p->State == STOPPED) ||
+			p->ErrorCount > MAX_ACTION_ERRORS || p->WaitCookie) goto sleep;
 
 		// get track position & CurrentURI
-		if (!p->Master && p->TrackPoll > TRACK_POLL) {
+		if (p->TrackPoll > TRACK_POLL) {
 			p->TrackPoll = 0;
 			if (p->State != STOPPED && p->State != PAUSED) {
 				AVTCallAction(p, "GetPositionInfo", p->seqN++);
@@ -265,11 +260,12 @@ static void *MRThread(void *args)
 		}
 
 		// do polling as event is broken in many uPNP devices
-		if (!p->Master && p->StatePoll > STATE_POLL) {
+		if (p->StatePoll > STATE_POLL) {
 			p->StatePoll = 0;
 			AVTCallAction(p, "GetTransportInfo", p->seqN++);
 		}
 
+sleep:
 		last = gettime_ms(),
 		pthread_mutex_unlock(&p->Mutex);
 	}
@@ -344,23 +340,36 @@ void callback(void *owner, raop_event_t event, void *param)
 		case RAOP_VOLUME: {
 			// Volume sent by raop is normalized 0..1
 			double RaopVolume = *(double*) param;
-			struct sMR *Master = Device->Master ? Device->Master : Device;
 			int GroupVolume, i, count = 0;
+			u32_t now = gettime_ms();
 
-			GroupVolume = GetGroupVolume(Master);
+			// discard echo commands
+			if (now < Device->VolumeStampRx + 1000) break;
 
-			if (GroupVolume == -1) {
+			Device->VolumeStampTx = now;
+			GroupVolume = GetGroupVolume(Device);
+
+			/* Volume is kept as a double in device's context to avoid relative
+			values going to 0 and being stuck there. This works because although
+			volume is echoed from UPnP event as an integer, timing check allows
+			that echo to be discarded, so until volume is changed locally, it
+			remains a floating value which will regrow from being < 1 */
+
+			if (GroupVolume < 0) {
 				Device->Volume = RaopVolume * Device->Config.MaxVolume;
 				CtrlSetVolume(Device, Device->Volume + 0.5, Device->seqN++);
 				LOG_INFO("[%p]: Volume[0..100] %d", Device, (int) Device->Volume);
 			} else {
+				double Ratio = GroupVolume ? (RaopVolume * Device->Config.MaxVolume) / GroupVolume : 0;
+
 				// set volume for slaves
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					struct sMR *p = glMRDevices + i;
 					if (!p->Running || p == Device || p->Master != Device) continue;
 
-					if (!GroupVolume) p->Volume = RaopVolume * p->Config.MaxVolume;
-					else p->Volume *= min((RaopVolume * p->Config.MaxVolume) / GroupVolume, 100);
+					// ratio to be applied is deducted from master
+					if (GroupVolume) p->Volume = min(p->Volume * Ratio, p->Config.MaxVolume);
+					else p->Volume = RaopVolume * p->Config.MaxVolume;
 
 					count++;
 
@@ -369,9 +378,10 @@ void callback(void *owner, raop_event_t event, void *param)
 				}
 
 				// and now for master (if standalone, don't do ratio)
-				if (count && GroupVolume) Master->Volume *= min((RaopVolume * Master->Config.MaxVolume) / GroupVolume, 100);
-				else Master->Volume = RaopVolume * Master->Config.MaxVolume;
-				CtrlSetVolume(Master, Master->Volume + 0.5, Master->seqN++);
+				if (count && GroupVolume) Device->Volume = min(Device->Volume * Ratio, Device->Config.MaxVolume);
+				else Device->Volume = RaopVolume * Device->Config.MaxVolume;
+
+				CtrlSetVolume(Device, Device->Volume + 0.5, Device->seqN++);
 				LOG_INFO("[%p]: Volume[0..100] for master %d", Device, (int) Device->Volume);
 			}
 			break;
@@ -435,16 +445,16 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 	if (r) {
 		struct sMR *Master = Device->Master ? Device->Master : Device;
 		double Volume = atoi(r);
-		int GroupVolume;
+		u32_t now = gettime_ms();
 
-		if (Volume != Device->Volume) {
-			GroupVolume = GetGroupVolume(Master);
+		if (Volume != (int) Device->Volume && now > Master->VolumeStampTx + 1000) {
+			double GroupVolume = GetGroupVolume(Device);
 			Device->Volume = Volume;
+			Master->VolumeStampRx = now;
 			LOG_INFO("[%p]: UPnP Volume local change %d:%d (%s)", Device, (int) Volume, (int) GroupVolume, Device->Master ? "slave": "master");
-			Volume = GroupVolume != -1 ? (double) GroupVolume / Master->Config.MaxVolume : (Volume / Device->Config.MaxVolume);
+			Volume = GroupVolume < 0 ? Volume / Device->Config.MaxVolume : (GroupVolume / Master->Config.MaxVolume);
 			raop_notify(Master->Raop, RAOP_VOLUME, &Volume);
 		}
-
 	}
 
 	NFREE(r);
@@ -908,11 +918,11 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	int i;
 	unsigned long mac_size = 6;
 	in_addr_t ip;
+	u32_t now = gettime_ms();
 
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
 	LoadMRConfig(glConfigID, UDN, &Device->Config);
-
 
 	if (!Device->Config.Enabled) return false;
 
@@ -923,14 +933,15 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	LOG_SDEBUG("UDN:\t%s\nFriendlyName:\t%s", UDN,  friendlyName);
 
-	Device->ExpectStop 	= false;
-	Device->TimeOut 	= false;
-	Device->WaitCookie 	= Device->StartCookie = NULL;
 	Device->Magic 		= MAGIC;
 	Device->Muted		= true;	//assume device is muted
 	Device->RaopState	= RAOP_STOP;
 	Device->State 		= STOPPED;
-	Device->LastSeen	= gettime_ms() / 1000;
+	Device->LastSeen	= now / 1000;
+	Device->VolumeStampRx = Device->VolumeStampTx = now - 2000;
+	Device->ExpectStop 	= false;
+	Device->TimeOut 	= false;
+	Device->WaitCookie 	= Device->StartCookie = NULL;
 	Device->Raop 		= NULL;
 	Device->Elapsed		= 0;
 	Device->seqN		= NULL;
@@ -967,7 +978,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(EventURL);
 		NFREE(ControlURL);
 	}
-
 
 	Device->Master = GetMaster(Device, &friendlyName);
 
@@ -1299,7 +1309,6 @@ bool ParseArgs(int argc, char **argv) {
 
 	return true;
 }
-
 
 /*----------------------------------------------------------------------------*/
 /*																			  */

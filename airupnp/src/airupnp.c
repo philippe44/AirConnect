@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.21.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.21.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -340,7 +340,7 @@ void callback(void *owner, raop_event_t event, void *param)
 		case RAOP_VOLUME: {
 			// Volume sent by raop is normalized 0..1
 			double RaopVolume = *(double*) param;
-			int GroupVolume, i, count = 0;
+			int GroupVolume, i;
 			u32_t now = gettime_ms();
 
 			// discard echo commands
@@ -362,27 +362,18 @@ void callback(void *owner, raop_event_t event, void *param)
 			} else {
 				double Ratio = GroupVolume ? (RaopVolume * Device->Config.MaxVolume) / GroupVolume : 0;
 
-				// set volume for slaves
+				// set volume for all devices
 				for (i = 0; i < MAX_RENDERERS; i++) {
 					struct sMR *p = glMRDevices + i;
-					if (!p->Running || p == Device || p->Master != Device) continue;
+					if (!p->Running || (p != Device && p->Master != Device)) continue;
 
-					// ratio to be applied is deducted from master
+					// for standalone master, GroupVolume & Volume are identical
 					if (GroupVolume) p->Volume = min(p->Volume * Ratio, p->Config.MaxVolume);
 					else p->Volume = RaopVolume * p->Config.MaxVolume;
 
-					count++;
-
 					CtrlSetVolume(p, p->Volume + 0.5, p->seqN++);
-					LOG_INFO("[%p]: Volume[0..100] for slave %d:%d", p, (int) p->Volume, GroupVolume);
+					LOG_INFO("[%p]: Volume[0..100] %d:%d", p, (int) p->Volume, GroupVolume);
 				}
-
-				// and now for master (if standalone, don't do ratio)
-				if (count && GroupVolume) Device->Volume = min(Device->Volume * Ratio, Device->Config.MaxVolume);
-				else Device->Volume = RaopVolume * Device->Config.MaxVolume;
-
-				CtrlSetVolume(Device, Device->Volume + 0.5, Device->seqN++);
-				LOG_INFO("[%p]: Volume[0..100] for master %d", Device, (int) Device->Volume);
 			}
 			break;
 		}

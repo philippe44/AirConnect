@@ -443,7 +443,7 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 			Device->Volume = Volume;
 			Master->VolumeStampRx = now;
 			LOG_INFO("[%p]: UPnP Volume local change %d:%d (%s)", Device, (int) Volume, (int) GroupVolume, Device->Master ? "slave": "master");
-			Volume = GroupVolume < 0 ? Volume / Device->Config.MaxVolume : (GroupVolume / Master->Config.MaxVolume);
+			Volume = GroupVolume < 0 ? Volume / Device->Config.MaxVolume : GroupVolume / 100;
 			raop_notify(Master->Raop, RAOP_VOLUME, &Volume);
 		}
 	}

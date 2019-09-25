@@ -1,3 +1,6 @@
+0.2.21.2
+ - Can't use Sonos' group volume API as it takes time to "settle down", so need to create our own
+ 
 0.2.21.1
  - handle master's volume within all devices loop
  

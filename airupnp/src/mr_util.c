@@ -36,6 +36,25 @@ int 				_voidHandler(Upnp_EventType EventType, void *_Event, void *Cookie) { ret
 
 
 /*----------------------------------------------------------------------------*/
+int CalcGroupVolume(struct sMR *Device) {
+	int i, n = 0, GroupVolume = 0;
+
+	if (!*Device->Service[GRP_REND_SRV_IDX].ControlURL) return -1;
+
+	for (i = 0; i < MAX_RENDERERS; i++) {
+		struct sMR *p = glMRDevices + i;
+		if (p->Running && (p == Device || p->Master == Device)) {
+			if (p->Volume == -1) p->Volume = CtrlGetVolume(p);
+			GroupVolume += p->Volume;
+			n++;
+		}
+	}
+
+	return GroupVolume / n;
+}
+
+
+/*----------------------------------------------------------------------------*/
 struct sMR *GetMaster(struct sMR *Device, char **Name)
 {
 	IXML_Document *ActionNode = NULL, *Response;

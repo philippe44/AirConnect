@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.21.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.21.2"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -345,9 +345,10 @@ void callback(void *owner, raop_event_t event, void *param)
 
 			// discard echo commands
 			if (now < Device->VolumeStampRx + 1000) break;
-
 			Device->VolumeStampTx = now;
-			GroupVolume = GetGroupVolume(Device);
+
+			// Sonos group volume API is unreliable, need to create our own
+			GroupVolume = CalcGroupVolume(Device);
 
 			/* Volume is kept as a double in device's context to avoid relative
 			values going to 0 and being stuck there. This works because although
@@ -439,7 +440,7 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 		u32_t now = gettime_ms();
 
 		if (Volume != (int) Device->Volume && now > Master->VolumeStampTx + 1000) {
-			double GroupVolume = GetGroupVolume(Device);
+			double GroupVolume = CalcGroupVolume(Master);
 			Device->Volume = Volume;
 			Master->VolumeStampRx = now;
 			LOG_INFO("[%p]: UPnP Volume local change %d:%d (%s)", Device, (int) Volume, (int) GroupVolume, Device->Master ? "slave": "master");
@@ -971,6 +972,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	}
 
 	Device->Master = GetMaster(Device, &friendlyName);
+	Device->Volume = CtrlGetVolume(Device);
 
 	if (Device->Master) {
 		LOG_INFO("[%p] skipping Sonos slave %s", Device, friendlyName);

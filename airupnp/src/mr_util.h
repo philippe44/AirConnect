@@ -26,6 +26,7 @@
 void 		FlushMRDevices(void);
 void 		DelMRDevice(struct sMR *p);
 struct sMR *GetMaster(struct sMR *Device, char **Name);
+int 		CalcGroupVolume(struct sMR *Master);
 bool		CheckAndLock(struct sMR *Device);
 double		GetLocalGroupVolume(struct sMR *Member, int *count);
 

@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.21.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.21.3"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -436,13 +436,13 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 	r = XMLGetChangeItem(VarDoc, "Volume", "channel", "Master", "val");
 	if (r) {
 		struct sMR *Master = Device->Master ? Device->Master : Device;
-		double Volume = atoi(r);
+		double Volume = atoi(r), GroupVolume;
 		u32_t now = gettime_ms();
 
 		if (Volume != (int) Device->Volume && now > Master->VolumeStampTx + 1000) {
-			double GroupVolume = CalcGroupVolume(Master);
 			Device->Volume = Volume;
 			Master->VolumeStampRx = now;
+			GroupVolume = CalcGroupVolume(Master);
 			LOG_INFO("[%p]: UPnP Volume local change %d:%d (%s)", Device, (int) Volume, (int) GroupVolume, Device->Master ? "slave": "master");
 			Volume = GroupVolume < 0 ? Volume / Device->Config.MaxVolume : GroupVolume / 100;
 			raop_notify(Master->Raop, RAOP_VOLUME, &Volume);
@@ -926,7 +926,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	LOG_SDEBUG("UDN:\t%s\nFriendlyName:\t%s", UDN,  friendlyName);
 
 	Device->Magic 		= MAGIC;
-	Device->Muted		= true;	//assume device is muted
 	Device->RaopState	= RAOP_STOP;
 	Device->State 		= STOPPED;
 	Device->LastSeen	= now / 1000;

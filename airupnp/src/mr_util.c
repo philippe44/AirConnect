@@ -37,7 +37,8 @@ int 				_voidHandler(Upnp_EventType EventType, void *_Event, void *Cookie) { ret
 
 /*----------------------------------------------------------------------------*/
 int CalcGroupVolume(struct sMR *Device) {
-	int i, n = 0, GroupVolume = 0;
+	int i, n = 0;
+	double GroupVolume = 0;
 
 	if (!*Device->Service[GRP_REND_SRV_IDX].ControlURL) return -1;
 

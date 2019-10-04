@@ -1,3 +1,7 @@
+0.2.21.3
+ - remove un-necessary muted flag 
+ - in Volume feedback, CalcGroupVolume was called before caller device was updated
+ 
 0.2.21.2
  - Can't use Sonos' group volume API as it takes time to "settle down", so need to create our own
  

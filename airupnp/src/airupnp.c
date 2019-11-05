@@ -1031,6 +1031,7 @@ bool isExcluded(char *Model, char *ModelNumber)
 		    if (stristr(ModelNumber, item)) return false;
 		    o += strlen(item);
 	    } while (*o++);
+	    return true;
 	}
 
 	if (glExcluded) {

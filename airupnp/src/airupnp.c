@@ -1025,7 +1025,7 @@ bool isExcluded(char *Model, char *ModelNumber)
 	char *q = glExcludedModelNumber;
 	char *o = glIncludedModelNumbers;
 
-	if(glIncludedModelNumbers) {
+	if (glIncludedModelNumbers) {
 	    do {
 		    sscanf(o, "%[^,]", item);
 		    if (stristr(ModelNumber, item)) return false;

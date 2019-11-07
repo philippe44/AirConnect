@@ -1274,8 +1274,8 @@ bool ParseArgs(int argc, char **argv) {
 			glExcludedModelNumber = optarg;
 			break;
 		case 'o':
-		    glIncludedModelNumbers = optarg;
-		    break;
+			glIncludedModelNumbers = optarg;
+			break;
 		case 'l':
 			strcpy(glMRConfig.Latency, optarg);
 			break;

@@ -126,7 +126,7 @@ static char				glHostName[_STR_LEN_];
 static struct mdnsd*	glmDNSServer = NULL;
 static char*			glExcluded = NULL;
 static char*			glExcludedModelNumber = NULL;
-static char*            glIncludedModelNumbers = NULL;
+static char*			glIncludedModelNumbers = NULL;
 static char				*glPidFile = NULL;
 static bool	 			glAutoSaveConfigFile = false;
 static bool				glGracefullShutdown = true;

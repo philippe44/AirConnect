@@ -126,6 +126,7 @@ static char				glHostName[_STR_LEN_];
 static struct mdnsd*	glmDNSServer = NULL;
 static char*			glExcluded = NULL;
 static char*			glExcludedModelNumber = NULL;
+static char*			glIncludedModelNumbers = NULL;
 static char				*glPidFile = NULL;
 static bool	 			glAutoSaveConfigFile = false;
 static bool				glGracefullShutdown = true;
@@ -157,6 +158,7 @@ static char usage[] =
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
 		   "  -n <name1,name2...>\texclude from search devices whose model number contains name1 or name 2 ...\n"
+		   "  -o <model_number_1,model_number_2,...>\tinclude only the model numbers listed; overrides -m and -n  ...\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|raop|main|util|upnp, level: error|warn|info|debug|sdebug\n"
 
 #if LINUX || FREEBSD
@@ -1021,6 +1023,16 @@ bool isExcluded(char *Model, char *ModelNumber)
 	char item[_STR_LEN_];
 	char *p = glExcluded;
 	char *q = glExcludedModelNumber;
+	char *o = glIncludedModelNumbers;
+
+	if (glIncludedModelNumbers) {
+	    do {
+		    sscanf(o, "%[^,]", item);
+		    if (stristr(ModelNumber, item)) return false;
+		    o += strlen(item);
+	    } while (*o++);
+	    return true;
+	}
 
 	if (glExcluded) {
 	    do {
@@ -1214,7 +1226,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpifmnlc", opt) && optind < argc - 1) {
+		if (strstr("bxdpifmnolc", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt)) {
@@ -1260,6 +1272,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'n':
 			glExcludedModelNumber = optarg;
+			break;
+		case 'o':
+			glIncludedModelNumbers = optarg;
 			break;
 		case 'l':
 			strcpy(glMRConfig.Latency, optarg);

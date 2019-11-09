@@ -1028,7 +1028,7 @@ bool isExcluded(char *Model, char *ModelNumber)
 	if (glIncludedModelNumbers) {
 	    do {
 		    sscanf(o, "%[^,]", item);
-		    if (strcmp(ModelNumber, item)) return false;
+		    if (strcmp(ModelNumber, item) == 0) return false;
 		    o += strlen(item);
 	    } while (*o++);
 	    return true;

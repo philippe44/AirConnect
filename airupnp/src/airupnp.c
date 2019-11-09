@@ -157,8 +157,8 @@ static char usage[] =
 		   "  -f <logfile>\t\twrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
-		   "  -n <name1,name2...>\texclude from search devices whose model number contains name1 or name 2 ...\n"
-		   "  -o <model_number_1,model_number_2,...>\tinclude only the model numbers listed; overrides -m and -n  ...\n"
+		   "  -n <model1,model2,...>\texclude from search devices whose model number contains name1 or name 2 ...\n"
+		   "  -o <model1,model2,...>\tinclude only the model numbers listed; overrides -m and -n  ...\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|raop|main|util|upnp, level: error|warn|info|debug|sdebug\n"
 
 #if LINUX || FREEBSD

@@ -1,3 +1,6 @@
+0.2.22.0
+ - (upnp) add -o option to enable only listed model numbers
+
 0.2.21.3
  - remove un-necessary muted flag 
  - in Volume feedback, CalcGroupVolume was called before caller device was updated

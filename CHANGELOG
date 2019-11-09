@@ -1,3 +1,6 @@
+0.2.22.1
+ - (upnp) -o option matches on exact model numbers only
+
 0.2.22.0
  - (upnp) add -o option to enable only listed model numbers
 

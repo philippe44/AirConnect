@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.21.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.22.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -1028,7 +1028,7 @@ bool isExcluded(char *Model, char *ModelNumber)
 	if (glIncludedModelNumbers) {
 	    do {
 		    sscanf(o, "%[^,]", item);
-		    if (stristr(ModelNumber, item)) return false;
+		    if (strcmp(ModelNumber, item) == 0) return false;
 		    o += strlen(item);
 	    } while (*o++);
 	    return true;

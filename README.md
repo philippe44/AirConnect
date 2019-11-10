@@ -19,6 +19,8 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x [executable]`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
+5. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 
+
 ## Running
 
 Double click the [executable] or launch it by typing `./[executable]` in the same command line window. 

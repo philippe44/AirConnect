@@ -1,0 +1,93 @@
+#!/bin/bash
+#AirConnect Updater - Pull latest Update from https://github.com/philippe44/AirConnect
+#AirConnect by philippe44 - updater script by FaserF https://github.com/FaserF
+#DO NOT MOVE THIS SCRIPT OUTSIDE THE MAIN AIRCONNECT WORKING DIRECTORY!
+
+#Initial Variables
+if test -f "CHANGELOG"; 
+    then
+    currversion=$(head -n 1 CHANGELOG)
+    currversion=${currversion//[-._]}
+    else
+    currversion=0000
+fi
+if test -f "airupnp.service"; 
+    then
+    mode=Updating
+    currdirectory=$PWD
+    echo "Current Installation detected -> Updating"
+    else
+        mode=Installing
+        echo "First Installation detected."
+        read -p "Enter full path where to install: "  currdirectory
+        mkdir $currdirectory
+fi
+tmpfolder=/tmp/AirConnect
+updatefolder=$tmpfolder/update
+backupfolder=$tmpfolder/oldversion
+
+#Delete older tmp folder (old backup and old update)
+rm -r $tmpfolder
+
+#Create Temp Folders
+mkdir $tmpfolder
+mkdir $backupfolder
+mkdir $updatefolder
+
+#Checking for new Updates
+echo "----"
+echo "Checking for new Updates"
+echo "----"
+wget https://raw.githubusercontent.com/philippe44/AirConnect/master/CHANGELOG -O $tmpfolder/CHANGELOG
+newversion=$(head -n 1 $tmpfolder/CHANGELOG)
+newversion=${newversion//[-._]}
+
+if [ "$newversion" -gt "$currversion" ];
+then
+#Download newest Version
+echo "----"
+echo "Downloading newest version..."
+echo "----"
+git clone https://github.com/philippe44/AirConnect.git $tmpfolder/update 2>&1 >/dev/null
+fi
+
+if [ "$newversion" -gt "$currversion" ] && [ $mode = "Updating" ];
+ then
+#Copy Update and Backup Current Version
+echo "----"
+echo "Backing up old version..."
+mv $currdirectory/* $tmpfolder/oldversion
+fi
+if [ "$newversion" -gt "$currversion" ];
+ then
+echo "----"
+echo "Installing newest version..."
+echo "----"
+rm -r $currdirectory/*
+mv $tmpfolder/update/* $currdirectory/
+fi
+rm -r $updatefolder
+
+versioncheck=$(head -n 1 $currdirectory/CHANGELOG)
+versioncheck=${versioncheck//[-._]}
+
+if [ "$newversion" -gt "$currversion" ] && [ "$newversion" -eq "$versioncheck" ];
+    then
+    echo "----"
+    echo "$mode done"
+    echo "----"
+    echo "Old Version: $currversion "
+    echo "New Version: $newversion "
+    elif [ "$newversion" -eq "$currversion" ];
+        then
+        echo "No new Update found."
+    elif [ "$newversion" -lt "$currversion" ];
+        then
+        echo "Your local Version is newer than the one on Github??"
+    else
+    echo "----"
+    echo "ERROR WHILE $mode (to) Version $newversion !!!!"
+fi
+
+echo "-----"
+echo "Old version backup in: $backupfolder"

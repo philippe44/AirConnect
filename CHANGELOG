@@ -1,3 +1,6 @@
+0.2.23.0
+ - improve mDNS detection on multiple VLAN
+
 0.2.22.1
  - (upnp) -o option matches on exact model numbers only
 

@@ -1,3 +1,9 @@
+0.2.24.0
+ - Do not send body when method is HEAD
+
+0.2.23.1
+ - A records expiration
+
 0.2.23.0
  - improve mDNS detection on multiple VLAN
 

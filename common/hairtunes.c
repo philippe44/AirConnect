@@ -1283,6 +1283,9 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	kd_free(resp);
 	kd_free(headers);
 
+	// nothing else to do if this is a HEAD request
+	if (strstr(method, "HEAD")) return false;
+
 	// need to re-send the range
 	if (offset) {
 		size_t count = 0;

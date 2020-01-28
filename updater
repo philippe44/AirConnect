@@ -20,6 +20,19 @@ if test -f "airupnp.service";
         mode=Installing
         echo "First Installation detected."
         read -p "Enter full path where to install: "  currdirectory
+
+        if test -z "$currdirectory"
+        then
+            # install to current path if nothing is entered
+            currdirectory=$PWD
+        fi
+
+        if [ "$currdirectory" = "/" ];
+        then
+            echo "Can't install at root"
+            exit 1
+        fi
+
         mkdir $currdirectory
 fi
 tmpfolder=/tmp/AirConnect

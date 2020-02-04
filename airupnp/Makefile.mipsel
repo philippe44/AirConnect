@@ -1,0 +1,11 @@
+CC	 	= mipsel-linux-gnu-gcc
+CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
+LDFLAGS ?= -s -lpthread -ldl -lm -lrt -L. 
+# for LD debug -s
+
+OBJ					= bin/mipsel
+EXECUTABLE 			= ../bin/airupnp-mipsel
+#EXECUTABLE_STATIC	= ../bin/airupnp-mipsel-static
+
+include Makefile
+

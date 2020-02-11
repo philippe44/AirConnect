@@ -749,7 +749,7 @@ static void *rtp_thread_func(void *arg) {
 				u64_t remote 	  =(((u64_t) ntohl(*(u32_t*)(pktp+16))) << 32) + ntohl(*(u32_t*)(pktp+20));
 				u32_t roundtrip   = gettime_ms() - reference;
 
-				// better discard sync packets when roundtrip is suspicious
+				// better discard sync packets when roundtrip is suspicious and get another one
 				if (roundtrip > 100) {
 					LOG_WARN("[%p]: discarding NTP roundtrip of %u ms", ctx, roundtrip);
 					break;

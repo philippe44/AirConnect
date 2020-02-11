@@ -1365,9 +1365,13 @@ char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict)
 		if (tmpNode) {
 			textNode = ixmlNode_getFirstChild(tmpNode);
 			if (textNode) {
-				ret = strdup(ixmlNode_getNodeValue(textNode));
-				if (ret) break;
-				LOG_WARN("ixmlNode_getNodeValue returned NULL", NULL);
+				ret = (char*) ixmlNode_getNodeValue(textNode);
+				if (ret) {
+					ret = strdup(ret);
+					break;
+				 } else {
+					LOG_WARN("ixmlNode_getNodeValue returned NULL", NULL);
+				 }
 			} else {
 				LOG_WARN("(BUG) ixmlNode_getFirstChild(tmpNode) returned NULL", NULL);
 			}

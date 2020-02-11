@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.24.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.24.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -1036,7 +1036,7 @@ bool isExcluded(char *Model, char *ModelNumber)
 
 	if (glExcluded) {
 	    do {
-		    sscanf(p, "%[^,]", item);
+			sscanf(p, "%[^,]", item);
 		    if (stristr(Model, item)) return true;
 		    p += strlen(item);
 	    } while (*p++);
@@ -1324,6 +1324,16 @@ int main(int argc, char *argv[])
 {
 	int i;
 	char resp[20] = "";
+
+	char cmd[]="18=jdk<hkjdqshkjdhkjhqskd,4=jdkqsljldkqjdlkqs";
+	int gpio;
+	char *p, type[4];
+
+	p = cmd;
+	do {
+		sscanf(p, "%d=%[^,]", &gpio, type);
+		p = strchr(p, ',');
+	} while (p++);
 
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);

@@ -765,9 +765,9 @@ static void *UpdateThread(void *args)
 							!strncmp(Device->friendlyName, Device->Config.Name, strlen(Device->friendlyName)) &&
 							Device->Config.Name[strlen(Device->Config.Name) - 1] == '+') {
 							LOG_INFO("[%p]: Device name change %s %s", Device, friendlyName, Device->friendlyName);
-							raop_update(Device->Raop, friendlyName, "airupnp");
 							strcpy(Device->friendlyName, friendlyName);
 							sprintf(Device->Config.Name, "%s+", friendlyName);
+							raop_update(Device->Raop, Device->Config.Name, "airupnp");
 						}
 
 						// we are a master (or not a Sonos)

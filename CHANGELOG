@@ -1,8 +1,11 @@
+0.2.24.2
+ - restore trailing '+' UPnP name changes
+ 
 0.2.24.1
  - do not copy NULL strings ... (util.c)
  
 0.2.24.0
- - Do not send body when method is HEAD
+ - do not send body when method is HEAD
 
 0.2.23.1
  - A records expiration

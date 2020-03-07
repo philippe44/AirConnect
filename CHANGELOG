@@ -1,3 +1,6 @@
+0.2.24.3
+ - (airupnp) add remote_title
+ 
 0.2.24.2
  - restore trailing '+' UPnP name changes
  

@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.24.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.24.3"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -982,8 +982,12 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	}
 
 	// set remaining items now that we are sure
-	if (*Device->Service[TOPOLOGY_IDX].ControlURL) Device->MetaData.duration = 1;
-	Device->MetaData.title = strdup("Streaming from AirConnect");
+	if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
+		Device->MetaData.duration = 1;
+		Device->MetaData.title = strdup("Streaming from AirConnect");
+	} else {
+		Device->MetaData.remote_title = strdup("Streaming from AirConnect");
+    }
 	if (*Device->Config.ArtWork) Device->MetaData.artwork = strdup(Device->Config.ArtWork);
 	Device->Running 	= true;
 	if (friendlyName) strcpy(Device->friendlyName, friendlyName);

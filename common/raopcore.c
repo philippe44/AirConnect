@@ -509,8 +509,10 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		if ((p = stristr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
 
 		// only send FLUSH if useful (discards frames above buffer head and top)
-		if (ctx->ht && hairtunes_flush(ctx->ht, seqno, rtptime))
+		if (ctx->ht && hairtunes_flush(ctx->ht, seqno, rtptime, true)) {
 			ctx->callback(ctx->owner, RAOP_FLUSH, &ctx->hport);
+			hairtunes_flush_release(ctx->ht);
+		}
 
 	}  else if (!strcmp(method, "TEARDOWN")) {
 

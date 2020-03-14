@@ -866,7 +866,7 @@ static bool rtp_request_resend(hairtunes_t *ctx, seq_t first, seq_t last) {
 	// do not request silly ranges (happens in case of network large blackouts)
 	if (seq_order(last, first) || last - first > BUFFER_FRAMES / 2) return false;
 
-	ctx->resent_frames += last - first + 1;
+	ctx->resent_frames += (seq_t) (last - first) + 1;
 
 	LOG_DEBUG("resend request [W:%hu R:%hu first=%hu last=%hu]", ctx->ab_write, ctx->ab_read, first, last);
 
@@ -874,7 +874,7 @@ static bool rtp_request_resend(hairtunes_t *ctx, seq_t first, seq_t last) {
 	req[1] = 0x55|0x80;  // Apple 'resend'
 	*(u16_t*)(req+2) = htons(1);  // our seqnum
 	*(u16_t*)(req+4) = htons(first);  // missed seqnum
-	*(u16_t*)(req+6) = htons(last-first+1);  // count
+	*(u16_t*)(req+6) = htons((seq_t) (last-first)+1);  // count
 
 	ctx->rtp_host.sin_port = htons(ctx->rtp_sockets[CONTROL].rport);
 

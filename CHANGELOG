@@ -1,3 +1,6 @@
+0.24.5
+ - (aircast) clear SSL context on shutdown
+ 
 0.24.4
  - race condition where the UPnP/CC device could be stopped by a flush after it started to play due to de-sync of flush/play (RTP) detetcion
  

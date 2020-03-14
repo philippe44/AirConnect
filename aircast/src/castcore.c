@@ -404,6 +404,7 @@ void CastDisconnect(struct sCastCtx *Ctx)
 	CastQueueFlush(&Ctx->reqQueue);
 
 	SSL_shutdown(Ctx->ssl);
+	SSL_clear(Ctx->ssl);
 	closesocket(Ctx->sock);
 
 	pthread_mutex_unlock(&Ctx->Mutex);

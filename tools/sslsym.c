@@ -117,6 +117,7 @@ SYMDECL(SSL_CTX_ctrl, long, 4, SSL_CTX *, ctx, int, cmd, long, larg, void*, parg
 SYMDECL(SSL_new, SSL*, 1, SSL_CTX*, s);
 SYMDECL(SSL_connect, int, 1, SSL*, s);
 SYMDECL(SSL_shutdown, int, 1, SSL*, s);
+SYMDECL(SSL_clear, int, 1, SSL*, s);
 SYMDECL(SSL_get_fd, int, 1, const SSL*, s);
 SYMDECL(SSL_set_fd, int, 2, SSL*, s, int, fd);
 SYMDECL(SSL_get_error, int, 2, const SSL*, s, int, ret_code);
@@ -197,6 +198,7 @@ bool load_ssl_symbols(void) {
 	SYMLOAD(SSLhandle, SSL_set_fd);
 	SYMLOAD(SSLhandle, SSL_get_error);
 	SYMLOAD(SSLhandle, SSL_shutdown);
+	SYMLOAD(SSLhandle, SSL_clear);
 	SYMLOAD(SSLhandle, SSL_read);
 	SYMLOAD(SSLhandle, SSL_write);
 	SYMLOAD(SSLhandle, SSL_pending);

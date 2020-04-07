@@ -1,3 +1,6 @@
+0.24.7
+ - garbadge left in airupnp.c
+ 
 0.24.6
  - Can't re-send more bytes than we've received
  

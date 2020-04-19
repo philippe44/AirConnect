@@ -135,7 +135,7 @@ There are many tools that allow an application to be run as a service. You can t
 
 ## Synology installation
 
-[@bandesz](https://github.com/bandesz) has made a nice package for automatic installation & launch of airupnp on Syno's
+[@eizedev](https://github.com/eizedev/AirConnect-Synology) hasis now maitaining a package for automatic installation & launch of airupnp on Syno's
 
 https://github.com/bandesz/AirConnect-Synology
 

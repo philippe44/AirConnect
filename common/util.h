@@ -94,7 +94,7 @@ IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, 
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict);
 char 		*XMLGetFirstElementItem(IXML_Element *element, const char *item);
-bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s);
+bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s, bool match);
 #endif
 
 u32_t 		gettime_ms(void);

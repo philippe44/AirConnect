@@ -1,13 +1,16 @@
-0.24.7
+0.2.25.0
+ - (airupnp) search for mediarenderer:2
+ 
+0.2.24.7
  - garbadge left in airupnp.c
  
-0.24.6
+0.2.24.6
  - Can't re-send more bytes than we've received
  
-0.24.5
+0.2.24.5
  - (aircast) clear SSL context on shutdown
  
-0.24.4
+0.2.24.4
  - race condition where the UPnP/CC device could be stopped by a flush after it started to play due to de-sync of flush/play (RTP) detetcion
  
 0.2.24.3

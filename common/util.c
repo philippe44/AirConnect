@@ -992,6 +992,19 @@ char *strndup(const char *s, size_t n) {
 
 	return p;
 }
+
+/*---------------------------------------------------------------------------*/
+char *strcasestr(const char *haystack, const char *needle)
+{
+ char *haystack_lwr = strlwr(strdup(haystack));
+ char *needle_lwr = strlwr(strdup(needle));
+ char *p = strstr(haystack_lwr, needle_lwr);
+
+ if (p) p = haystack + (p - haystack_lwr);
+ free(haystack_lwr);
+ free(needle_lwr);
+ return p;
+}
 #endif
 
 
@@ -1393,13 +1406,14 @@ char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict)
 
 
 /*----------------------------------------------------------------------------*/
-bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s)
+bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s, bool match)
 {
 	IXML_NodeList *nodeList = NULL;
 	IXML_Node *textNode = NULL;
 	IXML_Node *tmpNode = NULL;
 	int i;
 	bool ret = false;
+	const char *value;
 
 	nodeList = ixmlDocument_getElementsByTagName(doc, (char *)item);
 
@@ -1408,7 +1422,8 @@ bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s)
 		if (!tmpNode) continue;
 		textNode = ixmlNode_getFirstChild(tmpNode);
 		if (!textNode) continue;
-		if (!strcmp(ixmlNode_getNodeValue(textNode), s)) {
+		value = ixmlNode_getNodeValue(textNode);
+		if ((match && !strcmp(value, s)) || (!match && strcasestr(value, s))) {
 			ret = true;
 			break;
 		}

@@ -337,8 +337,10 @@ int CtrlGetVolume(struct sMR *Device)
 
 	if (Response) {
 		Item = XMLGetFirstDocumentItem(Response, "CurrentVolume", true);
-		Volume = atoi(Item);
-		free(Item);
+		if (Item) {
+			Volume = atoi(Item);
+			free(Item);
+		}
 		ixmlDocument_free(Response);
 	}
 

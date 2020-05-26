@@ -36,9 +36,10 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.25.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.26.0"" ("__DATE__" @ "__TIME__")"
 
-#define DISCOVERY_TIME 20
+#define DISCOVERY_TIME 	20
+#define MEDIA_VOLUME	0.5
 
 /*----------------------------------------------------------------------------*/
 /* globals initialized */
@@ -56,7 +57,7 @@ tMRConfig			glMRConfig = {
 							"",		// name
 							"flc",	// use_flac
 							true,	// metadata
-							0.5,	// media volume (0..1)
+							MEDIA_VOLUME,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 							"",		// rtp/http_latency (0 = use client's request)
 							false,	// drift
@@ -100,7 +101,8 @@ static char usage[] =
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -b <address>\t\tnetwork address to bind to\n"
-  		   "  -c <mp3[:<rate>]|flc[:0..9]|wav>\taudio format send to player\n"
+		   "  -c <mp3[:<rate>]|flc[:0..9]|wav>\taudio format send to player\n"
+   		   "  -v <0..1>\t\t group MediaVolume factor\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
@@ -454,6 +456,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 			// device update - when playing ChromeCast update their TXT records
 			} else {
 				char *Name = GetmDNSAttribute(s->attr, s->attr_count, "fn");
+
 				// new master in election, update and put it in the queue
 				if (Device->Group && Device->GroupMaster->Host.s_addr != s->addr.s_addr) {
 					struct sGroupMember *Member = calloc(1, sizeof(struct sGroupMember));
@@ -812,7 +815,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpiflc", opt) && optind < argc - 1) {
+		if (strstr("bxdpiflcv", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt)) {
@@ -827,6 +830,9 @@ bool ParseArgs(int argc, char **argv) {
 		switch (opt[0]) {
 		case 'f':
 			glLogFile = optarg;
+			break;
+		case 'v':
+			glMRConfig.MediaVolume = atof(optarg);
 			break;
 		case 'c':
 			strcpy(glMRConfig.Codec, optarg);

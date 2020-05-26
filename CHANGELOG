@@ -1,3 +1,6 @@
+0.2.26.0
+ - (aircast) add -v <factor> to globally set group media volume
+
 0.2.25.0
  - (airupnp) search for mediarenderer:2
  

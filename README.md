@@ -21,6 +21,8 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 5. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 
 
+6. In Docker, you must use 'host' mode to enable audio webserver
+
 ## Running
 
 Double click the [executable] or launch it by typing `./[executable]` in the same command line window. 

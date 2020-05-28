@@ -1,3 +1,6 @@
+0.2.26.1
+ - (airupnp) config update shall not be done when there is not config
+ 
 0.2.26.0
  - (aircast) add -v <factor> to globally set group media volume
 

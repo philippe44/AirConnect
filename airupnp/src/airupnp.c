@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.26.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.26.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -849,7 +849,7 @@ static void *UpdateThread(void *args)
 				}
 
 cleanup:
-				if (glAutoSaveConfigFile || glDiscovery || Updated) {
+				if (Updated && (glAutoSaveConfigFile || glDiscovery)) {
 					LOG_DEBUG("Updating configuration %s", glConfigName);
 					SaveConfig(glConfigName, glConfigID, false);
 				}

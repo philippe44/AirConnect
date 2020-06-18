@@ -1139,6 +1139,7 @@ static bool Start(bool cold)
 
 		UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER ":1", NULL);
 		UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER ":2", NULL);
+		UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER ":3", NULL);
 	}
 
 	return true;

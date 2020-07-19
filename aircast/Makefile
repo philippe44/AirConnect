@@ -5,12 +5,14 @@ COMMON		= ../common
 SRC			= ./src
 JANSSON		= $(BASE)/jansson
 NANOPB		= $(BASE)/nanopb
-MDNSSD		= $(BASE)/mdnssd
-TINYSVCMDNS	= $(BASE)/tinysvcmdns
+MDNSSD		= $(BASE)/mDNS-SD
+TINYSVCMDNS	= $(BASE)/TinySVCmDNS
 VALGRIND	= $(BASE)/valgrind
 UPNP 		= $(BASE)/libupnp/1.6.19
 SHINE		= $(BASE)/shine/src/lib
 DMAP_PARSER	= $(BASE)/dmap-parser
+OPENSSL		= $(BASE)/openssl
+FLAC		= $(BASE)/flac
 
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DNDEBUG -D_GNU_SOURCE -D_USE_XML_
 
@@ -35,7 +37,8 @@ INCLUDE = -I. \
 		  -I$(JANSSON)/src \
 		  -I$(NANOPB) \
 		  -I$(MDNSSD) \
-		  -I$(BASE)/flac/include\
+		  -I$(FLAC)/include\
+		  -I$(OPENSSL)/include\
 		  -I$(TINYSVCMDNS)
 		  		  
 DEPS	= $(SRC)/aircast.h

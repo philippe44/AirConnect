@@ -146,7 +146,7 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 
 	if (!strcmp(name, "enabled")) Conf->Enabled = atoi(val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atoi(val);
-	if (!strcmp(name, "upnp_max")) Conf->MaxVolume = atoi(val);
+	if (!strcmp(name, "upnp_max")) Conf->UPnPMax = atoi(val);
 	if (!strcmp(name, "use_flac")) strcpy(Conf->Codec, "flac");  // temporary
 	if (!strcmp(name, "codec")) strcpy(Conf->Codec, val);
 	if (!strcmp(name, "metadata")) Conf->Metadata = atoi(val);

@@ -45,6 +45,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i [config file name]` command line)
 - Chromecast groups are supported. Use -v to set the media volume factor for all devices (0.5 by default)
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
+- Use -u <version> to set the maximum UPnP searched version
 - Use of -z disables interactive mode (no TTY) **and** self-daemonizes (use -p <file> to get the PID). Use of -Z only disables interactive mode 
 - <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`), otherwise it will consume all CPU. On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
 - A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements (or use `<drift>` option in config file), but that might cause overrun or underrun on long playbacks
@@ -61,6 +62,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `drift <0|1>`	: enable adding or dropping a frame when case source frames producion is too fast or too slow
 - `enabled <0|1>`	: in common section, enables new discovered players by default. In a dedicated section, enables the player
 - `name` 		: The name that will appear for the device in AirPlay. You can change the default name.
+- `upnp_max`		: set the maximum UPnP version use to search players
 - `log_limit <-1 | n>` 	: (default -1) when using log file, limits its size to 'n' MB (-1 = no limit)
 - `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
 - `metadata <0|1>`	: send metadata to player (only for mp3 codec and if player supports ICY protocol)

@@ -82,6 +82,7 @@ void SaveConfig(char *name, void *ref, bool full)
 
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "max_volume", "%d", glMRConfig.MaxVolume);
+	XMLUpdateNode(doc, common, false, "upnp_max", "%d", glMRConfig.UPnPMax);
 	XMLUpdateNode(doc, common, false, "codec", glMRConfig.Codec);
 	XMLUpdateNode(doc, common, false, "metadata", "%d", glMRConfig.Metadata);
 	XMLUpdateNode(doc, common, false, "artwork", glMRConfig.ArtWork);
@@ -145,6 +146,7 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 
 	if (!strcmp(name, "enabled")) Conf->Enabled = atoi(val);
 	if (!strcmp(name, "max_volume")) Conf->MaxVolume = atoi(val);
+	if (!strcmp(name, "upnp_max")) Conf->MaxVolume = atoi(val);
 	if (!strcmp(name, "use_flac")) strcpy(Conf->Codec, "flac");  // temporary
 	if (!strcmp(name, "codec")) strcpy(Conf->Codec, val);
 	if (!strcmp(name, "metadata")) Conf->Metadata = atoi(val);

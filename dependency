@@ -1,0 +1,31 @@
+
+
+#!/bin/bash
+
+#Variables
+currentdirectory=$PWD
+tmpfolder=/tmp/AirConnect
+backupfolder=$tmpfolder/backup
+downloadfolder=$tmpfolder/download
+
+
+function checkValGrindInstallation() {
+	if [ ! -d "$currentdirectory/../valgrind" ]
+	then
+		echo "Valgrind installation was not found."
+	fi
+}
+
+
+function installValGrind()) {
+
+}
+
+#
+# Main
+#########################################
+#
+#
+
+#Check if AirConnect is already installed
+checkValGrindInstallation

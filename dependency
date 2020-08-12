@@ -3,23 +3,39 @@
 #!/bin/bash
 
 #Variables
-currentdirectory=$PWD
-tmpfolder=/tmp/AirConnect
-backupfolder=$tmpfolder/backup
-downloadfolder=$tmpfolder/download
+source_directory=$PWD/..
 
+function checkGitDependency() {
+	echo "Check if $1 dependency is installed"
 
-function checkValGrindInstallation() {
-	if [ ! -d "$currentdirectory/../valgrind" ]
+	if [ -f "$source_directory/$1" ]
 	then
-		echo "Valgrind installation was not found."
+		echo "- found installation"
+	else
+		echo "- did not find $1"
+
+		#Install git dependency
+		echo "----"
+		echo "- installing $1 ..."
+		echo "----"
+		git clone --depth=1 $2 $source_directory/$1 2>&1 >/dev/null 
 	fi
 }
 
 
-function installValGrind()) {
+function download() {
+    url=$1
+    filename=$2
 
+    if [ -x "$(which wget)" ] ; then
+        wget -q $url -O $2
+    elif [ -x "$(which curl)" ]; then
+        curl -o $2 -sfL $url
+    else
+        echo "Could not find curl or wget, please install one." >&2
+    fi
 }
+
 
 #
 # Main
@@ -28,4 +44,18 @@ function installValGrind()) {
 #
 
 #Check if AirConnect is already installed
-checkValGrindInstallation
+checkGitDependency nanopb https://github.com/nanopb/nanopb.git
+checkGitDependency jannson https://github.com/akheron/jansson.git
+checkGitDependency mDNS-SD https://github.com/philippe44/mDNS-SD.git
+checkGitDependency TinySVCmDNS https://github.com/philippe44/TinySVCmDNS.git
+checkGitDependency alac https://github.com/macosforge/alac.git
+checkGitDependency valgrind https://github.com/svn2github/valgrind.git
+checkGitDependency shine https://github.com/toots/shine.git
+checkGitDependency dmap-parser https://github.com/mattstevens/dmap-parser.git
+
+download https://github.com/pupnp/pupnp/archive/release-1.6.19.zip $source_directory/release-1.6.19.zip
+download https://ftp.osuosl.org/pub/xiph/releases/flac/flac-1.3.3.tar.xz $source_directory/flac-1.3.3.tar.xz
+download ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.zip $source_directory/pthreads-w32-2-9-1-release.zip
+
+#flac
+#libupnp/1.6.19

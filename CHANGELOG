@@ -1,3 +1,6 @@
+0.2.27.0
+ - (airupnp) add -u and UPnPMax config options to set the max upnp search
+ 
 0.2.26.1
  - (airupnp) config update shall not be done when there is not config
  

@@ -58,6 +58,7 @@ struct sService {
 	char		StreamLength[_STR_LEN_];
 	bool		Enabled;
 	char		Name[_STR_LEN_];
+	int			UPnPMax;
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	int			MaxVolume;

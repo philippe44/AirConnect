@@ -131,8 +131,8 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 
 	if (bind(ctx->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0 || listen(ctx->sock, 1)) {
 		LOG_ERROR("Cannot bind or listen RTSP listener: %s", strerror(errno));
-		free(ctx);
 		closesocket(ctx->sock);
+		free(ctx);
 		return NULL;
 	}
 

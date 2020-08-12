@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.26.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.27.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -71,6 +71,7 @@ tMRConfig			glMRConfig = {
 							"-3",      	// StreamLength
 							true,		// Enabled
 							"",      	// Name
+							1,			// UPnPMax
 							true,		// SendMetaData
 							false,		// SendCoverArt
 							100,		// MaxVolume
@@ -148,12 +149,13 @@ static char usage[] =
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -b <server>[:<port>]\tnetwork interface and UPnP port to use \n"
-   		   "  -c <mp3[:<rate>]|flc[:0..9]|wav|pcm>\taudio format send to player\n"
+		   "  -c <mp3[:<rate>]|flc[:0..9]|wav|pcm>\taudio format send to player\n"
+		   "  -u <version>\tset the maximum UPnP version for search (default 1)"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
 		   "  -l <[rtp][:http][:f]>\tRTP and HTTP latency (ms), ':f' forces silence fill\n"
-   		   "  -r \t\t\tlet timing reference drift (no click)\n"
+		   "  -r \t\t\tlet timing reference drift (no click)\n"
 		   "  -f <logfile>\t\twrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
@@ -300,15 +302,15 @@ void callback(void *owner, raop_event_t event, void *param)
 			break;
 		case RAOP_FLUSH:
 			LOG_INFO("[%p]: Flush", Device);
-			AVTStop(Device);
+			AVTBasic(Device, "Pause");
 			Device->RaopState = event;
-			Device->ExpectStop = true;
+			//Device->ExpectStop = true;
 			break;
 		case RAOP_PLAY: {
 			char *ProtoInfo;
 			char *uri, *mp3radio = NULL;
 
-			if (Device->RaopState != RAOP_PLAY) {
+			if (Device->RaopState != RAOP_PLAY && Device->RaopState != RAOP_FLUSH) {
 				if (!strcasecmp(Device->Config.Codec, "pcm"))
 					ProtoInfo = Device->Config.ProtocolInfo.pcm;
 				else if (!strcasecmp(Device->Config.Codec, "wav"))
@@ -605,11 +607,9 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 			// if there is a cookie, it's a targeted Sonos search
 			if (!Cookie) {
 				static int Version;
-				char *SearchTopic;
-
-				asprintf(&SearchTopic, "%s:%i", MEDIA_RENDERER, (Version++ & 0x01) + 1);
+				char SearchTopic[sizeof(MEDIA_RENDERER) + 2];
+				sprintf(SearchTopic, "%s:%i", MEDIA_RENDERER, (Version++ % glMRConfig.UPnPMax) + 1);
 				UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, SearchTopic, NULL);
-				free(SearchTopic);
 			}
 
 			break;
@@ -1137,8 +1137,12 @@ static bool Start(bool cold)
 		if ((glmDNSServer = mdnsd_start(glHost)) == NULL) goto Error;
 		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
-		UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER ":1", NULL);
-		UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, MEDIA_RENDERER ":2", NULL);
+		for (i = 0; i < glMRConfig.UPnPMax; i++) {
+			char SearchTopic[sizeof(MEDIA_RENDERER) + 2];
+			sprintf(SearchTopic, "%s:%i", MEDIA_RENDERER, i+1);
+			UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, SearchTopic, NULL);
+		}
+
 	}
 
 	return true;
@@ -1241,7 +1245,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpifmnolc", opt) && optind < argc - 1) {
+		if (strstr("bxdpifmnolcu", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt)) {
@@ -1262,6 +1266,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'c':
 			strcpy(glMRConfig.Codec, optarg);
+			break;
+		case 'u':
+			glMRConfig.UPnPMax = atoi(optarg);
 			break;
 		case 'i':
 			strcpy(glConfigName, optarg);

@@ -45,7 +45,7 @@ function download() {
 
 #Check if AirConnect is already installed
 checkGitDependency nanopb https://github.com/nanopb/nanopb.git
-checkGitDependency jannson https://github.com/akheron/jansson.git
+checkGitDependency jansson https://github.com/akheron/jansson.git
 checkGitDependency mDNS-SD https://github.com/philippe44/mDNS-SD.git
 checkGitDependency TinySVCmDNS https://github.com/philippe44/TinySVCmDNS.git
 checkGitDependency alac https://github.com/macosforge/alac.git

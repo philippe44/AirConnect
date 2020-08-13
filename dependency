@@ -8,7 +8,7 @@ source_directory=$PWD/..
 function checkGitDependency() {
 	echo "Check if $1 dependency is installed"
 
-	if [ -f "$source_directory/$1" ]
+	if [ -d "$source_directory/$1" ]
 	then
 		echo "- found installation"
 	else
@@ -52,10 +52,20 @@ checkGitDependency alac https://github.com/macosforge/alac.git
 checkGitDependency valgrind https://github.com/svn2github/valgrind.git
 checkGitDependency shine https://github.com/toots/shine.git
 checkGitDependency dmap-parser https://github.com/mattstevens/dmap-parser.git
+checkGitDependency openssl https://github.com/openssl/openssl.git
 
+if [ ! -d "$source_directory/pupnp-release-1.6.19" ]
+then
+echo "download libupnp"
 download https://github.com/pupnp/pupnp/archive/release-1.6.19.zip $source_directory/release-1.6.19.zip
-download https://ftp.osuosl.org/pub/xiph/releases/flac/flac-1.3.3.tar.xz $source_directory/flac-1.3.3.tar.xz
-download ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.zip $source_directory/pthreads-w32-2-9-1-release.zip
+unzip $source_directory/release-1.6.19.zip -d $source_directory
+rm $source_directory/release-1.6.19.zip
+else
+echo "what"
+fi
+
+#download https://ftp.osuosl.org/pub/xiph/releases/flac/flac-1.3.3.tar.xz $source_directory/flac-1.3.3.tar.xz
+#download ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.zip $source_directory/pthreads-w32-2-9-1-release.zip
 
 #flac
 #libupnp/1.6.19

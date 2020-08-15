@@ -4,16 +4,22 @@ TOOLS		= ../tools
 COMMON		= ../common
 SRC			= ./src
 JANSSON		= $(BASE)/jansson
-NANOPB		= $(BASE)/nanopb
+# nanopb 0.4.2 does not work out of the box, so use original one
+NANOPB		= $(BASE)/nanopb-nanopb-0.3.4 
+# use original case sensitive folder name
 MDNSSD		= $(BASE)/mDNS-SD
-TINYSVCMDNS	= $(BASE)/TinySVCmDNS
+TINYSVCMDNS	= $(BASE)/tinysvcmdns
 VALGRIND	= $(BASE)/valgrind
+# use original case sensitive folder name
 UPNP 		= $(BASE)/pupnp-release-1.6.19
 SHINE		= $(BASE)/shine/src/lib
 DMAP_PARSER	= $(BASE)/dmap-parser
-OPENSSL		= $(BASE)/openssl
-FLAC		= $(BASE)/flac
-
+# latest release
+FLAC		= $(BASE)/flac-1.3.3
+# use original case sensitive folder name
+# last known compatible version
+OPENSSL		= $(BASE)/openssl-OpenSSL_1_0_2u
+ 
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DNDEBUG -D_GNU_SOURCE -D_USE_XML_
 
 CFLAGS 		+= -fdata-sections -ffunction-sections 
@@ -37,8 +43,8 @@ INCLUDE = -I. \
 		  -I$(JANSSON)/src \
 		  -I$(NANOPB) \
 		  -I$(MDNSSD) \
-		  -I$(FLAC)/include\
-		  -I$(OPENSSL)/include\
+		  -I$(FLAC)/include \
+		  -I$(OPENSSL)/include \
 		  -I$(TINYSVCMDNS)
 		  		  
 DEPS	= $(SRC)/aircast.h
@@ -56,7 +62,7 @@ SOURCES_LIBS = sslsym.c
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
-LIBRARY 		= $(OBJ)/libixml.a $(OBJ)/libFLAC.a $(OBJ)/libshine.a
+LIBRARY 		= $(OBJ)/libixml.a $(OBJ)/libFLAC-static.a $(OBJ)/libshine.a
 LIBRARY_STATIC 	= $(LIBRARY) -lssl -lcrypto
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)

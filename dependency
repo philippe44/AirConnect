@@ -44,15 +44,18 @@ function download() {
 #
 
 #Check if AirConnect is already installed
-checkGitDependency nanopb https://github.com/nanopb/nanopb.git
-checkGitDependency jansson https://github.com/akheron/jansson.git
 checkGitDependency mDNS-SD https://github.com/philippe44/mDNS-SD.git
 checkGitDependency TinySVCmDNS https://github.com/philippe44/TinySVCmDNS.git
 checkGitDependency alac https://github.com/macosforge/alac.git
 checkGitDependency valgrind https://github.com/svn2github/valgrind.git
 checkGitDependency shine https://github.com/toots/shine.git
+cd $source_directory/shine
+autoreconf -fi
+./configure
+make
+
 checkGitDependency dmap-parser https://github.com/mattstevens/dmap-parser.git
-checkGitDependency openssl https://github.com/openssl/openssl.git
+
 
 if [ ! -d "$source_directory/pupnp-release-1.6.19" ]
 then
@@ -60,12 +63,90 @@ echo "download libupnp"
 download https://github.com/pupnp/pupnp/archive/release-1.6.19.zip $source_directory/release-1.6.19.zip
 unzip $source_directory/release-1.6.19.zip -d $source_directory
 rm $source_directory/release-1.6.19.zip
+
+#Configure
+cd $source_directory/pupnp-release-1.6.19
+autoreconf -fi
+./configure
+make
+
 else
 echo "what"
 fi
 
-#download https://ftp.osuosl.org/pub/xiph/releases/flac/flac-1.3.3.tar.xz $source_directory/flac-1.3.3.tar.xz
-#download ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.zip $source_directory/pthreads-w32-2-9-1-release.zip
 
-#flac
-#libupnp/1.6.19
+if [ ! -d "$source_directory/nanopb-nanopb-0.3.4" ]
+#Seems to be compiled with 0.3.4, so this version is hardcoded
+#Instead of newest version 0.4.2
+#checkGitDependency nanopb https://github.com/nanopb/nanopb.git
+then
+echo "download nanopb"
+download https://github.com/nanopb/nanopb/archive/nanopb-0.3.4.zip $source_directory/nanopb-0.3.4.zip
+unzip $source_directory/nanopb-0.3.4.zip -d $source_directory
+rm $source_directory/nanopb-0.3.4.zip
+else
+echo "what"
+fi
+
+
+if [ ! -d "$source_directory/jansson" ]
+#
+#On Macos brew install autoconf automake libtool is required
+#
+then
+echo "download jansson"
+checkGitDependency jansson https://github.com/akheron/jansson.git
+
+#Configure
+cd $source_directory/jansson
+autoreconf -fi
+./configure
+
+else
+echo "what"
+fi
+
+
+if [ ! -d "$source_directory/flac-1.3.3" ]
+then
+echo "download FLAC"
+download https://ftp.osuosl.org/pub/xiph/releases/flac/flac-1.3.3.tar.xz $source_directory/flac-1.3.3.tar.xz
+
+cd $source_directory
+gunzip flac-1.3.3.tar.xz
+tar xopf flac-1.3.3.tar
+rm flac-1.3.3.tar
+
+#Configure
+cd $source_directory/flac-1.3.3
+./configure
+make
+
+else
+echo "what"
+fi
+
+
+if [ ! -d "$source_directory/openssl-OpenSSL_1_0_2u" ]
+#Seems to be compiled with 1.0.2#, so this version is hardcoded
+#Instead of newest version 3.0.0
+#checkGitDependency openssl https://github.com/openssl/openssl.git
+then
+echo "download openssl"
+download https://github.com/openssl/openssl/archive/OpenSSL_1_0_2u.zip $source_directory/OpenSSL_1_0_2u.zip
+unzip $source_directory/OpenSSL_1_0_2u.zip -d $source_directory
+rm $source_directory/OpenSSL_1_0_2u.zip
+
+#Configure
+cd $source_directory/openssl-OpenSSL_1_0_2u
+./config
+
+else
+echo "what"
+fi
+
+
+##Copy Libs
+# find ../ -name "libshine.a"
+# find ../ -name "libFLAC-static.a"
+# find ../ -name "libixml.a"

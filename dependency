@@ -28,9 +28,7 @@ function downloadAndExtract() {
 	elif [[ $filename =~ \.xz$ ]]
 	then
 		cd $source_directory
-		tar -xzf $filename
-		#filename=${filename%.xz} # Remove .xz from filename
-		#tar xopf $filename
+		tar -xf $filename
 		rm $filename
 	fi
 }
@@ -113,9 +111,9 @@ function copyLib() {
 # Download easy dependencies
 #
 downloadProject https://github.com/philippe44/mDNS-SD.git mDNS-SD mDNS-SD 
-downloadProject  https://github.com/philippe44/TinySVCmDNS.git TinySVCmDNS TinySVCmDNS
-downloadProject  https://github.com/macosforge/alac.git alac alac
-downloadProject  https://github.com/svn2github/valgrind.git valgrind valgrind
+downloadProject https://github.com/philippe44/TinySVCmDNS.git TinySVCmDNS TinySVCmDNS
+downloadProject https://github.com/macosforge/alac.git alac alac
+downloadProject https://github.com/svn2github/valgrind.git valgrind valgrind
 downloadProject https://github.com/mattstevens/dmap-parser.git dmap-parser dmap-parser
 #Seems to be compiled with 0.3.4, so this version is hardcoded, instead of newest version 0.4.2
 downloadProject https://github.com/nanopb/nanopb/archive/nanopb-0.3.4.zip nanopb-nanopb-0.3.4.zip nanopb-nanopb-0.3.4

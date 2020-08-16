@@ -9,7 +9,7 @@ JANSSON		= $(BASE)/jansson
 NANOPB		= $(BASE)/nanopb-nanopb-0.3.4 
 # use original case sensitive folder name
 MDNSSD		= $(BASE)/mDNS-SD
-TINYSVCMDNS	= $(BASE)/tinysvcmdns
+TINYSVCMDNS	= $(BASE)/TinySVCmDNS
 VALGRIND	= $(BASE)/valgrind
 # use original case sensitive folder name
 UPNP 		= $(BASE)/pupnp-release-1.6.19

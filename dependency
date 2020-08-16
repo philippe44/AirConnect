@@ -28,7 +28,7 @@ function downloadAndExtract() {
 	elif [[ $filename =~ \.xz$ ]]
 	then
 		cd $source_directory
-		tar -xz $filename
+		tar -xzf $filename
 		#filename=${filename%.xz} # Remove .xz from filename
 		#tar xopf $filename
 		rm $filename

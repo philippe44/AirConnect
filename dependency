@@ -1,237 +1,196 @@
-
-
 #!/bin/bash
 
 #Variables
+needs_configuration=false
 base_directory=$PWD
-source_directory=$PWD/..
+lib_directory=$base_directory/lib
+source_directory=$base_directory/..
 
-function checkGitDependency() {
-	echo "Check if $1 dependency is installed"
-
-	if [ -d "$source_directory/$1" ]
-	then
-		echo "- found installation"
-	else
-		echo "- did not find $1"
-
-		#Install git dependency
-		echo "----"
-		echo "- installing $1 ..."
-		echo "----"
-		git clone --depth=1 $2 $source_directory/$1 2>&1 >/dev/null 
-	fi
-}
-
-
-function download() {
-    url=$1
-    filename=$2
+#
+# TODO: Description
+#
+function downloadAndExtract() {
+    local url=$1
+    local filename=$2
 
     if [ -x "$(which wget)" ] ; then
-        wget -q $url -O $2
+        wget -q $url -O $filename
     elif [ -x "$(which curl)" ]; then
-        curl -o $2 -sfL $url
+        curl -o $filename -sfL $url
     else
         echo "Could not find curl or wget, please install one." >&2
     fi
+
+	if [[ $filename =~ \.zip$ ]]
+	then
+		unzip -qq $filename -d $source_directory
+		rm $filename
+	elif [[ $filename =~ \.xz$ ]]
+	then
+		cd $source_directory
+		gunzip $filename
+		filename=${filename%.xz} # Remove .xz from filename
+		tar xopf $filename
+		rm $filename
+	fi
 }
+
+#
+# TODO: Description
+#
+function downloadProject() {
+	local projecturl=$1
+	local filename=$2
+	local foldername=$3
+	 #By default no configuration is needed, because the project could be their
+	needs_configuration=false
+
+	echo ""
+	echo "Check: Dependency $foldername"
+
+	if [ -d "$source_directory/$foldername" ]
+	then
+		echo "- found"
+	else
+		echo "- try to download"
+
+		#git checkout vs. normal download
+		if [[ $projecturl =~ \.git$ ]]
+        then
+			git clone --quiet --depth=1 $projecturl $source_directory/$foldername 2>&1 >/dev/null
+		else
+			downloadAndExtract $projecturl $source_directory/$filename
+    	fi
+
+		# Check if download was succesfull
+		if [ -d "$source_directory/$foldername" ]
+		then
+			echo "- download successfull"
+			needs_configuration=true
+		else
+			echo "- download failed"
+		fi
+	fi
+}
+
+#
+# TODO: Description
+#
+function copyLib() {
+	local projectname=$1
+	local libraryname=$2
+	
+	echo ""
+	echo "Check: $libraryname"
+
+	if [ ! -d "$base_directory/lib" ]
+		then
+			mkdir $base_directory/lib
+	fi
+
+	if [ ! -f "$lib_directory/$libraryname" ]
+	then
+		echo "- Did not find $libraryname in $lib_directory"
+		echo "- Try to copy $libraryname from $source_directory/$projectname into $lib_directory"
+
+		find $source_directory/$projectname/ -name "$libraryname" -execdir cp {} $lib_directory/ \;
+		if [ -f "$lib_directory/$libraryname" ]
+		then
+			echo "- installation successfull"
+		else
+			echo "- Did not find $libraryname. You have to check your installation"
+		fi
+	fi
+} 
 
 
 #
 # Main
 #########################################
 #
+
 #
-
-#Check if AirConnect is already installed
-checkGitDependency mDNS-SD https://github.com/philippe44/mDNS-SD.git
-checkGitDependency TinySVCmDNS https://github.com/philippe44/TinySVCmDNS.git
-checkGitDependency alac https://github.com/macosforge/alac.git
-checkGitDependency valgrind https://github.com/svn2github/valgrind.git
-checkGitDependency shine https://github.com/toots/shine.git
-cd $source_directory/shine
-autoreconf -fi
-./configure
-make
-
-checkGitDependency dmap-parser https://github.com/mattstevens/dmap-parser.git
+# Download easy dependencies
+#
+downloadProject https://github.com/philippe44/mDNS-SD.git mDNS-SD mDNS-SD 
+downloadProject  https://github.com/philippe44/TinySVCmDNS.git TinySVCmDNS TinySVCmDNS
+downloadProject  https://github.com/macosforge/alac.git alac alac
+downloadProject  https://github.com/svn2github/valgrind.git valgrind valgrind
+downloadProject https://github.com/mattstevens/dmap-parser.git dmap-parser dmap-parser
+#Seems to be compiled with 0.3.4, so this version is hardcoded, instead of newest version 0.4.2
+downloadProject https://github.com/nanopb/nanopb/archive/nanopb-0.3.4.zip nanopb-nanopb-0.3.4.zip nanopb-nanopb-0.3.4
 
 
-if [ ! -d "$source_directory/pupnp-release-1.6.19" ]
+
+downloadProject https://github.com/toots/shine.git shine shine
+if [ "$needs_configuration" = "true" ]
 then
-echo "download libupnp"
-download https://github.com/pupnp/pupnp/archive/release-1.6.19.zip $source_directory/release-1.6.19.zip
-unzip $source_directory/release-1.6.19.zip -d $source_directory
-rm $source_directory/release-1.6.19.zip
+	echo "- configuration and compile ..."
+	cd $source_directory/shine
+	autoreconf -fi  >& /dev/null
+	./configure     >& /dev/null
+	make            >& /dev/null
 
-#Configure
-cd $source_directory/pupnp-release-1.6.19
-autoreconf -fi
-./configure
-make
-
-else
-echo "what"
+	copyLib "shine" "libshine.a"
 fi
 
 
-if [ ! -d "$source_directory/nanopb-nanopb-0.3.4" ]
-#Seems to be compiled with 0.3.4, so this version is hardcoded
-#Instead of newest version 0.4.2
-#checkGitDependency nanopb https://github.com/nanopb/nanopb.git
+downloadProject https://github.com/pupnp/pupnp/archive/release-1.6.19.zip release-1.6.19.zip pupnp-release-1.6.19
+if [ "$needs_configuration" = "true" ]
 then
-echo "download nanopb"
-download https://github.com/nanopb/nanopb/archive/nanopb-0.3.4.zip $source_directory/nanopb-0.3.4.zip
-unzip $source_directory/nanopb-0.3.4.zip -d $source_directory
-rm $source_directory/nanopb-0.3.4.zip
-else
-echo "what"
+	echo "- configuration and compile ..."
+	cd $source_directory/pupnp-release-1.6.19
+	autoreconf -fi  >& /dev/null
+	./configure     >& /dev/null
+	make            >& /dev/null
+
+	copyLib "pupnp-release-1.6.19" "libixml.a"
 fi
 
 
-if [ ! -d "$source_directory/jansson" ]
-#
 #On Macos brew install autoconf automake libtool is required
-#
+downloadProject https://github.com/akheron/jansson.git jansson jansson
+if [ "$needs_configuration" = "true" ]
 then
-echo "download jansson"
-checkGitDependency jansson https://github.com/akheron/jansson.git
+	echo "- configuration  ..."
+	cd $source_directory/jansson
+	autoreconf -fi  >& /dev/null
+	./configure     >& /dev/null
 
-#Configure
-cd $source_directory/jansson
-autoreconf -fi
-./configure
-
-#FIXME workaound because of wrong include path in JANSSON_PRIVATE_H
-cp $source_directory/jansson/jansson_private_config.h $source_directory/jansson/src
-
-else
-echo "what"
+	#FIXME workaound because of wrong include path in JANSSON_PRIVATE_H
+	cp $source_directory/jansson/jansson_private_config.h $source_directory/jansson/src
 fi
 
 
-if [ ! -d "$source_directory/flac-1.3.3" ]
+downloadProject https://ftp.osuosl.org/pub/xiph/releases/flac/flac-1.3.3.tar.xz flac-1.3.3.tar.xz flac-1.3.3
+if [ "$needs_configuration" = "true" ]
 then
-echo "download FLAC"
-download https://ftp.osuosl.org/pub/xiph/releases/flac/flac-1.3.3.tar.xz $source_directory/flac-1.3.3.tar.xz
+	echo "- configuration and compile ..."
+	cd $source_directory/flac-1.3.3
+	./configure  >& /dev/null
+	make         >& /dev/null
 
-cd $source_directory
-gunzip flac-1.3.3.tar.xz
-tar xopf flac-1.3.3.tar
-rm flac-1.3.3.tar
-
-#Configure
-cd $source_directory/flac-1.3.3
-./configure
-make
-
-else
-echo "what"
+	copyLib "flac-1.3.3" "libFLAC-static.a"
 fi
 
 
-if [ ! -d "$source_directory/openssl-OpenSSL_1_0_2u" ]
-#Seems to be compiled with 1.0.2#, so this version is hardcoded
-#Instead of newest version 3.0.0
-#checkGitDependency openssl https://github.com/openssl/openssl.git
+#Seems to be compiled with 1.0.2#, so this version is hardcoded, instead of newest version 3.0.0
+downloadProject https://github.com/openssl/openssl/archive/OpenSSL_1_0_2u.zip OpenSSL_1_0_2u.zip openssl-OpenSSL_1_0_2u
+if [ "$needs_configuration" = "true" ]
 then
-echo "download openssl"
-download https://github.com/openssl/openssl/archive/OpenSSL_1_0_2u.zip $source_directory/OpenSSL_1_0_2u.zip
-unzip $source_directory/OpenSSL_1_0_2u.zip -d $source_directory
-rm $source_directory/OpenSSL_1_0_2u.zip
+	echo "- configuration and compile ..."
 
-#Configure
-platform=
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-   platform=
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-   platform=darwin64-x86_64-cc
-fi
-
-cd $source_directory/openssl-OpenSSL_1_0_2u
-./configure $plattform
-make
-
-else
-echo "what"
-fi
-
-
-
-
-###Libs 
-if [ ! -d "$base_directory/lib" ]
-	then
-		mkdir $base_directory/lib
-fi
-
-if [ ! -f "$base_directory/lib/libshine.a" ]
-then
-	echo "Did not find libshine.a in lib directory"
-	echo "- try to copy it from fresh installed shine project"
-
-	find ../shine/ -name "libshine.a" -execdir cp {} $source_directory/AirConnect/lib/ \;
-	if [ -f "$base_directory/lib/libshine.a" ]
-	then
-		echo "- installation successfull"
-	else
-		echo "- libshine.a not available. You have to check your installation"
+	platform=
+	if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+   		platform=
+	elif [[ "$OSTYPE" == "darwin"* ]]; then
+   		platform=darwin64-x86_64-cc
 	fi
-fi
 
-if [ ! -f "$base_directory/lib/libFLAC-static.a" ]
-then
-	echo "Did not find libFLAC-static.a in lib directory"
-	echo "- try to copy it from fresh installed shine project"
+	cd $source_directory/openssl-OpenSSL_1_0_2u
+	./configure $platform  >& /dev/null
+	make                   >& /dev/null
 
-	find ../flac-1.3.3/ -name "libFLAC-static.a" -execdir cp {} $source_directory/AirConnect/lib/ \;
-	if [ -f "$base_directory/lib/libFLAC-static.a" ]
-	then
-		echo "- installation successfull"
-	else
-		echo "- libFLAC-static.a not available. You have to check your installation"
-	fi
-fi
-
-if [ ! -f "$base_directory/lib/libixml.a" ]
-then
-	echo "Did not find libixml.a in lib directory"
-	echo "- try to copy it from fresh installed shine project"
-
-	find ../pupnp-release-1.6.19/ -name "libixml.a" -execdir cp {} $source_directory/AirConnect/lib/ \;
-	if [ -f "$base_directory/lib/libixml.a" ]
-	then
-		echo "- installation successfull"
-	else
-		echo "- libixml.a not available. You have to check your installation"
-	fi
-fi
-
-if [ ! -f "$base_directory/lib/libcrypto.a" ]
-then
-	echo "Did not find libcrypto.a in lib directory"
-	echo "- try to copy it from fresh installed openssl project"
-
-	find ../openssl-OpenSSL_1_0_2u/ -name "libcrypto.a" -execdir cp {} $source_directory/AirConnect/lib/ \;
-	if [ -f "$base_directory/lib/libcrypto.a" ]
-	then
-		echo "- installation successfull"
-	else
-		echo "- libcrypto.a not available. You have to check your installation"
-	fi
-fi
-
-if [ ! -f "$base_directory/lib/libssl.a" ]
-then
-	echo "Did not find libssl.a in lib directory"
-	echo "- try to copy it from fresh installed openssl project"
-
-	find ../openssl-OpenSSL_1_0_2u/ -name "libssl.a" -execdir cp {} $source_directory/AirConnect/lib/ \;
-	if [ -f "$base_directory/lib/libssl.a" ]
-	then
-		echo "- installation successfull"
-	else
-		echo "- libssl.a not available. You have to check your installation"
-	fi
+	copyLib "openssl-OpenSSL_1_0_2u" "libcrypto.a"
+	copyLib "openssl-OpenSSL_1_0_2u" "libssl.a"
 fi

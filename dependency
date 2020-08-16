@@ -3,6 +3,7 @@
 #!/bin/bash
 
 #Variables
+base_directory=$PWD
 source_directory=$PWD/..
 
 function checkGitDependency() {
@@ -102,6 +103,9 @@ cd $source_directory/jansson
 autoreconf -fi
 ./configure
 
+#FIXME workaound because of wrong include path in JANSSON_PRIVATE_H
+cp $source_directory/jansson/jansson_private_config.h $source_directory/jansson/src
+
 else
 echo "what"
 fi
@@ -138,15 +142,96 @@ unzip $source_directory/OpenSSL_1_0_2u.zip -d $source_directory
 rm $source_directory/OpenSSL_1_0_2u.zip
 
 #Configure
+platform=
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+   platform=
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+   platform=darwin64-x86_64-cc
+fi
+
 cd $source_directory/openssl-OpenSSL_1_0_2u
-./config
+./configure $plattform
+make
 
 else
 echo "what"
 fi
 
 
-##Copy Libs
-# find ../ -name "libshine.a"
-# find ../ -name "libFLAC-static.a"
-# find ../ -name "libixml.a"
+
+
+###Libs 
+if [ ! -d "$base_directory/lib" ]
+	then
+		mkdir $base_directory/lib
+fi
+
+if [ ! -f "$base_directory/lib/libshine.a" ]
+then
+	echo "Did not find libshine.a in lib directory"
+	echo "- try to copy it from fresh installed shine project"
+
+	find ../shine/ -name "libshine.a" -execdir cp {} $source_directory/AirConnect/lib/ \;
+	if [ -f "$base_directory/lib/libshine.a" ]
+	then
+		echo "- installation successfull"
+	else
+		echo "- libshine.a not available. You have to check your installation"
+	fi
+fi
+
+if [ ! -f "$base_directory/lib/libFLAC-static.a" ]
+then
+	echo "Did not find libFLAC-static.a in lib directory"
+	echo "- try to copy it from fresh installed shine project"
+
+	find ../flac-1.3.3/ -name "libFLAC-static.a" -execdir cp {} $source_directory/AirConnect/lib/ \;
+	if [ -f "$base_directory/lib/libFLAC-static.a" ]
+	then
+		echo "- installation successfull"
+	else
+		echo "- libFLAC-static.a not available. You have to check your installation"
+	fi
+fi
+
+if [ ! -f "$base_directory/lib/libixml.a" ]
+then
+	echo "Did not find libixml.a in lib directory"
+	echo "- try to copy it from fresh installed shine project"
+
+	find ../pupnp-release-1.6.19/ -name "libixml.a" -execdir cp {} $source_directory/AirConnect/lib/ \;
+	if [ -f "$base_directory/lib/libixml.a" ]
+	then
+		echo "- installation successfull"
+	else
+		echo "- libixml.a not available. You have to check your installation"
+	fi
+fi
+
+if [ ! -f "$base_directory/lib/libcrypto.a" ]
+then
+	echo "Did not find libcrypto.a in lib directory"
+	echo "- try to copy it from fresh installed openssl project"
+
+	find ../openssl-OpenSSL_1_0_2u/ -name "libcrypto.a" -execdir cp {} $source_directory/AirConnect/lib/ \;
+	if [ -f "$base_directory/lib/libcrypto.a" ]
+	then
+		echo "- installation successfull"
+	else
+		echo "- libcrypto.a not available. You have to check your installation"
+	fi
+fi
+
+if [ ! -f "$base_directory/lib/libssl.a" ]
+then
+	echo "Did not find libssl.a in lib directory"
+	echo "- try to copy it from fresh installed openssl project"
+
+	find ../openssl-OpenSSL_1_0_2u/ -name "libssl.a" -execdir cp {} $source_directory/AirConnect/lib/ \;
+	if [ -f "$base_directory/lib/libssl.a" ]
+	then
+		echo "- installation successfull"
+	else
+		echo "- libssl.a not available. You have to check your installation"
+	fi
+fi

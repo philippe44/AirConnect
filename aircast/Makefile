@@ -1,4 +1,5 @@
 BASE		= ../..
+BASE_LIB    = ../lib
 
 TOOLS		= ../tools
 COMMON		= ../common
@@ -62,8 +63,8 @@ SOURCES_LIBS = sslsym.c
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
-LIBRARY 		= $(OBJ)/libixml.a $(OBJ)/libFLAC-static.a $(OBJ)/libshine.a
-LIBRARY_STATIC 	= $(LIBRARY) -lssl -lcrypto
+LIBRARY 		= $(BASE_LIB)/libixml.a $(BASE_LIB)/libFLAC-static.a $(BASE_LIB)/libshine.a
+LIBRARY_STATIC 	= $(LIBRARY) $(BASE_LIB)/libssl.a $(BASE_LIB)/libcrypto.a
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 

@@ -28,9 +28,9 @@ function downloadAndExtract() {
 	elif [[ $filename =~ \.xz$ ]]
 	then
 		cd $source_directory
-		gunzip $filename
-		filename=${filename%.xz} # Remove .xz from filename
-		tar xopf $filename
+		tar -xz $filename
+		#filename=${filename%.xz} # Remove .xz from filename
+		#tar xopf $filename
 		rm $filename
 	fi
 }
@@ -182,13 +182,13 @@ then
 
 	platform=
 	if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-   		platform=
+   		platform=linux-generic64
 	elif [[ "$OSTYPE" == "darwin"* ]]; then
    		platform=darwin64-x86_64-cc
 	fi
 
 	cd $source_directory/openssl-OpenSSL_1_0_2u
-	./configure $platform  >& /dev/null
+	./Configure $platform  >& /dev/null
 	make                   >& /dev/null
 
 	copyLib "openssl-OpenSSL_1_0_2u" "libcrypto.a"

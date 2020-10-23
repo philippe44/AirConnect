@@ -1,3 +1,6 @@
+0.2.28.0
+ - make max_players a parameter
+
 0.2.27.1
  - handle range request beyond count better
 

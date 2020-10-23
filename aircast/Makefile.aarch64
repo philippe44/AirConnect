@@ -3,8 +3,9 @@ CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
 LDFLAGS ?= -s -lpthread -ldl -lm -lrt -L. 
 # for LD debug -s
 
-OBJ					= bin/aarch64
-EXECUTABLE 			= ../bin/aircast-aarch64
+OBJ			= bin/aarch64
+EXECUTABLE 		= ../bin/aircast-aarch64
+EXECUTABLE_STATIC	= ../bin/aircast-aarch64-static
 
 include Makefile
 

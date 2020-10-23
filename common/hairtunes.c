@@ -1249,7 +1249,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 #else
 		sscanf(str, "bytes=%zu", &offset);
 #endif
-        offset = ctx->http_count ? min(offset, ctx->http_count - 1) : 0;
+        offset = ctx->http_count && ctx->http_count > TAIL_SIZE ? min(offset, ctx->http_count - TAIL_SIZE - 1) : 0;
 		if (offset) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"

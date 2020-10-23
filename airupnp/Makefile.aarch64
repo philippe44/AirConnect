@@ -6,7 +6,7 @@ LDFLAGS ?= -s -lpthread -ldl -lm -lrt -L.
 
 OBJ					= bin/aarch64
 EXECUTABLE 			= ../bin/airupnp-aarch64
-#EXECUTABLE_STATIC	= ../bin/airupnp-aarch64-static
+EXECUTABLE_STATIC	= ../bin/airupnp-aarch64-static
 
 include Makefile
 

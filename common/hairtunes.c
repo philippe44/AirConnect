@@ -1002,7 +1002,7 @@ int send_data(int sock, void *data, int len, int flags) {
 	}
 	send(sock, "\r\n", 2, flags);
 
-	return sent;
+	return len;
 }
 #else
 #define send_data send
@@ -1249,12 +1249,17 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 #else
 		sscanf(str, "bytes=%zu", &offset);
 #endif
+        offset = ctx->http_count ? min(offset, ctx->http_count - 1) : 0;
 		if (offset) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
 			asprintf(&str, "bytes %zu-%zu/*", offset, ctx->http_count);
-#pragma GCC diagnostic pop            }
+#pragma GCC diagnostic pop
+#ifdef CHUNKED
 			head = "HTTP/1.1 206 Partial Content";
+#else
+            head = "HTTP/1.0 206 Partial Content";
+#endif
 			kd_add(resp, "Content-Range", str);
 			free(str);
 		}
@@ -1297,7 +1302,6 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 		size_t count = 0;
 
 		LOG_INFO("[%p] re-sending offset %zu/%zu", ctx, offset, ctx->http_count);
-        offset = min(offset, ctx->http_count);
 		ctx->silence_count = 0;
 		while (count != ctx->http_count - offset) {
 			size_t bytes = ctx->icy.interval ? ctx->icy.remain : ICY_INTERVAL;

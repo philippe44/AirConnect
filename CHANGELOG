@@ -1,3 +1,6 @@
+0.2.27.1
+ - handle range request beyond count better
+
 0.2.27.0
  - (airupnp) add -u and UPnPMax config options to set the max upnp search
  

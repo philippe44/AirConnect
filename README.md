@@ -63,6 +63,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `enabled <0|1>`	: in common section, enables new discovered players by default. In a dedicated section, enables the player
 - `name` 		: The name that will appear for the device in AirPlay. You can change the default name.
 - `upnp_max`		: set the maximum UPnP version use to search players
+- `max_players`		: set the maximum of players (32)
 - `log_limit <-1 | n>` 	: (default -1) when using log file, limits its size to 'n' MB (-1 = no limit)
 - `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
 - `metadata <0|1>`	: send metadata to player (only for mp3 codec and if player supports ICY protocol)

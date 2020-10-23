@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.27.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.28.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -60,7 +60,8 @@ of code repeating and break/continue
 /*----------------------------------------------------------------------------*/
 s32_t  				glLogLimit = -1;
 UpnpClient_Handle 	glControlPointHandle;
-struct sMR			glMRDevices[MAX_RENDERERS];
+struct sMR			*glMRDevices;
+int					glMaxDevices = 32;
 
 log_level	main_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
@@ -368,7 +369,7 @@ void callback(void *owner, raop_event_t event, void *param)
 				double Ratio = GroupVolume ? (RaopVolume * Device->Config.MaxVolume) / GroupVolume : 0;
 
 				// set volume for all devices
-				for (i = 0; i < MAX_RENDERERS; i++) {
+				for (i = 0; i < glMaxDevices; i++) {
 					struct sMR *p = glMRDevices + i;
 					if (!p->Running || (p != Device && p->Master != Device)) continue;
 
@@ -711,7 +712,7 @@ static void *UpdateThread(void *args)
 
 				LOG_DEBUG("Presence checking", NULL);
 
-				for (i = 0; i < MAX_RENDERERS; i++) {
+				for (i = 0; i < glMaxDevices; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running &&
 						((Device->LastSeen + PRESENCE_TIMEOUT) - now > PRESENCE_TIMEOUT	||
@@ -746,7 +747,7 @@ static void *UpdateThread(void *args)
 
 				// it's a Sonos group announce, just do a targeted search and exit
 				if (strstr(Update->Data, "group_description")) {
-					for (i = 0; i < MAX_RENDERERS; i++) {
+					for (i = 0; i < glMaxDevices; i++) {
    						Device = glMRDevices + i;
 						if (Device->Running && *Device->Service[TOPOLOGY_IDX].ControlURL)
 							UpnpSearchAsync(glControlPointHandle, 5, Device->UDN, Device);
@@ -755,7 +756,7 @@ static void *UpdateThread(void *args)
 				}
 
 				// existing device ?
-				for (i = 0; i < MAX_RENDERERS; i++) {
+				for (i = 0; i < glMaxDevices; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running && !strcmp(Device->DescDocURL, Update->Data)) {
 						char *friendlyName = NULL;
@@ -825,11 +826,11 @@ static void *UpdateThread(void *args)
 
 				// new device so search a free spot - as this function is not called
 				// recursively, no need to lock the device's mutex
-				for (i = 0; i < MAX_RENDERERS && glMRDevices[i].Running; i++);
+				for (i = 0; i < glMaxDevices && glMRDevices[i].Running; i++);
 
 				// no more room !
-				if (i == MAX_RENDERERS) {
-					LOG_ERROR("Too many uPNP devices (max:%u)", MAX_RENDERERS);
+				if (i == glMaxDevices) {
+					LOG_ERROR("Too many uPNP devices (max:%u)", glMaxDevices);
 					goto cleanup;
 				}
 
@@ -1113,8 +1114,8 @@ static bool Start(bool cold)
 		InitUtils();
 
 		// mutex should *always* be valid
-		memset(&glMRDevices, 0, sizeof(glMRDevices));
-		for (i = 0; i < MAX_RENDERERS; i++)	pthread_mutex_init(&glMRDevices[i].Mutex, 0);
+		glMRDevices = calloc(glMaxDevices, sizeof(struct sMR));
+		for (i = 0; i < glMaxDevices; i++)	pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
 		/* start the main thread */
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
@@ -1195,7 +1196,7 @@ static bool Stop(bool exit)
 		pthread_join(glMainThread, NULL);
 
 		// these are for sure unused now that libupnp cannot signal anything
-		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
+		for (i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
 		EndUtils();
 		
@@ -1216,7 +1217,7 @@ static void sighandler(int signum) {
 	int i;
 
 	if (!glGracefullShutdown) {
-		for (i = 0; i < MAX_RENDERERS; i++) {
+		for (i = 0; i < glMaxDevices; i++) {
 			struct sMR *p = &glMRDevices[i];
 			if (p->Running && p->State == PLAYING) AVTStop(p);
 		}
@@ -1479,7 +1480,7 @@ int main(int argc, char *argv[])
 			u32_t now = gettime_ms() / 1000;
 			bool all = !strcmp(resp, "dumpall");
 
-			for (i = 0; i < MAX_RENDERERS; i++) {
+			for (i = 0; i < glMaxDevices; i++) {
 				struct sMR *p = &glMRDevices[i];
 				bool Locked = pthread_mutex_trylock(&p->Mutex);
 

@@ -88,6 +88,7 @@ struct sMR {
 
 extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
-extern struct sMR			glMRDevices[MAX_RENDERERS];
+extern struct sMR			*glMRDevices;
+extern int					glMaxDevices;
 
 #endif

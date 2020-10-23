@@ -42,7 +42,7 @@ int CalcGroupVolume(struct sMR *Device) {
 
 	if (!*Device->Service[GRP_REND_SRV_IDX].ControlURL) return -1;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		struct sMR *p = glMRDevices + i;
 		if (p->Running && (p == Device || p->Master == Device)) {
 			if (p->Volume == -1) p->Volume = CtrlGetVolume(p);
@@ -106,7 +106,7 @@ int CalcGroupVolume(struct sMR *Device) {
 				}
 
 				// look for our master (if we are not)
-				for (k = 0; !done && k < MAX_RENDERERS; k++) {
+				for (k = 0; !done && k < glMaxDevices; k++) {
 					if (glMRDevices[k].Running && stristr(glMRDevices[k].UDN, (char*) Coordinator)) {
 						Master = glMRDevices + k;
 						LOG_DEBUG("Found Master %s %s", myUUID, Master->UDN);
@@ -137,7 +137,7 @@ int CalcGroupVolume(struct sMR *Device) {
 {
 	int i;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		struct sMR *p = &glMRDevices[i];
 		pthread_mutex_lock(&p->Mutex);
 		if (p->Running) {
@@ -185,7 +185,7 @@ struct sMR* CURL2Device(char *CtrlURL)
 {
 	int i, j;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running) continue;
 		for (j = 0; j < NB_SRV; j++) {
 			if (!strcmp(glMRDevices[i].Service[j].ControlURL, CtrlURL)) {
@@ -203,7 +203,7 @@ struct sMR* SID2Device(char *SID)
 {
 	int i, j;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running) continue;
 		for (j = 0; j < NB_SRV; j++) {
 			if (!strcmp(glMRDevices[i].Service[j].SID, SID)) {
@@ -235,7 +235,7 @@ struct sMR* UDN2Device(char *UDN)
 {
 	int i;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running) continue;
 		if (!strcmp(glMRDevices[i].UDN, UDN)) {
 			return &glMRDevices[i];
@@ -271,7 +271,7 @@ void MakeMacUnique(struct sMR *Device)
 	int i;
 
 	// mutex is locked
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
 		if (!memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
 			u32_t hash = hash32(Device->UDN);

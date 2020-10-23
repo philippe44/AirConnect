@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.27.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.28.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -67,7 +67,8 @@ tMRConfig			glMRConfig = {
 /*----------------------------------------------------------------------------*/
 /* globals */
 /*----------------------------------------------------------------------------*/
-struct sMR			glMRDevices[MAX_RENDERERS];
+struct sMR			*glMRDevices;
+int					glMaxDevices = 32;
 
 /*----------------------------------------------------------------------------*/
 /* consts or pseudo-const*/
@@ -368,7 +369,7 @@ static struct sMR *SearchUDN(char *UDN)
 {
 	int i;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		if (glMRDevices[i].Running && !strcmp(glMRDevices[i].UDN, UDN))
 			return glMRDevices + i;
 	}
@@ -380,7 +381,7 @@ static struct sMR *SearchUDN(char *UDN)
 /*----------------------------------------------------------------------------*/
 static bool isMember(struct in_addr host) {
 	int i;
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		 if (glMRDevices[i].Running && GetAddr(glMRDevices[i].CastCtx).s_addr == host.s_addr)
 			return true;
 	}
@@ -490,10 +491,10 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		}
 
 		// device creation so search a free spot.
-		for (j = 0; j < MAX_RENDERERS && glMRDevices[j].Running; j++);
+		for (j = 0; j < glMaxDevices && glMRDevices[j].Running; j++);
 
 		// no more room !
-		if (j == MAX_RENDERERS) {
+		if (j == glMaxDevices) {
 			LOG_ERROR("Too many Cast devices", NULL);
 			NFREE(UDN);
 			break;
@@ -599,7 +600,7 @@ void MakeMacUnique(struct sMR *Device)
 {
 	int i;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
 		if (!memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
 			u32_t hash = hash32(Device->UDN);
@@ -672,7 +673,7 @@ void FlushCastDevices(void)
 {
 	int i;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		struct sMR *p = &glMRDevices[i];
 		if (p->Running) {
 			raop_delete(p->Raop);
@@ -717,8 +718,8 @@ static bool Start(bool cold)
 		}
 
 		// mutexes must always be valid
-		memset(&glMRDevices, 0, sizeof(glMRDevices));
-		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
+		glMRDevices = calloc(glMaxDevices, sizeof(struct sMR));
+		for (i = 0; i < glMaxDevices; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
 		InitUtils();
 		InitSSL();
@@ -763,7 +764,7 @@ static bool Stop(bool exit)
 		LOG_DEBUG("terminate main thread ...", NULL);
 		WakeAll();
 		pthread_join(glMainThread, NULL);
-		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
+		for (i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
 		EndSSL();
 		EndUtils();
@@ -786,7 +787,7 @@ static void sighandler(int signum) {
 	int i;
 
 	if (!glGracefullShutdown) {
-		for (i = 0; i < MAX_RENDERERS; i++) {
+		for (i = 0; i < glMaxDevices; i++) {
 			struct sMR *p = &glMRDevices[i];
 			if (p->Running && p->State == PLAYING) CastStop(p->CastCtx);
 		}
@@ -1037,7 +1038,7 @@ int main(int argc, char *argv[])
 		if (!strcmp(resp, "dump") || !strcmp(resp, "dumpall"))	{
 			bool all = !strcmp(resp, "dumpall");
 
-			for (i = 0; i < MAX_RENDERERS; i++) {
+			for (i = 0; i < glMaxDevices; i++) {
 				struct sMR *p = &glMRDevices[i];
 				bool Locked = pthread_mutex_trylock(&p->Mutex);
 

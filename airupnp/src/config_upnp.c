@@ -79,6 +79,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, root, false, "util_log",level2debug(util_loglevel));
 	XMLUpdateNode(doc, root, false, "raop_log",level2debug(raop_loglevel));
 	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
+	XMLUpdateNode(doc, root, false, "max_players", "%d", (int) glMaxDevices);
 
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "max_volume", "%d", glMRConfig.MaxVolume);
@@ -95,7 +96,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, proto, false, "mp3", glMRConfig.ProtocolInfo.mp3);
 
 	// mutex is locked here so no risk of a player being destroyed in our back
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		IXML_Node *dev_node;
 
 		if (!glMRDevices[i].Running) continue;
@@ -177,6 +178,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
 	if (!strcmp(name, "raop_log")) raop_loglevel = debug2level(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
+	if (!strcmp(name, "max_players")) glMaxDevices = atol(val);
  }
 
 

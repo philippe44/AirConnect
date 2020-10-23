@@ -819,6 +819,11 @@ static void *UpdateThread(void *args)
 				ModelNumber = XMLGetFirstDocumentItem(DescDoc, "modelNumber", true);
 				UDN = XMLGetFirstDocumentItem(DescDoc, "UDN", true);
 
+				// Check for null returns
+				if (ModelName == NULL || ModelNumber == NULL || UDN == NULL) {
+				  goto cleanup;
+				}
+
 				// excluded device
 				if (isExcluded(ModelName, ModelNumber)) {
 					goto cleanup;

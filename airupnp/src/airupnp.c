@@ -161,7 +161,7 @@ static char usage[] =
 		   "  -p <pid file>\t\twrite PID in file\n"
 		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
 		   "  -n <model1,model2,...>\texclude from search devices whose model number contains name1 or name 2 ...\n"
-		   "  -o <model1,model2,...>\tinclude only the model numbers listed; overrides -m and -n  ...\n"
+		   "  -o <model1,model2,...>\tinclude only the model numbers listed; overrides -m and -n (use <NULL> to include players that don't return a model number) ...\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|raop|main|util|upnp, level: error|warn|info|debug|sdebug\n"
 
 #if LINUX || FREEBSD
@@ -1060,7 +1060,7 @@ bool isExcluded(char *Model, char *ModelNumber)
 		    p += strlen(item);
 	    } while (*p++);
 	}
-	
+
 	if (glExcludedModelNumber && ModelNumber) {
 	    do {
 		    sscanf(q, "%[^,]", item);

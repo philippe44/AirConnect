@@ -1,3 +1,6 @@
+0.2.28.1
+ - check that model & modelnumber are not NULL before looking of exclusion
+ 
 0.2.28.0
  - make max_players a parameter
 

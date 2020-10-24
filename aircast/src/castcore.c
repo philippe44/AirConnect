@@ -231,7 +231,7 @@ bool SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, 
 
 	free(buffer);
 
-	if (!stristr(message.payload_utf8, "PING")) {
+	if (!strcasestr(message.payload_utf8, "PING")) {
 		LOG_DEBUG("[%p]: Cast sending: %s", Ctx->ssl, message.payload_utf8);
 	}
 

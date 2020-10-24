@@ -99,11 +99,11 @@ bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s,
 
 u32_t 		gettime_ms(void);
 
-char*		stristr(char *s1, char *s2);
 #if WIN
 char* 		strsep(char** stringp, const char* delim);
 char 		*strndup(const char *s, size_t n);
 int 		asprintf(char **strp, const char *fmt, ...);
+char*		strcasestr(const char *haystack, const char *needle);
 #else
 char 		*strlwr(char *str);
 #endif

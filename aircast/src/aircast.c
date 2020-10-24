@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.28.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.28.2"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -504,7 +504,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 
 		// if model is a group
 		Model = GetmDNSAttribute(s->attr, s->attr_count, "md");
-		if (Model && !stristr(Model, "Group")) Group = false;
+		if (Model && !strcasestr(Model, "Group")) Group = false;
 		else Group = true;
 		NFREE(Model);
 

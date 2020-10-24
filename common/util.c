@@ -948,23 +948,6 @@ char *strlwr(char *str)
 #endif
 
 
-/*---------------------------------------------------------------------------*/
-char *stristr(char *s1, char *s2)
-{
- char *s1_lwr, *s2_lwr, *p;
-
- if (!s1 || !s2) return NULL;
-
- s1_lwr = strlwr(strdup(s1));
- s2_lwr = strlwr(strdup(s2));
- p = strstr(s1_lwr, s2_lwr);
-
- if (p) p = s1 + (p - s1_lwr);
- free(s1_lwr);
- free(s2_lwr);
- return p;
-}
-
 #if WIN
 /*---------------------------------------------------------------------------*/
 char* strsep(char** stringp, const char* delim)
@@ -1013,11 +996,11 @@ char* strextract(char *s1, char *beg, char *end)
 {
 	char *p1, *p2, *res;
 
-	p1 = stristr(s1, beg);
+	p1 = strcasestr(s1, beg);
 	if (!p1) return NULL;
 
 	p1 += strlen(beg);
-	p2 = stristr(p1, end);
+	p2 = strcasestr(p1, end);
 	if (!p2) return strdup(p1);
 
 	res = malloc(p2 - p1 + 1);

@@ -1,3 +1,6 @@
+0.2.28.2
+ - exclude NULL modelnumber when -o is specified unless they are explicitely autorized
+ 
 0.2.28.1
  - check that model & modelnumber are not NULL before looking of exclusion
  

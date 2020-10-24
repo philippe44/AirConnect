@@ -109,7 +109,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	ctx->drift = drift;
 	if (!strcasecmp(codec, "pcm")) ctx->encode.codec = CODEC_PCM;
 	else if (!strcasecmp(codec, "wav")) ctx->encode.codec = CODEC_WAV;
-	else if (stristr(codec, "mp3")) {
+	else if (strcasestr(codec, "mp3")) {
 		ctx->encode.codec = CODEC_MP3;
 		ctx->encode.mp3.icy = metadata;
 		if (strchr(codec, ':')) ctx->encode.mp3.bitrate = atoi(strchr(codec, ':') + 1);
@@ -412,7 +412,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		NFREE(ctx->rtsp.aesiv);
 		NFREE(ctx->rtsp.fmtp);
 
-		if ((p = stristr(body, "rsaaeskey")) != NULL) {
+		if ((p = strcasestr(body, "rsaaeskey")) != NULL) {
 			unsigned char *aeskey;
 			int len, outlen;
 
@@ -427,7 +427,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 			NFREE(padded);
 		}
 
-		if ((p = stristr(body, "aesiv")) != NULL) {
+		if ((p = strcasestr(body, "aesiv")) != NULL) {
 			p = strextract(p, ":", "\r\n");
 			base64_pad(p, &padded);
 			ctx->rtsp.aesiv = malloc(strlen(padded));
@@ -437,7 +437,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 			NFREE(padded);
 		}
 
-		if ((p = stristr(body, "fmtp")) != NULL) {
+		if ((p = strcasestr(body, "fmtp")) != NULL) {
 			p = strextract(p, ":", "\r\n");
 			ctx->rtsp.fmtp = strdup(p);
 			NFREE(p);
@@ -455,8 +455,8 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		hairtunes_resp_t ht;
 		short unsigned tport = 0, cport = 0;
 
-		if ((p = stristr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
-		if ((p = stristr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
+		if ((p = strcasestr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
+		if ((p = strcasestr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
 
 		ht = hairtunes_init(ctx->peer, ctx->encode, false, ctx->drift, true, ctx->latencies,
 							ctx->rtsp.aeskey, ctx->rtsp.aesiv, ctx->rtsp.fmtp,
@@ -492,8 +492,8 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		}
 
 		buf = kd_lookup(headers, "RTP-Info");
-		if ((p = stristr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
-		if ((p = stristr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
+		if ((p = strcasestr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
+		if ((p = strcasestr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
 
 		if (ctx->ht) hairtunes_record(ctx->ht, seqno, rtptime);
 
@@ -505,8 +505,8 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		char *p;
 
 		buf = kd_lookup(headers, "RTP-Info");
-		if ((p = stristr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
-		if ((p = stristr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
+		if ((p = strcasestr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
+		if ((p = strcasestr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
 
 		// only send FLUSH if useful (discards frames above buffer head and top)
 		if (ctx->ht && hairtunes_flush(ctx->ht, seqno, rtptime, true)) {
@@ -535,7 +535,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 	} if (!strcmp(method, "SET_PARAMETER")) {
 		char *p;
 
-		if ((p = stristr(body, "volume")) != NULL) {
+		if ((p = strcasestr(body, "volume")) != NULL) {
 			double volume;
 
 			sscanf(p, "%*[^:]:%lf", &volume);
@@ -605,7 +605,7 @@ bool search_remote_cb(mDNSservice_t *slist, void *cookie, bool *stop) {
 
 	// see if we have found an active remote for our ID
 	for (s = slist; s; s = s->next) {
-		if (stristr(s->name, ctx->active_remote.DACPid)) {
+		if (strcasestr(s->name, ctx->active_remote.DACPid)) {
 			ctx->active_remote.host = s->addr;
 			ctx->active_remote.port = s->port;
 			LOG_INFO("[%p]: found ActiveRemote for %s at %s:%u", ctx, ctx->active_remote.DACPid,

@@ -107,7 +107,7 @@ int CalcGroupVolume(struct sMR *Device) {
 
 				// look for our master (if we are not)
 				for (k = 0; !done && k < glMaxDevices; k++) {
-					if (glMRDevices[k].Running && stristr(glMRDevices[k].UDN, (char*) Coordinator)) {
+					if (glMRDevices[k].Running && strcasestr(glMRDevices[k].UDN, (char*) Coordinator)) {
 						Master = glMRDevices + k;
 						LOG_DEBUG("Found Master %s %s", myUUID, Master->UDN);
 						done = true;

@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.28.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.28.2"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -316,7 +316,7 @@ void callback(void *owner, raop_event_t event, void *param)
 					ProtoInfo = Device->Config.ProtocolInfo.pcm;
 				else if (!strcasecmp(Device->Config.Codec, "wav"))
 					ProtoInfo = Device->Config.ProtocolInfo.wav;
-				else if (stristr(Device->Config.Codec, "mp3")) {
+				else if (strcasestr(Device->Config.Codec, "mp3")) {
 					if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
 						mp3radio = "x-rincon-mp3radio://";
 						LOG_INFO("[%p]: Sonos live stream", Device);
@@ -1040,7 +1040,11 @@ bool isExcluded(char *Model, char *ModelNumber)
 	char *q = glExcludedModelNumber;
 	char *o = glIncludedModelNumbers;
 
-	if (glIncludedModelNumbers && ModelNumber) {
+	if (glIncludedModelNumbers) {
+		if (!ModelNumber) {
+			if (strcasestr(glIncludedModelNumbers, "<NULL>")) return false;
+			else return true;
+		}
 		do {
 			sscanf(o, "%[^,]", item);
 			if (!strcmp(ModelNumber, item)) return false;
@@ -1052,7 +1056,7 @@ bool isExcluded(char *Model, char *ModelNumber)
 	if (glExcluded && Model) {
 		do {
 			sscanf(p, "%[^,]", item);
-		    if (stristr(Model, item)) return true;
+		    if (strcasestr(Model, item)) return true;
 		    p += strlen(item);
 	    } while (*p++);
 	}
@@ -1060,7 +1064,7 @@ bool isExcluded(char *Model, char *ModelNumber)
 	if (glExcludedModelNumber && ModelNumber) {
 	    do {
 		    sscanf(q, "%[^,]", item);
-		    if (stristr(ModelNumber, item)) return true;
+			if (strcasestr(ModelNumber, item)) return true;
 		    q += strlen(item);
 	    } while (*q++);
 	}

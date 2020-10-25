@@ -1,3 +1,6 @@
+0.2.28.3
+ - remove stristr and clean strcasestr case called with NULL
+ 
 0.2.28.2
  - exclude NULL modelnumber when -o is specified unless they are explicitely autorized
  

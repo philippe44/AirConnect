@@ -947,8 +947,22 @@ char *strlwr(char *str)
 }
 #endif
 
-
 #if WIN
+/*---------------------------------------------------------------------------*/
+char *strcasestr(const char *haystack, const char *needle)
+{
+	char *haystack_lwr, *needle_lwr, *p;
+
+	haystack_lwr = strlwr(strdup(haystack));
+	needle_lwr = strlwr(strdup(needle));
+	p = strstr(haystack_lwr, needle_lwr);
+
+	if (p) p = haystack + (p - haystack_lwr);
+	free(haystack_lwr);
+	free(needle_lwr);
+	return p;
+}
+
 /*---------------------------------------------------------------------------*/
 char* strsep(char** stringp, const char* delim)
 {
@@ -975,21 +989,7 @@ char *strndup(const char *s, size_t n) {
 
 	return p;
 }
-
-/*---------------------------------------------------------------------------*/
-char *strcasestr(const char *haystack, const char *needle)
-{
- char *haystack_lwr = strlwr(strdup(haystack));
- char *needle_lwr = strlwr(strdup(needle));
- char *p = strstr(haystack_lwr, needle_lwr);
-
- if (p) p = haystack + (p - haystack_lwr);
- free(haystack_lwr);
- free(needle_lwr);
- return p;
-}
 #endif
-
 
 /*----------------------------------------------------------------------------*/
 char* strextract(char *s1, char *beg, char *end)
@@ -1406,7 +1406,7 @@ bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s, b
 		textNode = ixmlNode_getFirstChild(tmpNode);
 		if (!textNode) continue;
 		value = ixmlNode_getNodeValue(textNode);
-		if ((match && !strcmp(value, s)) || (!match && strcasestr(value, s))) {
+		if ((match && !strcmp(value, s)) || (!match && value && strcasestr(value, s))) {
 			ret = true;
 			break;
 		}

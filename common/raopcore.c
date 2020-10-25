@@ -405,7 +405,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 		kd_add(resp, "Public", "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER");
 
-	} else if (!strcmp(method, "ANNOUNCE")) {
+	} else if (!strcmp(method, "ANNOUNCE") && body) {
 		char *padded, *p;
 
 		NFREE(ctx->rtsp.aeskey);
@@ -491,9 +491,10 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 			kd_add(resp, "Audio-Latency", latency);
 		}
 
-		buf = kd_lookup(headers, "RTP-Info");
-		if ((p = strcasestr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
-		if ((p = strcasestr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
+		if ((buf = kd_lookup(headers, "RTP-Info")) != NULL) {
+			if ((p = strcasestr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
+			if ((p = strcasestr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
+		}
 
 		if (ctx->ht) hairtunes_record(ctx->ht, seqno, rtptime);
 
@@ -504,9 +505,10 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		unsigned rtptime = 0;
 		char *p;
 
-		buf = kd_lookup(headers, "RTP-Info");
-		if ((p = strcasestr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
-		if ((p = strcasestr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
+		if ((buf = kd_lookup(headers, "RTP-Info")) != NULL) {
+			if ((p = strcasestr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
+			if ((p = strcasestr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
+        }
 
 		// only send FLUSH if useful (discards frames above buffer head and top)
 		if (ctx->ht && hairtunes_flush(ctx->ht, seqno, rtptime, true)) {
@@ -532,10 +534,10 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 		ctx->callback(ctx->owner, RAOP_STOP, &ctx->hport);
 
-	} if (!strcmp(method, "SET_PARAMETER")) {
+	} else if (!strcmp(method, "SET_PARAMETER")) {
 		char *p;
 
-		if ((p = strcasestr(body, "volume")) != NULL) {
+		if (body && (p = strcasestr(body, "volume")) != NULL) {
 			double volume;
 
 			sscanf(p, "%*[^:]:%lf", &volume);
@@ -560,6 +562,9 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 				free_metadata(&metadata);
 			}
 		}
+	} else {
+		success = false;
+    	LOG_ERROR("[%p]: unknown/unhandled method %s", ctx, method);
 	}
 
 	// don't need to free "buf" because kd_lookup return a pointer, not a strdup

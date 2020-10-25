@@ -88,24 +88,24 @@ void 		dup_metadata(struct metadata_s *dst, struct metadata_s *src);
 int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait);
 
 #ifdef _USE_XML_
-const char 	*XMLGetLocalName(IXML_Document *doc, int Depth);
-IXML_Node  	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
-IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);
+const char*	XMLGetLocalName(IXML_Document *doc, int Depth);
+IXML_Node*	XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
+IXML_Node*	XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
-char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict);
-char 		*XMLGetFirstElementItem(IXML_Element *element, const char *item);
+char*		XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict);
+char*		XMLGetFirstElementItem(IXML_Element *element, const char *item);
 bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s, bool match);
 #endif
 
 u32_t 		gettime_ms(void);
 
 #if WIN
-char* 		strsep(char** stringp, const char* delim);
-char 		*strndup(const char *s, size_t n);
-int 		asprintf(char **strp, const char *fmt, ...);
 char*		strcasestr(const char *haystack, const char *needle);
+char* 		strsep(char** stringp, const char* delim);
+char*		strndup(const char *s, size_t n);
+int 		asprintf(char **strp, const char *fmt, ...);
 #else
-char 		*strlwr(char *str);
+char*		strlwr(char *str);
 #endif
 char* 		strextract(char *s1, char *beg, char *end);
 u32_t 		hash32(char *str);

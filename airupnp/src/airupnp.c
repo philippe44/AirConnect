@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.28.3"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.28.4"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -914,7 +914,6 @@ static void *MainThread(void *args)
 
 	return NULL;
 }
-
 
 /*----------------------------------------------------------------------------*/
 static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location)

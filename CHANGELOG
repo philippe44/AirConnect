@@ -1,3 +1,6 @@
+0.2.28.4
+ - http_parse SDEBUG statement did not print received line
+ 
 0.2.28.3
  - remove stristr and clean strcasestr case called with NULL
  

@@ -1237,7 +1237,11 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 
 	if (!http_parse(sock, method, headers, &body, &len)) return false;
 
-	LOG_INFO("[%p]: received %s", ctx, method);
+	if (*loglevel == lINFO) {
+		char *p = kd_dump(headers);
+		LOG_INFO("[%p]: received %s\n%s", ctx, method, p);
+		NFREE(p);
+	}
 
 	kd_add(resp, "Server", "HairTunes");
 	kd_add(resp, "Content-Type", mime_types[ctx->encode.config.codec]);
@@ -1287,7 +1291,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 	str = http_send(sock, head ? head : "HTTP/1.0 200 OK", resp);
 #endif
 
-	LOG_INFO("[%p]: responding:\n%s", ctx, str);
+	LOG_INFO("[%p]: responding: %s", ctx, str);
 
 	NFREE(body);
 	NFREE(str);

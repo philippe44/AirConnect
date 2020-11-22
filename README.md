@@ -45,7 +45,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i [config file name]` command line)
 - Chromecast groups are supported. Use -v to set the media volume factor for all devices (0.5 by default)
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
-- Use -u \<version>\ to set the maximum UPnP searched version
+- Use -u \<version\> to set the maximum UPnP searched version
 - Use of -z disables interactive mode (no TTY) **and** self-daemonizes (use -p <file> to get the PID). Use of -Z only disables interactive mode 
 - <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`), otherwise it will consume all CPU. On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
 - A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements (or use `<drift>` option in config file), but that might cause overrun or underrun on long playbacks

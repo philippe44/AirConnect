@@ -15,7 +15,7 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 2. For Windows, download all the .dll as well.
 
-3. Store the [executable] (e.g. `airupnp-osx-multi`) in any directory. 
+3. Store the \<executable\> (e.g. `airupnp-osx-multi`) in any directory. 
 
 4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
@@ -25,7 +25,7 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 ## Running
 
-Double click the [executable] or launch it by typing `./[executable]` in the same command line window. 
+Double click the \<executable\> or launch it by typing `./<executable>` in the same command line window. 
 
 <strong>For Sonos & Heos players, set latency by adding `-l 1000:2000` on the command line.</strong> (Example: `./airupnp-osx-multi -l 1000:2000`) 
 
@@ -53,7 +53,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 
 ## Config file parameters 
 
-The default configuration file is `config.xml`, stored in the same directory as the [executable]. Each of parameters below can be set in the `<common>` section to apply to all devices. It can also be set in any `<device>` section to apply only to a specific device and overload the value set in `<common>`. Use the `-x <config>`command line option to use a config file of your choice.
+The default configuration file is `config.xml`, stored in the same directory as the \<executable\>. Each of parameters below can be set in the `<common>` section to apply to all devices. It can also be set in any `<device>` section to apply only to a specific device and overload the value set in `<common>`. Use the `-x <config>`command line option to use a config file of your choice.
 
 - `latency <[rtp][:http][:f]>` 	: (default: (0:0))buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
 	* [rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay. A negative value force sending of silence frames when no AirPlay audio has been received after 'RTP' ms, to force a continuous stream. If not, the UPnP/CC player will be not receive audio and some might close the connection after a while, although most players will simply be silent until stream restarts. This shall not be necessary in most of the case.

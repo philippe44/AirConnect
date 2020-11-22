@@ -10,14 +10,14 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 1. Pre-built binaries are in bin/ directory of this repository. You can download the whole repository as a zip file, clone it using git, or go to the [bin/ folder in the web interface](https://github.com/philippe44/AirConnect/tree/master/bin) and download the version that matches your OS. It's also possible to download files manually in a terminal by typing (e.g. for aircast arm version)<br/>`wget https://raw.githubusercontent.com/philippe44/AirConnect/master/bin/aircast-arm` 
 
-* For **Chromecast**, the file is `aircast-[platform]` (so `aircast-osx-multi` for Chromecast on OS X.) 
-* For **UPnP/Sonos**, the file is `airupnp-[platform]` (so `airupnp-osx-multi` for UPnP/Sonos on OS X.) 
+* For **Chromecast**, the file is `aircast-<platform>` (so `aircast-osx-multi` for Chromecast on OS X.) 
+* For **UPnP/Sonos**, the file is `airupnp-<platform>` (so `airupnp-osx-multi` for UPnP/Sonos on OS X.) 
 
 2. For Windows, download all the .dll as well.
 
 3. Store the [executable] (e.g. `airupnp-osx-multi`) in any directory. 
 
-4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x [executable]`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
+4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
 5. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 
 
@@ -38,12 +38,12 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 <strong>Use `-h` for command line details</strong>
 - When started in interactive mode (w/o -Z or -z option) a few commands can be typed at the prompt
 	- `exit`
-	- `save [name]` : save the current configuration in file named [name]
+	- `save <file>` : save the current configuration in file named [name]
 - Volume changes made in native control applications are synchronized with AirPlay client
 - Pause, Stop, Next, Prev using native control application are sent to AirPlay client - once paused, "native" play will not work
 - Re-scan for new / lost players happens every 30s
-- A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i [config file name]` command line)
-- Chromecast groups are supported. Use -v to set the media volume factor for all devices (0.5 by default)
+- A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i <file>` command line)
+- Chromecast groups are supported. Use `-v` to set the media volume factor for all devices (0.5 by default)
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
 - Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 

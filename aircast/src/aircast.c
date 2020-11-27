@@ -101,6 +101,7 @@ static char usage[] =
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -b <address>\t\tnetwork address to bind to\n"
+		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
 		   "  -c <mp3[:<rate>]|flc[:0..9]|wav>\taudio format send to player\n"
    		   "  -v <0..1>\t\t group MediaVolume factor\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"

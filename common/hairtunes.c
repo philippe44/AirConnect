@@ -55,8 +55,10 @@
 #define MS2TS(ms, rate) ((((u64_t) (ms)) * (rate)) / 1000)
 #define TS2MS(ts, rate) NTP2MS(TS2NTP(ts,rate))
 
-#define GAP_THRES	8
-#define GAP_COUNT	20
+
+#define GAP_THRES	8
+
+#define GAP_COUNT	20
 
 extern log_level 	raop_loglevel;
 static log_level 	*loglevel = &raop_loglevel;
@@ -663,7 +665,7 @@ static void *rtp_thread_func(void *arg) {
 
 	for (i = 0; i < 3; i++) {
 		if (ctx->rtp_sockets[i].sock > sock) sock = ctx->rtp_sockets[i].sock;
-		// send synchro requets 3 times
+		// send synchro requests 3 times
 		ntp_sent = rtp_request_timing(ctx);
 	}
 
@@ -984,7 +986,8 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 		}
 	}
 
-	if (!curframe->ready) {
+
+	if (!curframe->ready) {
 		LOG_DEBUG("[%p]: created zero frame (W:%hu R:%hu)", ctx, ctx->ab_write, ctx->ab_read);
 		memset(curframe->data, 0, ctx->frame_size*4);
 		curframe->len = ctx->frame_size * 4;

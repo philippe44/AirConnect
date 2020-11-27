@@ -65,6 +65,9 @@ typedef struct raop_ctx_s {
 		struct mDNShandle_s *handle;
 	} active_remote;
 	void *owner;
+	struct {
+		u16_t base, range;
+	} ports;
 } raop_ctx_t;
 
 extern log_level	raop_loglevel;
@@ -86,7 +89,8 @@ extern char private_key[];
 /*----------------------------------------------------------------------------*/
 struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 						char *model, unsigned char mac[6], char *codec, bool metadata,
-						bool drift,	char *latencies, void *owner, raop_cb_t callback) {
+						bool drift,	char *latencies, void *owner, raop_cb_t callback,
+						unsigned short port_base, unsigned short port_range ) {
 	struct raop_ctx_s *ctx = malloc(sizeof(struct raop_ctx_s));
 	struct sockaddr_in addr;
 	socklen_t nlen = sizeof(struct sockaddr);
@@ -102,6 +106,8 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	// make sure we have a clean context
 	memset(ctx, 0, sizeof(raop_ctx_t));
 
+	ctx->ports.base = port_base;
+	ctx->ports.range = port_range;
 	ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
 	ctx->callback = callback;
 	ctx->latencies = latencies;
@@ -178,7 +184,7 @@ void raop_update(struct raop_ctx_s *ctx, char *name, char *model) {
 	if (!ctx) return;
 
 	mdns_service_remove(ctx->svr, ctx->svc);
-	
+
 	// set model
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
@@ -460,7 +466,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 		ht = hairtunes_init(ctx->peer, ctx->encode, false, ctx->drift, true, ctx->latencies,
 							ctx->rtsp.aeskey, ctx->rtsp.aesiv, ctx->rtsp.fmtp,
-							cport, tport, ctx, hairtunes_cb);
+							cport, tport, ctx, hairtunes_cb, ctx->ports.base, ctx->ports.range);
 
 		ctx->hport = ht.hport;
 		ctx->ht = ht.ctx;

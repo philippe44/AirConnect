@@ -313,7 +313,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 								bool sync, bool drift, bool range, char *latencies,
 								char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
-								void *owner, hairtunes_cb_t callback)
+								void *owner, hairtunes_cb_t callback,
+								unsigned short port_base, unsigned short port_range)
 {
 	int i = 0;
 	char *arg, *p;
@@ -321,6 +322,11 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	bool rc = true;
 	hairtunes_t *ctx = calloc(1, sizeof(hairtunes_t));
 	hairtunes_resp_t resp = { 0, 0, 0, 0, NULL };
+	struct {
+		unsigned short count, offset;
+	} port = { 0 };
+	if (!port_base) port_range = 1;
+	port.offset = rand() % port_range;
 
 	if (!ctx) return resp;
 
@@ -381,14 +387,23 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 
 	buffer_alloc(ctx->audio_buffer, ctx->frame_size*4);
 
-	// create rtp ports
-	for (i = 0; i < 3; i++) {
-		ctx->rtp_sockets[i].sock = bind_socket(&ctx->rtp_sockets[i].lport, SOCK_DGRAM);
+	for (i = 0; rc && i < 3; i++) {
+		do {
+			ctx->rtp_sockets[i].lport = port_base + ((port.offset + port.count++) % port_range);
+			ctx->rtp_sockets[i].sock = bind_socket(&ctx->rtp_sockets[i].lport, SOCK_DGRAM);
+		} while (ctx->rtp_sockets[i].sock < 0 && port.count < port_range);
+
 		rc &= ctx->rtp_sockets[i].sock > 0;
+
+		LOG_INFO("[%p]: UDP port-%d %hu", ctx, i, ctx->rtp_sockets[i].lport);
 	}
 
 	// create http port and start listening
-	ctx->http_listener = bind_socket(&resp.hport, SOCK_STREAM);
+	do {
+		resp.hport = port_base + ((port.offset + port.count++) % port_range);
+		ctx->http_listener = bind_socket(&resp.hport, SOCK_STREAM);
+	} while (ctx->http_listener < 0 && port.count < port_range);
+
 	i = 128*1024;
 	setsockopt(ctx->http_listener, SOL_SOCKET, SO_SNDBUF, (void*) &i, sizeof(i));
 	rc &= ctx->http_listener > 0;
@@ -397,6 +412,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	resp.cport = ctx->rtp_sockets[CONTROL].lport;
 	resp.tport = ctx->rtp_sockets[TIMING].lport;
 	resp.aport = ctx->rtp_sockets[DATA].lport;
+
+	LOG_INFO("[%p]: HTTP listening port %hu", ctx, resp.hport);
 
 	if (rc) {
 		ctx->running = true;
@@ -435,7 +452,7 @@ void hairtunes_end(hairtunes_t *ctx)
 	}
 
 	shutdown_socket(ctx->http_listener);
-	for (i = 0; i < 3; i++) closesocket(ctx->rtp_sockets[i].sock);
+	for (i = 0; i < 3; i++) if (ctx->rtp_sockets[i].sock > 0) closesocket(ctx->rtp_sockets[i].sock);
 
 	delete_alac(ctx->alac_codec);
 	if (ctx->encode.codec) {

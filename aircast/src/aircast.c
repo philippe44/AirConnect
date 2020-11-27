@@ -36,15 +36,18 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.28.5"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.30.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
 
 /*----------------------------------------------------------------------------*/
-/* globals initialized */
+/* globals */
 /*----------------------------------------------------------------------------*/
+struct sMR	*glMRDevices;
+u16_t		glPortBase, glPortRange;
 s32_t		glLogLimit = -1;
+int			glMaxDevices = 32;
 
 log_level	main_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
@@ -64,11 +67,7 @@ tMRConfig			glMRConfig = {
 							"", 	// artwork
 					};
 
-/*----------------------------------------------------------------------------*/
-/* globals */
-/*----------------------------------------------------------------------------*/
-struct sMR			*glMRDevices;
-int					glMaxDevices = 32;
+
 
 /*----------------------------------------------------------------------------*/
 /* consts or pseudo-const*/
@@ -515,7 +514,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 			Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 										"aircast", Device->Config.mac, Device->Config.Codec,
 										Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-										Device, callback);
+										Device, callback, glPortBase, glPortRange);
 			if (!Device->Raop) {
 				LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 				RemoveCastDevice(Device);
@@ -816,7 +815,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpiflcv", opt) && optind < argc - 1) {
+		if (strstr("abxdpiflcv", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt)) {
@@ -840,6 +839,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'b':
 			strcpy(glInterface, optarg);
+			break;
+		case 'a':
+			sscanf(optarg, "%hu:%hu", &glPortBase, &glPortRange);
 			break;
 		case 'i':
 			strcpy(glConfigName, optarg);
@@ -897,6 +899,8 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		}
 	}
+
+	if (glPortBase && !glPortRange) glPortRange = glMaxDevices*4;
 
 	return true;
 }

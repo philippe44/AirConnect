@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.28.5"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.30.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -48,6 +48,8 @@
 
 #define DISCOVERY_TIME 		20
 #define PRESENCE_TIMEOUT	(DISCOVERY_TIME * 6)
+
+#define MAX_DEVICES			32
 
 /* for the haters of GOTO statement: I'm not a big fan either, but there are
 cases where they make code more leightweight and readable, instead of tons of
@@ -61,7 +63,8 @@ of code repeating and break/continue
 s32_t  				glLogLimit = -1;
 UpnpClient_Handle 	glControlPointHandle;
 struct sMR			*glMRDevices;
-int					glMaxDevices = 32;
+int					glMaxDevices = MAX_DEVICES;
+u16_t				glPortBase, glPortRange;
 
 log_level	main_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
@@ -149,7 +152,8 @@ static char usage[] =
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -b <server>[:<port>]\tnetwork interface and UPnP port to use \n"
+		   "  -b <server>[:<port>]\tnetwork interface and UPnP port to use\n"
+		   "  -a <port>[:<count>]\tset inbound port and range for UDP and HTTP\n"
 		   "  -c <mp3[:<rate>]|flc[:0..9]|wav|pcm>\taudio format send to player\n"
 		   "  -u <version>\tset the maximum UPnP version for search (default 1)"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
@@ -788,7 +792,7 @@ static void *UpdateThread(void *args)
 							Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 								   "airupnp", Device->Config.mac, Device->Config.Codec,
 								   Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-								   Device, callback);
+								   Device, callback, glPortBase, glPortRange);
 							pthread_mutex_unlock(&Device->Mutex);
 						} else if (Master && (!Device->Master || Device->Master == Device)) {
 							pthread_mutex_lock(&Device->Mutex);
@@ -842,7 +846,7 @@ static void *UpdateThread(void *args)
 					Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 									   "airupnp", Device->Config.mac, Device->Config.Codec,
 									   Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-									   Device, callback);
+									   Device, callback, glPortBase, glPortRange);
 					if (!Device->Raop) {
 						LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 						DelMRDevice(Device);
@@ -1244,12 +1248,12 @@ bool ParseArgs(int argc, char **argv) {
 
 	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < MAXCMDLINE); i++) {
 		strcat(cmdline, argv[i]);
-		strcat(cmdline, " ");
+		strcat(cmdline, " ");                                                                        
 	}
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpifmnolcu", opt) && optind < argc - 1) {
+		if (strstr("abxdpifmnolcu", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt)) {
@@ -1264,6 +1268,9 @@ bool ParseArgs(int argc, char **argv) {
 		switch (opt[0]) {
 		case 'b':
 			strcpy(glUPnPSocket, optarg);
+			break;
+		case 'a':
+			sscanf(optarg, "%hu:%hu", &glPortBase, &glPortRange);
 			break;
 		case 'f':
 			glLogFile = optarg;
@@ -1339,6 +1346,8 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		}
 	}
+
+	if (glPortBase && !glPortRange) glPortRange = glMaxDevices*4;
 
 	return true;
 }

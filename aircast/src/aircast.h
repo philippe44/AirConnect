@@ -90,5 +90,6 @@ extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern struct sMR			*glMRDevices;
 extern int					glMaxDevices;
+extern unsigned short		glPortBase, glPortRange;
 
 #endif

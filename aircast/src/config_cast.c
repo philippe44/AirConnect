@@ -75,6 +75,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, root, false, "util_log",level2debug(util_loglevel));
 	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
 	XMLUpdateNode(doc, root, false, "max_players", "%d", (int) glMaxDevices);
+	XMLUpdateNode(doc, root, false, "ports", "%hu:%hu", glPortBase, glPortRange);
 
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "stop_receiver", "%d", (int) glMRConfig.StopReceiver);
@@ -162,6 +163,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
 	if (!strcmp(name, "max_players")) glMaxDevices = atol(val);
+	if (!strcmp(name, "ports")) sscanf(val, "%hu:%hu", &glPortBase, &glPortRange);
  }
 
 

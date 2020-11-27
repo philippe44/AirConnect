@@ -10,14 +10,14 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 1. Pre-built binaries are in bin/ directory of this repository. You can download the whole repository as a zip file, clone it using git, or go to the [bin/ folder in the web interface](https://github.com/philippe44/AirConnect/tree/master/bin) and download the version that matches your OS. It's also possible to download files manually in a terminal by typing (e.g. for aircast arm version)<br/>`wget https://raw.githubusercontent.com/philippe44/AirConnect/master/bin/aircast-arm` 
 
-* For **Chromecast**, the file is `aircast-[platform]` (so `aircast-osx-multi` for Chromecast on OS X.) 
-* For **UPnP/Sonos**, the file is `airupnp-[platform]` (so `airupnp-osx-multi` for UPnP/Sonos on OS X.) 
+* For **Chromecast**, the file is `aircast-<platform>` (so `aircast-osx-multi` for Chromecast on OS X.) 
+* For **UPnP/Sonos**, the file is `airupnp-<platform>` (so `airupnp-osx-multi` for UPnP/Sonos on OS X.) 
 
 2. For Windows, download all the .dll as well.
 
-3. Store the [executable] (e.g. `airupnp-osx-multi`) in any directory. 
+3. Store the \<executable\> (e.g. `airupnp-osx-multi`) in any directory. 
 
-4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x [executable]`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
+4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
 5. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 
 
@@ -25,7 +25,7 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 ## Running
 
-Double click the [executable] or launch it by typing `./[executable]` in the same command line window. 
+Double click the \<executable\> or launch it by typing `./<executable>` in the same command line window. 
 
 <strong>For Sonos & Heos players, set latency by adding `-l 1000:2000` on the command line.</strong> (Example: `./airupnp-osx-multi -l 1000:2000`) 
 
@@ -38,22 +38,22 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 <strong>Use `-h` for command line details</strong>
 - When started in interactive mode (w/o -Z or -z option) a few commands can be typed at the prompt
 	- `exit`
-	- `save [name]` : save the current configuration in file named [name]
+	- `save <file>` : save the current configuration in file named [name]
 - Volume changes made in native control applications are synchronized with AirPlay client
 - Pause, Stop, Next, Prev using native control application are sent to AirPlay client - once paused, "native" play will not work
 - Re-scan for new / lost players happens every 30s
-- A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i [config file name]` command line)
-- Chromecast groups are supported. Use -v to set the media volume factor for all devices (0.5 by default)
+- A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i <file>` command line)
+- Chromecast groups are supported. Use `-v` to set the media volume factor for all devices (0.5 by default)
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
-- Use -u <version> to set the maximum UPnP searched version
-- Use of -z disables interactive mode (no TTY) **and** self-daemonizes (use -p <file> to get the PID). Use of -Z only disables interactive mode 
+- Use `-u <version>` to set the maximum UPnP searched version
+- Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 
 - <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`), otherwise it will consume all CPU. On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
 - A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements (or use `<drift>` option in config file), but that might cause overrun or underrun on long playbacks
 - <strong>This is an audio-only application. Do not expect to play a video on your device and have the audio from UPnP/Sonos or ChromeCast synchronized. It does not, cannot and will not work, regardless of any latency parameter. Please do not open tickets requesting this (see details below to understand why)</strong>
 
 ## Config file parameters 
 
-The default configuration file is `config.xml`, stored in the same directory as the [executable]. Each of parameters below can be set in the `<common>` section to apply to all devices. It can also be set in any `<device>` section to apply only to a specific device and overload the value set in `<common>`
+The default configuration file is `config.xml`, stored in the same directory as the \<executable\>. Each of parameters below can be set in the `<common>` section to apply to all devices. It can also be set in any `<device>` section to apply only to a specific device and overload the value set in `<common>`. Use the `-x <config>`command line option to use a config file of your choice.
 
 - `latency <[rtp][:http][:f]>` 	: (default: (0:0))buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
 	* [rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay. A negative value force sending of silence frames when no AirPlay audio has been received after 'RTP' ms, to force a continuous stream. If not, the UPnP/CC player will be not receive audio and some might close the connection after a while, although most players will simply be silent until stream restarts. This shall not be necessary in most of the case.

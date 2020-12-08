@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.30.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.40.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -165,7 +165,7 @@ static void  RemoveCastDevice(struct sMR *Device);
 static bool	 Start(bool cold);
 static bool	 Stop(bool exit);
 
-void callback(void *owner, raop_event_t event, void *param)
+void raop_cb(void *owner, raop_event_t event, void *param)
 {
 	struct sMR *Device = (struct sMR*) owner;
 
@@ -515,7 +515,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 			Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 										"aircast", Device->Config.mac, Device->Config.Codec,
 										Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-										Device, callback, glPortBase, glPortRange);
+										Device, raop_cb, NULL, glPortBase, glPortRange);
 			if (!Device->Raop) {
 				LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 				RemoveCastDevice(Device);
@@ -901,8 +901,6 @@ bool ParseArgs(int argc, char **argv) {
 		}
 	}
 
-	if (glPortBase && !glPortRange) glPortRange = glMaxDevices*4;
-
 	return true;
 }
 
@@ -940,6 +938,9 @@ int main(int argc, char *argv[])
 
 	// potentially overwrite with some cmdline parameters
 	if (!ParseArgs(argc, argv)) exit(1);
+
+	// make sure port range is correct
+	if (glPortBase && !glPortRange) glPortRange = glMaxDevices*4;
 
 	if (glLogFile) {
 		if (!freopen(glLogFile, "a", stderr)) {

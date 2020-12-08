@@ -1,3 +1,7 @@
+0.2.40.0
+ - add HTTP header callback for better DLNA handling
+ - answer to getcontentFeatures
+ 
 0.2.30.0
  - add port range
  

@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.30.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.40.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -283,7 +283,7 @@ sleep:
 }
 
 /*----------------------------------------------------------------------------*/
-void callback(void *owner, raop_event_t event, void *param)
+void HandleRAOP(void *owner, raop_event_t event, void *param)
 {
 	struct sMR *Device = (struct sMR*) owner;
 
@@ -312,31 +312,20 @@ void callback(void *owner, raop_event_t event, void *param)
 			//Device->ExpectStop = true;
 			break;
 		case RAOP_PLAY: {
-			char *ProtoInfo;
-			char *uri, *mp3radio = NULL;
+			char *uri, *mp3radio = "";
 
 			if (Device->RaopState != RAOP_PLAY && Device->RaopState != RAOP_FLUSH) {
-				if (!strcasecmp(Device->Config.Codec, "pcm"))
-					ProtoInfo = Device->Config.ProtocolInfo.pcm;
-				else if (!strcasecmp(Device->Config.Codec, "wav"))
-					ProtoInfo = Device->Config.ProtocolInfo.wav;
-				else if (strcasestr(Device->Config.Codec, "mp3")) {
-					if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
-						mp3radio = "x-rincon-mp3radio://";
-						LOG_INFO("[%p]: Sonos live stream", Device);
-					}
-					ProtoInfo = Device->Config.ProtocolInfo.mp3;
-				} else
-					ProtoInfo = Device->Config.ProtocolInfo.flac;
-
+				if (strcasestr(Device->Config.Codec, "mp3") && *Device->Service[TOPOLOGY_IDX].ControlURL) {
+					mp3radio = "x-rincon-mp3radio://";
+					LOG_INFO("[%p]: Sonos live stream", Device);
+				}
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
-				asprintf(&uri, "%shttp://%s:%u/stream.%s", mp3radio ? mp3radio : "",
-								inet_ntoa(glHost), *((short unsigned*) param),
-								Device->Config.Codec);
+				asprintf(&uri, "%shttp://%s:%u/stream.%s", mp3radio, inet_ntoa(glHost),
+							    *((short unsigned*) param),	Device->Config.Codec);
 #pragma GCC diagnostic pop
 
-				AVTSetURI(Device, uri, &Device->MetaData, ProtoInfo);
+				AVTSetURI(Device, uri, &Device->MetaData, Device->ProtocolInfo);
 				NFREE(uri);
 			}
 
@@ -394,6 +383,22 @@ void callback(void *owner, raop_event_t event, void *param)
 	pthread_mutex_unlock(&Device->Mutex);
 }
 
+
+/*----------------------------------------------------------------------------*/
+void HandleHTTP(void *owner, struct key_data_s *headers, struct key_data_s *response)
+{
+	struct sMR *Device = (struct sMR*) owner;
+	char *p;
+
+	if (kd_lookup(headers, "getcontentFeatures.dlna.org") && (p = strcasestr(Device->ProtocolInfo, "DLNA.ORG")) != NULL) {
+		kd_add(response, "contentFeatures.dlna.org", p);
+	}
+
+	if ((p = kd_lookup(headers, "transferMode.dlna.org")) != NULL) {
+		kd_add(response, "transferMode.dlna.org", p);
+	}
+}
+
 
 /*----------------------------------------------------------------------------*/
 static bool _ProcessQueue(struct sMR *Device)
@@ -792,7 +797,7 @@ static void *UpdateThread(void *args)
 							Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 								   "airupnp", Device->Config.mac, Device->Config.Codec,
 								   Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-								   Device, callback, glPortBase, glPortRange);
+								   Device, HandleRAOP, HandleHTTP, glPortBase, glPortRange);
 							pthread_mutex_unlock(&Device->Mutex);
 						} else if (Master && (!Device->Master || Device->Master == Device)) {
 							pthread_mutex_lock(&Device->Mutex);
@@ -846,7 +851,7 @@ static void *UpdateThread(void *args)
 					Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 									   "airupnp", Device->Config.mac, Device->Config.Codec,
 									   Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-									   Device, callback, glPortBase, glPortRange);
+									   Device, HandleRAOP, HandleHTTP, glPortBase, glPortRange);
 					if (!Device->Raop) {
 						LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 						DelMRDevice(Device);
@@ -1003,10 +1008,16 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		Device->MetaData.remote_title = strdup("Streaming from AirConnect");
     }
 	if (*Device->Config.ArtWork) Device->MetaData.artwork = strdup(Device->Config.ArtWork);
-	Device->Running 	= true;
+	Device->Running = true;
 	if (friendlyName) strcpy(Device->friendlyName, friendlyName);
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", friendlyName);
 	QueueInit(&Device->ActionQueue, false, NULL);
+
+	// set protocolinfo (will be used for some HTTP response)
+	if (!strcasecmp(Device->Config.Codec, "pcm")) Device->ProtocolInfo = Device->Config.ProtocolInfo.pcm;
+	else if (!strcasecmp(Device->Config.Codec, "wav")) Device->ProtocolInfo = Device->Config.ProtocolInfo.wav;
+	else if (strcasestr(Device->Config.Codec, "mp3")) Device->ProtocolInfo = Device->Config.ProtocolInfo.mp3;
+	else Device->ProtocolInfo = Device->Config.ProtocolInfo.flac;
 
 	ip = ExtractIP(location);
 	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", mac_size)) {
@@ -1347,8 +1358,6 @@ bool ParseArgs(int argc, char **argv) {
 		}
 	}
 
-	if (glPortBase && !glPortRange) glPortRange = glMaxDevices*4;
-
 	return true;
 }
 
@@ -1388,6 +1397,9 @@ int main(int argc, char *argv[])
 
 	// potentially overwrite with some cmdline parameters
 	if (!ParseArgs(argc, argv)) exit(1);
+
+	// make sure port range is correct
+	if (glPortBase && !glPortRange) glPortRange = glMaxDevices*4;
 
 	if (glLogFile) {
 		if (!freopen(glLogFile, "a", stderr)) {

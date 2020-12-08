@@ -103,6 +103,7 @@ struct sMR {
 	u32_t			VolumeStampRx, VolumeStampTx;
 	u16_t			ErrorCount;
 	bool			TimeOut;
+	char 			*ProtocolInfo;
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;

@@ -121,7 +121,7 @@ void 		winsock_close(void);
 int 		shutdown_socket(int sd);
 int 		bind_socket(short unsigned *port, int mode);
 int 		conn_socket(unsigned short port);#if !WINint SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size);#endif
-typedef struct {
+typedef struct key_data_s {
 	char *key;
 	char *data;
 } key_data_t;

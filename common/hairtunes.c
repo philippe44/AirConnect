@@ -182,7 +182,8 @@ typedef struct hairtunes_s {
 	alac_file *alac_codec;
 	int flush_seqno;
 	bool playing, silence, http_ready;
-	hairtunes_cb_t callback;
+	event_cb_t event_cb;
+	http_cb_t http_cb;
 	void *owner;
 	char *http_tail;
 	size_t http_count;
@@ -313,7 +314,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 								bool sync, bool drift, bool range, char *latencies,
 								char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
-								void *owner, hairtunes_cb_t callback,
+								void *owner,
+								event_cb_t event_cb, http_cb_t http_cb,
 								unsigned short port_base, unsigned short port_range)
 {
 	int i = 0;
@@ -346,7 +348,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	ctx->latency = atoi(latencies);
 	ctx->latency = (ctx->latency * 44100) / 1000;
 	if (strstr(latencies, ":f")) ctx->http_fill = true;
-	ctx->callback = callback;
+	ctx->event_cb = event_cb;
+	ctx->http_cb = http_cb;
 	ctx->owner = owner;
 	ctx->synchro.required = sync;
 	ctx->timing.drift = drift;
@@ -645,7 +648,7 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 		fwrite(abuf->data, abuf->len, 1, ctx->rtpOUT);
 #endif
 		if (ctx->silence && memcmp(abuf->data, ctx->silence_frame, abuf->len)) {
-			ctx->callback(ctx->owner, HAIRTUNES_PLAY);
+			ctx->event_cb(ctx->owner, HAIRTUNES_PLAY);
 			ctx->silence = false;
 		}
 	}
@@ -663,7 +666,7 @@ static void *rtp_thread_func(void *arg) {
 
 	for (i = 0; i < 3; i++) {
 		if (ctx->rtp_sockets[i].sock > sock) sock = ctx->rtp_sockets[i].sock;
-		// send synchro requets 3 times
+		// send synchro requests 3 times
 		ntp_sent = rtp_request_timing(ctx);
 	}
 
@@ -1298,9 +1301,11 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 		free(str);
 	} else ctx->icy.interval = 0;
 
-#ifdef CHUNKED
-	mirror_header(headers, resp, "Connection");
-	mirror_header(headers, resp, "transferMode.dlna.org");
+	// let owner modify HTTP response if needed
+	if (ctx->http_cb) ctx->http_cb(ctx->owner, headers, resp);
+
+#ifdef CHUNKED
+	mirror_header(headers, resp, "Connection");
 	kd_add(resp, "Transfer-Encoding", "chunked");
 	str = http_send(sock, head ? head : "HTTP/1.1 200 OK", resp);
 #else

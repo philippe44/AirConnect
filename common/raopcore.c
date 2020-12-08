@@ -57,7 +57,8 @@ typedef struct raop_ctx_s {
 		char *fmtp;
 	} rtsp;
 	struct hairtunes_s *ht;
-	raop_cb_t	callback;
+	raop_cb_t	raop_cb;
+	http_cb_t	http_cb;
 	struct {
 		char				DACPid[32], id[32];
 		struct in_addr		host;
@@ -78,7 +79,8 @@ static bool 	handle_rtsp(raop_ctx_t *ctx, int sock);
 
 static char*	rsa_apply(unsigned char *input, int inlen, int *outlen, int mode);
 static int  	base64_pad(char *src, char **padded);
-static void 	hairtunes_cb(void *owner, hairtunes_event_t event);
+static void 	event_cb(void *owner, hairtunes_event_t event);
+static void 	http_cb(void *owner, struct key_data_s *headers, struct key_data_s *response);
 static void* 	search_remote(void *args);
 
 extern char private_key[];
@@ -89,7 +91,8 @@ extern char private_key[];
 /*----------------------------------------------------------------------------*/
 struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 						char *model, unsigned char mac[6], char *codec, bool metadata,
-						bool drift,	char *latencies, void *owner, raop_cb_t callback,
+						bool drift,	char *latencies, void *owner,
+						raop_cb_t raop_cb, http_cb_t http_cb,
 						unsigned short port_base, unsigned short port_range ) {
 	struct raop_ctx_s *ctx = malloc(sizeof(struct raop_ctx_s));
 	struct sockaddr_in addr;
@@ -109,7 +112,8 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	ctx->ports.base = port_base;
 	ctx->ports.range = port_range;
 	ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
-	ctx->callback = callback;
+	ctx->raop_cb = raop_cb;
+	ctx->http_cb = http_cb;
 	ctx->latencies = latencies;
 	ctx->owner = owner;
 	ctx->drift = drift;
@@ -466,7 +470,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 		ht = hairtunes_init(ctx->peer, ctx->encode, false, ctx->drift, true, ctx->latencies,
 							ctx->rtsp.aeskey, ctx->rtsp.aesiv, ctx->rtsp.fmtp,
-							cport, tport, ctx, hairtunes_cb, ctx->ports.base, ctx->ports.range);
+							cport, tport, ctx, event_cb, http_cb, ctx->ports.base, ctx->ports.range);
 
 		ctx->hport = ht.hport;
 		ctx->ht = ht.ctx;
@@ -504,7 +508,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 		if (ctx->ht) hairtunes_record(ctx->ht, seqno, rtptime);
 
-		ctx->callback(ctx->owner, RAOP_STREAM, &ctx->hport);
+		ctx->raop_cb(ctx->owner, RAOP_STREAM, &ctx->hport);
 
 	}  else if (!strcmp(method, "FLUSH")) {
 		unsigned short seqno = 0;
@@ -518,7 +522,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 		// only send FLUSH if useful (discards frames above buffer head and top)
 		if (ctx->ht && hairtunes_flush(ctx->ht, seqno, rtptime, true)) {
-			ctx->callback(ctx->owner, RAOP_FLUSH, &ctx->hport);
+			ctx->raop_cb(ctx->owner, RAOP_FLUSH, &ctx->hport);
 			hairtunes_flush_release(ctx->ht);
 		}
 
@@ -538,7 +542,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		NFREE(ctx->rtsp.aesiv);
 		NFREE(ctx->rtsp.fmtp);
 
-		ctx->callback(ctx->owner, RAOP_STOP, &ctx->hport);
+		ctx->raop_cb(ctx->owner, RAOP_STOP, &ctx->hport);
 
 	} else if (!strcmp(method, "SET_PARAMETER")) {
 		char *p;
@@ -549,7 +553,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 			sscanf(p, "%*[^:]:%lf", &volume);
 			LOG_INFO("[%p]: SET PARAMETER volume %lf", ctx, volume);
 			volume = (volume == -144.0) ? 0 : (1 + volume / 30);
-			ctx->callback(ctx->owner, RAOP_VOLUME, &volume);
+			ctx->raop_cb(ctx->owner, RAOP_VOLUME, &volume);
 		}
 
 		if (((p = kd_lookup(headers, "Content-Type")) != NULL) && !strcasecmp(p, "application/x-dmap-tagged")) {
@@ -594,18 +598,26 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 }
 
 /*----------------------------------------------------------------------------*/
-static void hairtunes_cb(void *owner, hairtunes_event_t event)
+static void event_cb(void *owner, hairtunes_event_t event)
 {
 	raop_ctx_t *ctx = (raop_ctx_t*) owner;
 
 	switch(event) {
 		case HAIRTUNES_PLAY:
-			ctx->callback(ctx->owner, RAOP_PLAY, &ctx->hport);
+			ctx->raop_cb(ctx->owner, RAOP_PLAY, &ctx->hport);
 			break;
 		default:
 			LOG_ERROR("[%p]: unknown hairtunes event", ctx, event);
 			break;
 	}
+}
+
+/*----------------------------------------------------------------------------*/
+static void http_cb(void *owner, struct key_data_s *headers, struct key_data_s *response)
+{
+	// just callback owner, don't do much
+	raop_ctx_t *ctx = (raop_ctx_t*) owner;
+	if (ctx->http_cb) ctx->http_cb(ctx->owner, headers, response);
 }
 
 

@@ -47,7 +47,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
 - Use `-a <port>[:<count>]`to specify a port range 
-- Use `-g -3|-1|0|` to tweak http transfer mode where -3 = chunked, -1 = no content-length and 0 = fixed (dummy) length (see below)
+- Use `-g -3|-1|0|` to tweak http transfer mode where -3 = chunked, -1 = no content-length and 0 = fixed (dummy) length (see "HTTP content-length" below)"
 - Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 
 - <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`), otherwise it will consume all CPU. On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
 - A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements (or use `<drift>` option in config file), but that might cause overrun or underrun on long playbacks

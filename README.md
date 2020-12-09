@@ -162,7 +162,7 @@ To identify your Sonos players, pick an identified IP address, and visit the Son
 [@chpusch](https://github.com/chpusch) has found that Bose SoundTouch work well including synchonisation (as for Sonos, you need to use Bose's native application for grouping / ungrouping). I don't have a SoundTouch system so I cannot do the level of slave/master detection I did for Sonos
 
 #### Pioneer/Phorus/Play-Fi
-Some of these speakers only support mp3 and require a modified `ProtocolInfo` to stream correctly. This can be done by editing the config file and changing `<codec>flac</codec>` to `<codec>mp3</codec>` and replacing the `<mp3>..</mp3>` line with: 
+Some of these speakers only support mp3 and require a modified `ProtocolInfo` to stream correctly. This can be done by editing the config file and changing `<codec>flc</codec>` to `<codec>mp3</codec>` and replacing the `<mp3>..</mp3>` line with: 
 ```
 <mp3>http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000</mp3>
 ```

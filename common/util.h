@@ -104,8 +104,10 @@ char*		strcasestr(const char *haystack, const char *needle);
 char* 		strsep(char** stringp, const char* delim);
 char*		strndup(const char *s, size_t n);
 int 		asprintf(char **strp, const char *fmt, ...);
+int 		vasprintf(char **strp, const char *fmt, va_list args);
 #else
 char*		strlwr(char *str);
+char* 		itoa(int value, char* str, int radix);
 #endif
 char* 		strextract(char *s1, char *beg, char *end);
 u32_t 		hash32(char *str);
@@ -126,13 +128,14 @@ typedef struct key_data_s {
 	char *data;
 } key_data_t;
 
-bool 		http_parse(int sock, char *method, key_data_t *rkd, char **body, int *len);
+bool 		http_parse(int sock, char *method, char *resource, char *proto, key_data_t *rkd, char **body, int *len);
 char*		http_send(int sock, char *method, key_data_t *rkd);
 int 		read_line(int fd, char *line, int maxlen, int timeout);
 int 		send_response(int sock, char *response);
 
 char*		kd_lookup(key_data_t *kd, char *key);
 bool 		kd_add(key_data_t *kd, char *key, char *value);
+bool 		kd_vadd(key_data_t *kd, char *key, char *fmt, ...);
 char* 		kd_dump(key_data_t *kd);
 void 		kd_free(key_data_t *kd);
 

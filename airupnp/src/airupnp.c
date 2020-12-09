@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.40.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.41.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -50,6 +50,7 @@
 #define PRESENCE_TIMEOUT	(DISCOVERY_TIME * 6)
 
 #define MAX_DEVICES			32
+#define HTTP_FIXED_LENGTH	INT_MAX
 
 /* for the haters of GOTO statement: I'm not a big fan either, but there are
 cases where they make code more leightweight and readable, instead of tons of
@@ -72,7 +73,7 @@ log_level	util_loglevel = lWARN;
 log_level	upnp_loglevel = lINFO;
 
 tMRConfig			glMRConfig = {
-							"-3",      	// StreamLength
+							-1,      	// HTTPLength
 							true,		// Enabled
 							"",      	// Name
 							1,			// UPnPMax
@@ -89,7 +90,7 @@ tMRConfig			glMRConfig = {
 								"http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
 								"http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
 								"http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
-								"http-get:*:audio/mp3:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
+								"http-get:*:audio/mp3:DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
 							},
 					};
 
@@ -155,6 +156,7 @@ static char usage[] =
 		   "  -b <server>[:<port>]\tnetwork interface and UPnP port to use\n"
 		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
 		   "  -c <mp3[:<rate>]|flc[:0..9]|wav|pcm>\taudio format send to player\n"
+  		   "  -g <-3|-1|0>\t\tHTTP content-length mode (-3:chunked, -1:none, 0:fixed)\n"
 		   "  -u <version>\tset the maximum UPnP version for search (default 1)\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
@@ -163,9 +165,9 @@ static char usage[] =
 		   "  -r \t\t\tlet timing reference drift (no click)\n"
 		   "  -f <logfile>\t\twrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
-		   "  -m <name1,name2...>\texclude from search devices whose model name contains name1 or name 2 ...\n"
-		   "  -n <model1,model2,...>\texclude from search devices whose model number contains name1 or name 2 ...\n"
-		   "  -o <model1,model2,...>\tinclude only the model numbers listed; overrides -m and -n (use <NULL> to include players that don't return a model number) ...\n"
+		   "  -m <n1,n2...>\t\texclude devices whose model include tokens\n"
+		   "  -n <m1,m2,...>\texclude devices whose name includes tokens\n"
+		   "  -o <m1,m2,...>\tinclude only listed models; overrides -m and -n (use <NULL> if player don't return a model)\n"
 		   "  -d <log>=<level>\tSet logging level, logs: all|raop|main|util|upnp, level: error|warn|info|debug|sdebug\n"
 
 #if LINUX || FREEBSD
@@ -797,7 +799,8 @@ static void *UpdateThread(void *args)
 							Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 								   "airupnp", Device->Config.mac, Device->Config.Codec,
 								   Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-								   Device, HandleRAOP, HandleHTTP, glPortBase, glPortRange);
+								   Device, HandleRAOP, HandleHTTP, glPortBase, glPortRange,
+								   Device->Config.HTTPLength ? Device->Config.HTTPLength : HTTP_FIXED_LENGTH);
 							pthread_mutex_unlock(&Device->Mutex);
 						} else if (Master && (!Device->Master || Device->Master == Device)) {
 							pthread_mutex_lock(&Device->Mutex);
@@ -835,7 +838,7 @@ static void *UpdateThread(void *args)
 
 				// new device so search a free spot - as this function is not called
 				// recursively, no need to lock the device's mutex
-				for (i = 0; i < glMaxDevices && glMRDevices[i].Running; i++);
+				for (i = 0; i < glMaxDevices && glMRDevices[i].Running; i++) {}
 
 				// no more room !
 				if (i == glMaxDevices) {
@@ -851,7 +854,8 @@ static void *UpdateThread(void *args)
 					Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 									   "airupnp", Device->Config.mac, Device->Config.Codec,
 									   Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-									   Device, HandleRAOP, HandleHTTP, glPortBase, glPortRange);
+									   Device, HandleRAOP, HandleHTTP, glPortBase, glPortRange,
+									   Device->Config.HTTPLength ? Device->Config.HTTPLength : HTTP_FIXED_LENGTH);
 					if (!Device->Raop) {
 						LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 						DelMRDevice(Device);
@@ -1264,7 +1268,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("abxdpifmnolcu", opt) && optind < argc - 1) {
+		if (strstr("abxdpifmnolcug", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt)) {
@@ -1322,6 +1326,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'l':
 			strcpy(glMRConfig.Latency, optarg);
+			break;
+		case 'g':
+			glMRConfig.HTTPLength = atoi(optarg);
 			break;
 #if LINUX || FREEBSD
 		case 'z':
@@ -1438,7 +1445,7 @@ int main(int argc, char *argv[])
 		FILE *pid_file;
 		pid_file = fopen(glPidFile, "wb");
 		if (pid_file) {
-			fprintf(pid_file, "%d", getpid());
+			fprintf(pid_file, "%ld", (long) getpid());
 			fclose(pid_file);
 		}
 		else {

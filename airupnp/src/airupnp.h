@@ -55,7 +55,7 @@ struct sService {
 
 typedef struct sMRConfig
 {
-	char		StreamLength[_STR_LEN_];
+	int			HTTPLength;
 	bool		Enabled;
 	char		Name[_STR_LEN_];
 	int			UPnPMax;

@@ -69,6 +69,7 @@ typedef struct raop_ctx_s {
 	struct {
 		u16_t base, range;
 	} ports;
+	int http_length;
 } raop_ctx_t;
 
 extern log_level	raop_loglevel;
@@ -93,7 +94,8 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 						char *model, unsigned char mac[6], char *codec, bool metadata,
 						bool drift,	char *latencies, void *owner,
 						raop_cb_t raop_cb, http_cb_t http_cb,
-						unsigned short port_base, unsigned short port_range ) {
+						unsigned short port_base, unsigned short port_range,
+						int http_length ) {
 	struct raop_ctx_s *ctx = malloc(sizeof(struct raop_ctx_s));
 	struct sockaddr_in addr;
 	socklen_t nlen = sizeof(struct sockaddr);
@@ -109,6 +111,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	// make sure we have a clean context
 	memset(ctx, 0, sizeof(raop_ctx_t));
 
+	ctx->http_length = http_length;
 	ctx->ports.base = port_base;
 	ctx->ports.range = port_range;
 	ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -375,7 +378,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 	int len;
 	bool success = true;
 
-	if (!http_parse(sock, method, headers, &body, &len)) {
+	if (!http_parse(sock, method, NULL, NULL, headers, &body, &len)) {
 		NFREE(body);
 		kd_free(headers);
 		return false;
@@ -470,7 +473,8 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 		ht = hairtunes_init(ctx->peer, ctx->encode, false, ctx->drift, true, ctx->latencies,
 							ctx->rtsp.aeskey, ctx->rtsp.aesiv, ctx->rtsp.fmtp,
-							cport, tport, ctx, event_cb, http_cb, ctx->ports.base, ctx->ports.range);
+							cport, tport, ctx, event_cb, http_cb, ctx->ports.base,
+							ctx->ports.range, ctx->http_length);
 
 		ctx->hport = ht.hport;
 		ctx->ht = ht.ctx;

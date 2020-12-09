@@ -187,6 +187,7 @@ typedef struct hairtunes_s {
 	void *owner;
 	char *http_tail;
 	size_t http_count;
+	int http_length;
 } hairtunes_t;
 
 
@@ -316,7 +317,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
 								void *owner,
 								event_cb_t event_cb, http_cb_t http_cb,
-								unsigned short port_base, unsigned short port_range)
+								unsigned short port_base, unsigned short port_range,
+								int http_length)
 {
 	int i = 0;
 	char *arg, *p;
@@ -337,6 +339,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 		free(ctx);
 		return resp;
 	}
+	ctx->http_length = http_length;
 	ctx->host = host;
 	ctx->decrypt = false;
 	ctx->rtp_host.sin_family = AF_INET;
@@ -1004,30 +1007,29 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 }
 
 /*---------------------------------------------------------------------------*/
-#ifdef CHUNKED
-int send_data(int sock, void *data, int len, int flags) {
-	char *chunk;
+int send_data(bool chunked, int sock, void *data, int len, int flags) {
+	char chunk[16];
 	int bytes = len;
 
-	asprintf(&chunk, "%x\r\n", len);
-	send(sock, chunk, strlen(chunk), flags);
-	free(chunk);
+	if (chunked) {
+		itoa(len, chunk, 16);
+		strcat(chunk, "\r\n");
+		send(sock, chunk, strlen(chunk), flags);
+	}
+
 	while (bytes) {
-		int sent = send(sock, data + len - bytes, bytes, flags);
+		int sent = send(sock, (u8_t*) data + len - bytes, bytes, flags);
 		if (sent < 0) {
 			LOG_ERROR("Error sending data %u", len);
 			return -1;
 		}
 		bytes -= sent;
 	}
-	send(sock, "\r\n", 2, flags);
+
+	if (chunked) send(sock, "\r\n", 2, flags);
 
 	return len;
 }
-#else
-#define send_data send
-#endif
-
 
 /*---------------------------------------------------------------------------*/
 static void *http_thread_func(void *arg) {
@@ -1112,7 +1114,7 @@ static void *http_thread_func(void *arg) {
 					ctx->http_count = ctx->encode.len;
 
 					// should be fast enough and can't release mutex anyway
-					send_data(sock, (void*) ctx->encode.buffer, ctx->encode.len, 0);
+					send_data(ctx->http_length == -3, sock, (void*) ctx->encode.buffer, ctx->encode.len, 0);
 					ctx->encode.len = 0;
 					ctx->encode.header = false;
 				}
@@ -1142,7 +1144,7 @@ static void *http_thread_func(void *arg) {
 #endif
 					ctx->http_count = sizeof(wave_header);
 					memcpy(ctx->http_tail, &wave_header, sizeof(wave_header));
-					send_data(sock, (void*) &wave_header, sizeof(wave_header), 0);
+					send_data(ctx->http_length == -3, sock, (void*) &wave_header, sizeof(wave_header), 0);
 					ctx->encode.header = false;
 				}
 				len = size;
@@ -1187,11 +1189,11 @@ static void *http_thread_func(void *arg) {
 
 					// send remaining data first
 					offset = ctx->icy.remain;
-					send_data(sock, (void*) inbuf, offset, 0);
+					if (offset) send_data(ctx->http_length == -3, sock, (void*) inbuf, offset, 0);
 					len -= offset;
 
 					// then send icy data
-					send_data(sock, (void*) buffer, len_16 * 16 + 1, 0);
+					send_data(ctx->http_length == -3, sock, (void*) buffer, len_16 * 16 + 1, 0);
 					ctx->icy.remain = ctx->icy.interval;
 
 					LOG_SDEBUG("[%p]: ICY checked %u", ctx, ctx->icy.remain);
@@ -1201,7 +1203,7 @@ static void *http_thread_func(void *arg) {
 				}
 
 				LOG_SDEBUG("[%p]: HTTP sent frame count:%u bytes:%u (W:%hu R:%hu)", ctx, frame_count++, len+offset, ctx->ab_write, ctx->ab_read);
-				sent = send_data(sock, (u8_t*) inbuf + offset , len, 0);
+				sent = send_data(ctx->http_length == -3, sock, (u8_t*) inbuf + offset , len, 0);
 
 				// update remaining count with desired length
 				if (ctx->icy.interval) ctx->icy.remain -= len;
@@ -1236,7 +1238,6 @@ static void *http_thread_func(void *arg) {
 }
 
 
-#ifdef CHUNKED
 /*----------------------------------------------------------------------------*/
 static void mirror_header(key_data_t *src, key_data_t *rsp, char *key) {
 	char *data;
@@ -1244,22 +1245,23 @@ static void mirror_header(key_data_t *src, key_data_t *rsp, char *key) {
 	data = kd_lookup(src, key);
 	if (data) kd_add(rsp, key, data);
 }
-#endif
 
 
 /*----------------------------------------------------------------------------*/
 static bool handle_http(hairtunes_t *ctx, int sock)
 {
-	char *body = NULL, method[16] = "", *str, *head = NULL;
+	char *body = NULL, method[16] = "", proto[16] = "", *str, *head = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
 	size_t offset = 0;
 	int len;
+	bool HTTP_11;
 
-	if (!http_parse(sock, method, headers, &body, &len)) return false;
+	if (!http_parse(sock, method, NULL, proto, headers, &body, &len)) return false;
+	HTTP_11 = strstr(proto, "1.1") != NULL;
 
-	if (*loglevel == lINFO) {
+	if (*loglevel >= lINFO) {
 		char *p = kd_dump(headers);
-		LOG_INFO("[%p]: received %s\n%s", ctx, method, p);
+		LOG_INFO("[%p]: received %s %s\n%s", ctx, method, proto, p);
 		NFREE(p);
 	}
 
@@ -1273,50 +1275,38 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 #else
 		sscanf(str, "bytes=%zu", &offset);
 #endif
-        offset = ctx->http_count && ctx->http_count > TAIL_SIZE ? min(offset, ctx->http_count - TAIL_SIZE - 1) : 0;
+		offset = ctx->http_count && ctx->http_count > TAIL_SIZE ? min(offset, ctx->http_count - TAIL_SIZE - 1) : 0;
 		if (offset) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-			asprintf(&str, "bytes %zu-%zu/*", offset, ctx->http_count);
-#pragma GCC diagnostic pop
-#ifdef CHUNKED
-			head = "HTTP/1.1 206 Partial Content";
-#else
-            head = "HTTP/1.0 206 Partial Content";
-#endif
-			kd_add(resp, "Content-Range", str);
-			free(str);
+			if (ctx->http_length == -3 && HTTP_11) head = "HTTP/1.1 206 Partial Content";
+			else head = "HTTP/1.0 206 Partial Content";
+			kd_vadd(resp, "Content-Range", "bytes %zu-%zu/*", offset, ctx->http_count);
 		}
 	}
 
 	// check if add ICY metadata is needed (only on live stream)
 	if (ctx->encode.config.codec == CODEC_MP3 && ctx->encode.config.mp3.icy &&
 		((str = kd_lookup(headers, "Icy-MetaData")) != NULL) && atoi(str)) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-		asprintf(&str, "%u", ICY_INTERVAL);
-#pragma GCC diagnostic pop
-		kd_add(resp, "icy-metaint", str);
+		kd_vadd(resp, "icy-metaint", "%u", ICY_INTERVAL);
 		ctx->icy.interval = ctx->icy.remain = ICY_INTERVAL;
-		free(str);
 	} else ctx->icy.interval = 0;
+	//ctx->icy.interval = 0;
 
 	// let owner modify HTTP response if needed
 	if (ctx->http_cb) ctx->http_cb(ctx->owner, headers, resp);
 
-#ifdef CHUNKED
-	mirror_header(headers, resp, "Connection");
-	kd_add(resp, "Transfer-Encoding", "chunked");
-	str = http_send(sock, head ? head : "HTTP/1.1 200 OK", resp);
-#else
-	kd_add(resp, "Connection", "close");
-	str = http_send(sock, head ? head : "HTTP/1.0 200 OK", resp);
-#endif
+	if (ctx->http_length == -3 && HTTP_11) {
+		mirror_header(headers, resp, "Connection");
+		kd_add(resp, "Transfer-Encoding", "chunked");
+		str = http_send(sock, head ? head : "HTTP/1.1 200 OK", resp);
+	} else {
+		if (ctx->http_length > 0) kd_vadd(resp, "Content-Length", "%d", ctx->http_length);
+		kd_add(resp, "Connection", "close");
+		str = http_send(sock, head ? head : "HTTP/1.0 200 OK", resp);
+	}
 
 	LOG_INFO("[%p]: responding: %s", ctx, str);
 
 	NFREE(body);
-	NFREE(str);
 	kd_free(resp);
 	kd_free(headers);
 
@@ -1334,7 +1324,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 			int sent;
 
 			bytes = min(bytes, ctx->http_count - offset - count);
-			sent = send_data(sock, ctx->http_tail + ((offset + count) % TAIL_SIZE), bytes, 0);
+			sent = send_data(ctx->http_length == -3, sock, ctx->http_tail + ((offset + count) % TAIL_SIZE), bytes, 0);
 
 			if (sent < 0) {
 				LOG_ERROR("[%p]: error re-sending range %u", ctx, offset);
@@ -1347,7 +1337,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 			if (ctx->icy.interval) {
 				ctx->icy.remain -= sent;
 				if (!ctx->icy.remain) {
-					send_data(sock, "\1", 1, 0);
+					send_data(ctx->http_length == -3, sock, "\1", 1, 0);
 					ctx->icy.remain = ctx->icy.interval;
 				}
 			}

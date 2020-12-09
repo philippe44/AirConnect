@@ -31,7 +31,8 @@ hairtunes_resp_t 	hairtunes_init(struct in_addr host, encode_t codec,
 							char *aeskey, char *aesiv, char *fmtpstr,
 							short unsigned pCtrlPort, short unsigned pTimingPort,
 							void *owner, event_cb_t event_cb, http_cb_t http_cb,
-							unsigned short port_base, unsigned short port_range);
+							unsigned short port_base, unsigned short port_range,
+							int http_length);
 void			 	hairtunes_end(struct hairtunes_s *ctx);
 bool 				hairtunes_flush(struct hairtunes_s *ctx, unsigned short seqno, unsigned rtptime, bool exit_locked);
 void 				hairtunes_flush_release(struct hairtunes_s *ctx);

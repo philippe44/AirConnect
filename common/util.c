@@ -1015,7 +1015,7 @@ char* strextract(char *s1, char *beg, char *end)
 /*----------------------------------------------------------------------------*/
 int asprintf(char **strp, const char *fmt, ...)
 {
-	va_list args, cp;
+	va_list args;
 	int len, ret = 0;
 
 	va_start(args, fmt);
@@ -1027,6 +1027,48 @@ int asprintf(char **strp, const char *fmt, ...)
 	va_end(args);
 
 	return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+int vasprintf(char **strp, const char *fmt, va_list args)
+{
+	int len, ret = 0;
+
+	len = vsnprintf(NULL, 0, fmt, args);
+	*strp = malloc(len + 1);
+
+	if (*strp) ret = vsprintf(*strp, fmt, args);
+
+	return ret;
+}
+
+#else
+ /*---------------------------------------------------------------------------*/
+char* itoa(int value, char* str, int radix) {
+	static char dig[] =
+		"0123456789"
+		"abcdefghijklmnopqrstuvwxyz";
+	int n = 0, neg = 0;
+	unsigned int v;
+	char* p, *q;
+	char c;
+
+	if (radix == 10 && value < 0) {
+		value = -value;
+		neg = 1;
+	}
+	v = value;
+	do {
+		str[n++] = dig[v%radix];
+		v /= radix;
+	} while (v);
+	if (neg)
+		str[n++] = '-';
+	str[n] = '\0';
+
+	for (p = str, q = p + (n-1); p < q; ++p, --q)
+		c = *p, *p = *q, *q = c;
+	return str;
 }
 #endif
 
@@ -1074,7 +1116,7 @@ char *trim(char *s)
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-bool http_parse(int sock, char *method, key_data_t *rkd, char **body, int *len)
+bool http_parse(int sock, char *method, char *resource, char *proto, key_data_t *rkd, char **body, int *len)
 {
 	char line[256], *dp;
 	unsigned j;
@@ -1093,6 +1135,9 @@ bool http_parse(int sock, char *method, key_data_t *rkd, char **body, int *len)
 		LOG_ERROR("missing method", NULL);
 		return false;
 	}
+
+	if (resource) sscanf(line, "%*s%s", resource);
+	if (proto) sscanf(line, "%*s%*s%s", proto);
 
 	i = *len = 0;
 
@@ -1234,7 +1279,27 @@ bool kd_add(key_data_t *kd, char *key, char *data)
 	kd[i].data = strdup(data);
 	kd[i+1].key = NULL;
 
-	return NULL;
+	return true;
+}
+
+/*----------------------------------------------------------------------------*/
+bool kd_vadd(key_data_t *kd, char *key, char *fmt, ...)
+{
+	int i = 0;
+	va_list args;
+	while (kd && kd[i].key) i++;
+
+	va_start(args, fmt);
+
+	if (vasprintf(&kd[i].data, fmt, args)) {
+		kd[i].key = strdup(key);
+		kd[i+1].key = NULL;
+		va_end(args);
+		return true;
+	}
+
+	va_end(args);
+	return false;
 }
 
 

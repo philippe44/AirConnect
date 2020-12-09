@@ -1,3 +1,7 @@
+0.2.41.0
+ - allow chunked encoding and fixed length
+ - DLNA.ORG_PN was missing for mp3
+
 0.2.40.0
  - add HTTP header callback for better DLNA handling
  - answer to getcontentFeatures

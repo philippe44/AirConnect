@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.40.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.41.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -515,7 +515,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 			Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 										"aircast", Device->Config.mac, Device->Config.Codec,
 										Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-										Device, raop_cb, NULL, glPortBase, glPortRange);
+										Device, raop_cb, NULL, glPortBase, glPortRange, -1);
 			if (!Device->Raop) {
 				LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 				RemoveCastDevice(Device);

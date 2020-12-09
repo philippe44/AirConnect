@@ -47,6 +47,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
 - Use `-a <port>[:<count>]`to specify a port range 
+- Use `-g -3|-1|0|` to tweak http transfer mode where -3 = chunked, -1 = no content-length and 0 = fixed (dummy) length (see below)
 - Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 
 - <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`), otherwise it will consume all CPU. On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
 - A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements (or use `<drift>` option in config file), but that might cause overrun or underrun on long playbacks
@@ -64,7 +65,8 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `enabled <0|1>`	: in common section, enables new discovered players by default. In a dedicated section, enables the player
 - `name` 		: The name that will appear for the device in AirPlay. You can change the default name.
 - `upnp_max`		: set the maximum UPnP version use to search players (default 1)
- - `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
+- `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
+- `http_length`		: same as `-g` command line parameter
 - `metadata <0|1>`	: send metadata to player (only for mp3 codec and if player supports ICY protocol)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
 - `artwork`		: an URL to an artwork to be displayed on player
@@ -171,6 +173,21 @@ Note: you can use the `-i config.xml` to generate a config file if you do not ha
 - When players disappear regularly, it might be that your router is filtering out multicast packets. For example, for a Asus AC-RT68U, you have to login by ssh and run echo 0 > /sys/class/net/br0/bridge/multicast_snooping but it does not stay after a reboot.
 
 - Lots of users seems to have problem with Unify and broadcasting / finding players. Here is a guide https://www.neilgrogan.com/ubnt-sonos/ made by somebody who fixes the issue for his Sonos
+
+## HTTP & UPnP specificities
+### HTTP content-length and transfer modes
+Lots of UPnP player have very poor quality HTTP and UPnP stacks, in addition of UPnP itself being a poorly defined/certified standard. One of the main difficulty comes from the fact that AirConnect cannot provide the length of the file being streamed as the source is an infinite real time RTP flow coming from the AirPlay source.
+
+The HTTP standard is clear that the "content-length" header is optional and can be omitted when server does not know the size of the source. If the client is HTTP 1.1 there is another possibility which is to use "chunked" mode where the body of the message is divided into chunks of variable length. This is *explicitely* made for case of unknown source length and an HTTP client that claims to support 1.1 **must** support chunked-encoding.
+
+The default mode of AirUPnP is "no content-length" (http_header = -1) but unfortunately, some players can't deal with that. You can then try "chunked-encoding" (http_header = -3) but some players who claim to be HTTP 1.1 do not support it. There is a last resort option to add a large fake `content-length` (http_length = 0). It is set to 2^31-1, so around 5 hours of playback with flac re-encoding. Note that if player is HTTP 1.0 and http_header is set to -3, AirUPnP will fallback no content-length.
+
+This might still not work as some players do not understand that the source is not a randomly accessible (searchable) file and want to get the first(e.g.) 128kB to try to do some smart guess on the length, close the connection, re-open it from the beginning and expect to have the same content. I'm trying to keep a buffer of last recently sent bytes to be able to resend-it, but that does not always works. Normally, players should understand that when they ask for a range and the response is 200 (full content), it *means* the source does not support range request but some don't (I've tried to add a header "accept: no-range but that makes things worse most of the time).
+
+### UPnP/DLNA ProtocolInfo
+When sending DLNA/UPnP content, there is a special parameter named `ProtocolInfo` that is found in the UPnP command (DIDL-lite header) and can be also explicitly requested by the player during a GET. That field is automatically built but is subject to a lot of intepretations, so it might be helpful to manually define it and you can do that for pcm, wav, flac and mp3 format using the field with the same name in your config file.
+
+The description of DIDL-lite, ProtocolInfo and DLNA is way beyond the scope of this README, so you should seek for information before tweaking these.
 
 ## Delay when switching track or source
 

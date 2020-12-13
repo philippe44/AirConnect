@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.41.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.41.2"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -66,6 +66,7 @@ UpnpClient_Handle 	glControlPointHandle;
 struct sMR			*glMRDevices;
 int					glMaxDevices = MAX_DEVICES;
 u16_t				glPortBase, glPortRange;
+char				glUPnPSocket[128] = "?";
 
 log_level	main_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
@@ -143,7 +144,6 @@ static pthread_t 		glMainThread, glUpdateThread;
 static tQueue			glUpdateQueue;
 static bool				glInteractive = true;
 static char				*glLogFile;
-static char				glUPnPSocket[128] = "?";
 static u32_t			glPort;
 static void				*glConfigID = NULL;
 static char				glConfigName[_STR_LEN_] = "./config.xml";
@@ -1098,10 +1098,11 @@ static bool Start(bool cold)
 	int i, rc;
 	char IP[16] = "";
 
-
 	glHost.s_addr = INADDR_ANY;
 
-	if (!strstr(glUPnPSocket, "?")) sscanf(glUPnPSocket, "%[^:]:%u", IP, &glPort);
+	// Linux can't do a sscanf with an optional %[^:]
+	if (!strstr(glUPnPSocket, "?"))
+		if (!sscanf(glUPnPSocket, "%[^:]:%u", IP, &glPort)) sscanf(glUPnPSocket, ":%u", &glPort);
 
 	if (!*IP) {
 		struct in_addr host;
@@ -1255,13 +1256,10 @@ static void sighandler(int signum) {
 /*---------------------------------------------------------------------------*/
 bool ParseArgs(int argc, char **argv) {
 	char *optarg = NULL;
-	int optind = 1;
-	int i;
+	int i, optind = 1;
+	char cmdline[256] = "";
 
-#define MAXCMDLINE 256
-	char cmdline[MAXCMDLINE] = "";
-
-	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < MAXCMDLINE); i++) {
+	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < sizeof(cmdline)); i++) {
 		strcat(cmdline, argv[i]);
 		strcat(cmdline, " ");                                                                        
 	}

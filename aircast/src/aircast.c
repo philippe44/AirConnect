@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.41.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.41.2"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -803,13 +803,10 @@ static void sighandler(int signum) {
 /*---------------------------------------------------------------------------*/
 bool ParseArgs(int argc, char **argv) {
 	char *optarg = NULL;
-	int optind = 1;
-	int i;
+	int i, optind = 1;
+	char cmdline[256] = "";
 
-#define MAXCMDLINE 256
-	char cmdline[MAXCMDLINE] = "";
-
-	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < MAXCMDLINE); i++) {
+	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < sizeof(cmdline)); i++) {
 		strcat(cmdline, argv[i]);
 		strcat(cmdline, " ");
 	}

@@ -1,3 +1,6 @@
+0.2.41.1
+ - RTSP port was not bound to range!
+ 
 0.2.41.0
  - allow chunked encoding and fixed length
  - DLNA.ORG_PN was missing for mp3

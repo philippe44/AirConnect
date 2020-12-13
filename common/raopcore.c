@@ -97,10 +97,12 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 						unsigned short port_base, unsigned short port_range,
 						int http_length ) {
 	struct raop_ctx_s *ctx = malloc(sizeof(struct raop_ctx_s));
-	struct sockaddr_in addr;
-	socklen_t nlen = sizeof(struct sockaddr);
-	char *id;
-	int i;
+	char *id;
+	int i;
+	struct {
+		unsigned short count, offset;
+	} port = { 0 };
+
 	char *txt[] = { NULL, "tp=UDP", "sm=false", "sv=false", "ek=1",
 					"et=0,1", "md=0,1,2", "cn=0,1", "ch=2",
 					"ss=16", "sr=44100", "vn=3", "txtvers=1",
@@ -114,7 +116,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	ctx->http_length = http_length;
 	ctx->ports.base = port_base;
 	ctx->ports.range = port_range;
-	ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
+	ctx->host = host;
 	ctx->raop_cb = raop_cb;
 	ctx->http_cb = http_cb;
 	ctx->latencies = latencies;
@@ -131,30 +133,25 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 		if (strchr(codec, ':')) ctx->encode.flac.level = atoi(strchr(codec, ':') + 1);
 	}
 
-	if (ctx->sock == -1) {
-		LOG_ERROR("Cannot create listening socket", NULL);
-		free(ctx);
-		return NULL;
-	}
+	// find a free port
+	if (!port_base) port_range = 1;
+	port.offset = rand() % port_range;
 
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_addr.s_addr = host.s_addr;
-	addr.sin_family = AF_INET;
-	addr.sin_port = 0;
+	do {
+		ctx->port = port_base + ((port.offset + port.count++) % port_range);
+		ctx->sock = bind_socket(&ctx->port, SOCK_STREAM);
+	} while (ctx->sock < 0 && port.count < port_range);
 
-	if (bind(ctx->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0 || listen(ctx->sock, 1)) {
+	// then listen for RTSP incoming connections
+	if (ctx->sock < 0 || listen(ctx->sock, 1)) {
 		LOG_ERROR("Cannot bind or listen RTSP listener: %s", strerror(errno));
 		closesocket(ctx->sock);
 		free(ctx);
 		return NULL;
 	}
 
-	getsockname(ctx->sock, (struct sockaddr *) &addr, &nlen);
-	ctx->port = ntohs(addr.sin_port);
-	ctx->host = host;
-
-	// set model
-#pragma GCC diagnostic push
+	// set model
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
 	asprintf(&(txt[0]), "am=%s", model);
 #pragma GCC diagnostic pop

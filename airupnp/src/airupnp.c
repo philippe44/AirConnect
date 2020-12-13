@@ -1122,7 +1122,7 @@ static bool Start(bool cold)
 
 	S_ADDR(glHost) = inet_addr(IP);
 	gethostname(glHostName, _STR_LEN_);
-	if (!glPort) glPort = UpnpGetServerPort();
+	glPort = UpnpGetServerPort();
 
 	LOG_INFO("Binding to %s:%d", IP, glPort);
 

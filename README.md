@@ -21,7 +21,9 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 5. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 
 
-6. In Docker, you must use 'host' mode to enable audio webserver
+6. Don't use firewall or set ports using -g (or \<ports\> parameter) otherwise incoming player requests will be blocked. You also must open port 5353 for mDNS and set the UPnP listening port for airupnp using `-b` (or \<upnp_socket\> parameter)
+
+7. In Docker, you must use 'host' mode to enable audio webserver
 
 ## Running
 
@@ -46,6 +48,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Chromecast groups are supported. Use `-v` to set the media volume factor for all devices (0.5 by default)
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
+- Use `-b [ip][:port]`to set network interface to use and (for airupnp only) port for UPnP to listen to (default is first available starting from 49152)
 - Use `-a <port>[:<count>]`to specify a port range 
 - Use `-g -3|-1|0|` to tweak http transfer mode where -3 = chunked, -1 = no content-length and 0 = fixed (dummy) length (see "HTTP content-length" below)"
 - Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 
@@ -75,7 +78,7 @@ These are the global parameters
 
 - `log_limit <-1 | n>` 		: (default -1) when using log file, limits its size to 'n' MB (-1 = no limit)
 - `max_players`			: set the maximum of players (default 32)
-- `ports <port>[:<count>]` 	: set port range to use
+- `ports <port>[:<count>]` 	: set port range to use (see -a)
 
 ## Start automatically in Linux
 

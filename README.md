@@ -21,7 +21,7 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 5. Don't use firewall or set ports using options below and open them. 
 	- Port 5353 (UDP) is needed to listen to mDNS messages
-	- Each device uses 1 port permanently (RTSP) and when playing it adds 1 port for HTTP and 3 ports for RTP (use `-g`or \<ports\> parameter, default is random)
+	- Each device uses 1 port permanently (RTSP) and when playing adds 1 port for HTTP and 3 ports for RTP (use `-g`or \<ports\> parameter, default is random)
 	- UPnP adds one extra port for discovery (use `-b` or \<upnp_socket\> parameter, default is 49152 and user value must be *above* this)
 
 6. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 

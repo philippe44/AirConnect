@@ -19,12 +19,15 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
-5. Don't use firewall or set ports using -g (or \<ports\> parameter), open port 5353 for mDNS and set UPnP listening port (airupnponly) using `-b` (or \<upnp_socket\> parameter)
+5. Don't use firewall or set ports using options below and open them. 
+- Port 5353 (UDP) is needed to listen to mDNS messages
+- Each device uses 1 port permanently (RTSP) and when playing it adds 1 port for HTTP and 3 ports for RTP (use `-g`or \<ports\> parameter, default is random)
+- UPnP adds one extra port for discovery (use `-b` or \<upnp_socket\> parameter, default is 49152 and user value must be *above* this)
 
 6. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 
 ter)
 
-7. In Docker, you must use 'host' mode to enable audio webserver
+7. In Docker, you must use 'host' mode to enable audio webserver. Note that you can't have a NAT between your devices and the machine where AirConnect runs.
 
 ## Running
 

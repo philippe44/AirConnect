@@ -66,7 +66,7 @@ UpnpClient_Handle 	glControlPointHandle;
 struct sMR			*glMRDevices;
 int					glMaxDevices = MAX_DEVICES;
 u16_t				glPortBase, glPortRange;
-char				glUPnPSocket[128] = "?";
+char				glBinding[128] = "?";
 
 log_level	main_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
@@ -153,7 +153,7 @@ static char usage[] =
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -b <server>[:<port>]\tnetwork interface and UPnP port to use\n"
+		   "  -b <ip>[:<port>]\tnetwork interface and UPnP port to use\n"
 		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
 		   "  -c <mp3[:<rate>]|flc[:0..9]|wav|pcm>\taudio format send to player\n"
   		   "  -g <-3|-1|0>\t\tHTTP content-length mode (-3:chunked, -1:none, 0:fixed)\n"
@@ -913,7 +913,7 @@ static void *MainThread(void *args)
 		}
 
 		// try to detect IP change when auto-detect
-		if (strstr(glUPnPSocket, "?")) {
+		if (strstr(glBinding, "?")) {
 			struct in_addr Host;
 			Host.s_addr = get_localhost(NULL);
 			if (Host.s_addr != INADDR_ANY && Host.s_addr != glHost.s_addr) {
@@ -1100,9 +1100,8 @@ static bool Start(bool cold)
 
 	glHost.s_addr = INADDR_ANY;
 
-	// Linux can't do a sscanf with an optional %[^:]
-	if (!strstr(glUPnPSocket, "?"))
-		if (!sscanf(glUPnPSocket, "%[^:]:%u", IP, &glPort)) sscanf(glUPnPSocket, ":%u", &glPort);
+	// sscanf does not caprure empty strings
+	if (!strstr(glBinding, "?") && !sscanf(glBinding, "%[^:]:%u", IP, &glPort)) sscanf(glBinding, ":%u", &glPort);
 
 	if (!*IP) {
 		struct in_addr host;
@@ -1280,7 +1279,7 @@ bool ParseArgs(int argc, char **argv) {
 
 		switch (opt[0]) {
 		case 'b':
-			strcpy(glUPnPSocket, optarg);
+			strcpy(glBinding, optarg);
 			break;
 		case 'a':
 			sscanf(optarg, "%hu:%hu", &glPortBase, &glPortRange);

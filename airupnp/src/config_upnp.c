@@ -80,7 +80,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, root, false, "raop_log",level2debug(raop_loglevel));
 	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
 	XMLUpdateNode(doc, root, false, "max_players", "%d", (int) glMaxDevices);
-	XMLUpdateNode(doc, root, false, "upnp_socket", glUPnPSocket);
+	XMLUpdateNode(doc, root, false, "binding", glBinding);
 	XMLUpdateNode(doc, root, false, "ports", "%hu:%hu", glPortBase, glPortRange);
 
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
@@ -89,7 +89,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "upnp_max", "%d", glMRConfig.UPnPMax);
 	XMLUpdateNode(doc, common, false, "codec", glMRConfig.Codec);
 	XMLUpdateNode(doc, common, false, "metadata", "%d", glMRConfig.Metadata);
-	XMLUpdateNode(doc, common, false, "artwork", glMRConfig.ArtWork);
+	XMLUpdateNode(doc, common, false, "artwork", "%s", glMRConfig.ArtWork);
 	XMLUpdateNode(doc, common, false, "latency", glMRConfig.Latency);
 	XMLUpdateNode(doc, common, false, "drift", "%d", glMRConfig.Drift);
 
@@ -182,7 +182,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "raop_log")) raop_loglevel = debug2level(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
 	if (!strcmp(name, "max_players")) glMaxDevices = atol(val);
-	if (!strcmp(name, "upnp_socket")) strcpy(glUPnPSocket, val);
+	if (!strcmp(name, "binding")) strcpy(glBinding, val);
 	if (!strcmp(name, "ports")) sscanf(val, "%hu:%hu", &glPortBase, &glPortRange);
  }
 

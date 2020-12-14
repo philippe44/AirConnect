@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.41.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.42.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -48,6 +48,7 @@ struct sMR	*glMRDevices;
 u16_t		glPortBase, glPortRange;
 s32_t		glLogLimit = -1;
 int			glMaxDevices = 32;
+char		glBinding[16] = "?";
 
 log_level	main_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
@@ -91,7 +92,6 @@ static bool					glInteractive = true;
 static char					*glPidFile = NULL;
 static bool					glAutoSaveConfigFile = false;
 static bool					glGracefullShutdown = true;
-static char 				glInterface[16] = "?";
 static void					*glConfigID = NULL;
 static char					glConfigName[_STR_LEN_] = "./config.xml";
 static struct mdnsd*		glmDNSServer = NULL;
@@ -100,7 +100,7 @@ static char usage[] =
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -b <address>\t\tnetwork address to bind to\n"
+		   "  -b <ip>\t\tnetwork address to bind to\n"
 		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
 		   "  -c <mp3[:<rate>]|flc[:0..9]|wav>\taudio format send to player\n"
    		   "  -v <0..1>\t\t group MediaVolume factor\n"
@@ -579,7 +579,7 @@ static void *MainThread(void *args)
 		}
 
 		// try to detect IP change when auto-detect
-		if (strstr(glInterface, "?")) {
+		if (strstr(glBinding, "?")) {
 			struct in_addr host;
 			host.s_addr = get_localhost(NULL);
 			if (host.s_addr != INADDR_ANY && host.s_addr != glHost.s_addr) {
@@ -705,7 +705,7 @@ static bool Start(bool cold)
 	char hostname[_STR_LEN_];
 
 	glHost.s_addr = get_localhost(&glHostName);
-	if (!strstr(glInterface, "?")) glHost.s_addr = inet_addr(glInterface);
+	if (!strstr(glBinding, "?")) glHost.s_addr = inet_addr(glBinding);
 	snprintf(hostname, _STR_LEN_, "%s.local", glHostName);
 
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
@@ -836,7 +836,7 @@ bool ParseArgs(int argc, char **argv) {
 			strcpy(glMRConfig.Codec, optarg);
 			break;
 		case 'b':
-			strcpy(glInterface, optarg);
+			strcpy(glBinding, optarg);
 			break;
 		case 'a':
 			sscanf(optarg, "%hu:%hu", &glPortBase, &glPortRange);

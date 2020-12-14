@@ -70,12 +70,13 @@ void SaveConfig(char *name, void *ref, bool full)
 		common = (IXML_Node*) XMLAddNode(doc, root, "common", NULL);
 	}
 
-	XMLUpdateNode(doc, root, false, "main_log",level2debug(main_loglevel));
-	XMLUpdateNode(doc, root, false, "cast_log",level2debug(cast_loglevel));
-	XMLUpdateNode(doc, root, false, "util_log",level2debug(util_loglevel));
+	XMLUpdateNode(doc, root, false, "main_log", level2debug(main_loglevel));
+	XMLUpdateNode(doc, root, false, "cast_log", level2debug(cast_loglevel));
+	XMLUpdateNode(doc, root, false, "util_log", level2debug(util_loglevel));
 	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
 	XMLUpdateNode(doc, root, false, "max_players", "%d", (int) glMaxDevices);
 	XMLUpdateNode(doc, root, false, "ports", "%hu:%hu", glPortBase, glPortRange);
+	XMLUpdateNode(doc, root, false, "binding", glBinding);
 
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "stop_receiver", "%d", (int) glMRConfig.StopReceiver);
@@ -84,7 +85,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "drift", "%d", glMRConfig.Drift);
 	XMLUpdateNode(doc, common, false, "codec", glMRConfig.Codec);
 	XMLUpdateNode(doc, common, false, "metadata", "%d", glMRConfig.Metadata);
-	XMLUpdateNode(doc, common, false, "artwork", glMRConfig.ArtWork);
+	XMLUpdateNode(doc, common, false, "artwork", "%s", glMRConfig.ArtWork);
 
 	for (i = 0; i < glMaxDevices; i++) {
 		IXML_Node *dev_node;
@@ -164,6 +165,7 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
 	if (!strcmp(name, "max_players")) glMaxDevices = atol(val);
 	if (!strcmp(name, "ports")) sscanf(val, "%hu:%hu", &glPortBase, &glPortRange);
+	if (!strcmp(name, "binding")) strcpy(glBinding, val);
  }
 
 

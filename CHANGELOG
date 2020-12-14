@@ -1,3 +1,7 @@
+0.2.42.0
+ - a bit of cleaning wrt below issue
+ - use "binding" as general parameter name for upnp/cast
+ 
 0.2.41.2
  - %&@!* of Linux does not handle sscanf with %[^:]:%u when the first string is empty
  

@@ -91,5 +91,6 @@ extern tMRConfig			glMRConfig;
 extern struct sMR			*glMRDevices;
 extern int					glMaxDevices;
 extern unsigned short		glPortBase, glPortRange;
+extern char					glBinding[16];
 
 #endif

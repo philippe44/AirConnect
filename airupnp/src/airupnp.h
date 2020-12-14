@@ -111,7 +111,7 @@ extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern struct sMR			*glMRDevices;
 extern int					glMaxDevices;
-extern char					glUPnPSocket[];
+extern char					glBinding[128];
 extern unsigned short		glPortBase, glPortRange;
 
 int 			MasterHandler(Upnp_EventType EventType, void *Event, void *Cookie);

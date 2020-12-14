@@ -10,8 +10,8 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 1. Pre-built binaries are in bin/ directory of this repository. You can download the whole repository as a zip file, clone it using git, or go to the [bin/ folder in the web interface](https://github.com/philippe44/AirConnect/tree/master/bin) and download the version that matches your OS. It's also possible to download files manually in a terminal by typing (e.g. for aircast arm version)<br/>`wget https://raw.githubusercontent.com/philippe44/AirConnect/master/bin/aircast-arm` 
 
-* For **Chromecast**, the file is `aircast-<platform>` (so `aircast-osx-multi` for Chromecast on OS X.) 
-* For **UPnP/Sonos**, the file is `airupnp-<platform>` (so `airupnp-osx-multi` for UPnP/Sonos on OS X.) 
+	* For **Chromecast**, the file is `aircast-<platform>` (so `aircast-osx-multi` for Chromecast on OS X.) 
+	* For **UPnP/Sonos**, the file is `airupnp-<platform>` (so `airupnp-osx-multi` for UPnP/Sonos on OS X.) 
 
 2. For Windows, download all the .dll as well.
 
@@ -19,12 +19,15 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
-5. Don't use firewall or set ports using -g (or \<ports\> parameter) otherwise incoming player requests will be blockedYou must open port 5353 for mDNS and set the UPnP listening port for airupnp using `-b` (or \<upnp_socket\> parameter
+5. Don't use firewall or set ports using options below and open them. 
+	- Port 5353 (UDP) is needed to listen to mDNS messages
+	- Each device uses 1 port permanently (RTSP) and when playing adds 1 port for HTTP and 3 ports for RTP (use `-g`or \<ports\> parameter, default is random)
+	- UPnP adds one extra port for discovery (use `-b` or \<upnp_socket\> parameter, default is 49152 and user value must be *above* this)
 
 6. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 
 ter)
 
-7. In Docker, you must use 'host' mode to enable audio webserver
+7. In Docker, you must use 'host' mode to enable audio webserver. Note that you can't have a NAT between your devices and the machine where AirConnect runs.
 
 ## Running
 
@@ -49,7 +52,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Chromecast groups are supported. Use `-v` to set the media volume factor for all devices (0.5 by default)
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
-- Use `-b [ip][:port]`to set network interface to use and (for airupnp only) port for UPnP to listen to (default is first available starting from 49152)
+- Use `-b [ip][:port]`to set network interface to use and, for airupnp only, UPnP port to listen to (must be above the default 49152)
 - Use `-a <port>[:<count>]`to specify a port range 
 - Use `-g -3|-1|0|` to tweak http transfer mode where -3 = chunked, -1 = no content-length and 0 = fixed (dummy) length (see "HTTP content-length" below)"
 - Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 

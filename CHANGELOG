@@ -1,3 +1,6 @@
+0.2.42.1
+ - re-align airupnp & aircast version numbers
+ 
 0.2.42.0
  - a bit of cleaning wrt below issue
  - use "binding" as general parameter name for upnp/cast

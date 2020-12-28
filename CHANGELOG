@@ -1,3 +1,7 @@
+0.2.43.0
+ - don't remove unresponsive UPnP devices when playing
+ - don't remove CC devices that still respond to ping
+ 
 0.2.42.1
  - re-align airupnp & aircast version numbers
  

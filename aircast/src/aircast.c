@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.42.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.43.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -394,6 +394,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 {
 	struct sMR *Device;
 	mDNSservice_t *s;
+	int j;
 
 	if (*loglevel == lDEBUG) {
 		LOG_DEBUG("----------------- round ------------------", NULL);
@@ -421,7 +422,6 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		char *UDN = NULL, *Name = NULL;
 		char *Model;
 		bool Group;
-		int j;
 
 		// is the mDNS record usable or announce made on behalf
 		if ((UDN = GetmDNSAttribute(s->attr, s->attr_count, "id")) == NULL ||
@@ -430,29 +430,23 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		// is that device already here
 		if ((Device = SearchUDN(UDN)) != NULL) {
 			// a service is being removed
+			Device->Remove = s->expired;
 			if (s->expired) {
-				bool Remove = true;
 				// groups need to find if the removed service is the master
 				if (Device->Group) {
 					// there are some other master candidates
 					if (Device->GroupMaster->Next) {
-						Remove = false;
+						Device->Remove = false;
 						// changing the master, so need to update cast params
 						if (Device->GroupMaster->Host.s_addr == s->host.s_addr) {
 							free(pop_item((list_t**) &Device->GroupMaster));
 							UpdateCastDevice(Device->CastCtx, Device->GroupMaster->Host, Device->GroupMaster->Port);
-							Remove = false;
 						} else {
 							struct sGroupMember *Member = Device->GroupMaster;
 							while (Member && (Member->Host.s_addr != s->host.s_addr)) Member = Member->Next;
 							if (Member) free(remove_item((list_t*) Member, (list_t**) &Device->GroupMaster));
 						}
 					}
-				}
-				if (Remove) {
-					LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
-					raop_delete(Device->Raop);
-					RemoveCastDevice(Device);
 				}
 			// device update - when playing ChromeCast update their TXT records
 			} else {
@@ -524,6 +518,16 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 
 		NFREE(UDN);
 		NFREE(Name);
+	}
+
+	// look for devices to be removed
+	for (j = 0; j < glMaxDevices; j++) {
+		Device = glMRDevices + j;
+		if (Device->Running && Device->Remove && !CastIsConnected(Device->CastCtx)) {
+			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
+			raop_delete(Device->Raop);
+			RemoveCastDevice(Device);
+		}
 	}
 
 	if (glAutoSaveConfigFile || glDiscovery) {

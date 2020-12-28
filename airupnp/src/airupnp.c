@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.42.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.43.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -725,7 +725,7 @@ static void *UpdateThread(void *args)
 
 				for (i = 0; i < glMaxDevices; i++) {
 					Device = glMRDevices + i;
-					if (Device->Running &&
+					if (Device->Running && (Device->State != PLAYING || Device->RaopState != RAOP_PLAY) &&
 						((Device->LastSeen + PRESENCE_TIMEOUT) - now > PRESENCE_TIMEOUT	||
 						Device->ErrorCount > MAX_ACTION_ERRORS)) {
 

@@ -84,6 +84,7 @@ struct sMR {
 		struct in_addr		Host;
 		u16_t				Port;
    } *GroupMaster;
+   bool Remove;
 };
 
 extern s32_t				glLogLimit;

@@ -242,7 +242,7 @@ If you want to recompile, you'll need:
 - https://github.com/akheron/jansson
 - https://github.com/philippe44/mDNS-SD (use fork v2)
 - https://github.com/philippe44/TinySVCmDNS
-- https://github.com/macosforge/alac
+- https://github.com/philippe44/alac
 - https://github.com/mrjimenez/pupnp (I'm using 1.6.19)
 - https://xiph.org/flac/
 - http://www.sourceware.org/pthreads-win32/

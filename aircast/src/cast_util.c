@@ -37,8 +37,10 @@ bool CastIsConnected(struct sCastCtx *Ctx)
 {
 	bool status;
 
+	if (!Ctx) return false;
+
 	pthread_mutex_lock(&Ctx->Mutex);
-	status = (Ctx->ssl != NULL);
+	status = Ctx->Status >= CAST_CONNECTED;
 	pthread_mutex_unlock(&Ctx->Mutex);
 	return status;
 }
@@ -282,9 +284,11 @@ void CastPowerOn(struct sCastCtx *Ctx)
 void CastRelease(struct sCastCtx *Ctx)
 {
 	pthread_mutex_lock(&Ctx->Mutex);
-	SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-					"{\"type\":\"STOP\",\"requestId\":%d}", Ctx->reqId++);
-	Ctx->Status = CAST_CONNECTED;
+	if (Ctx->Status != CAST_DISCONNECTED) {
+		SendCastMessage(Ctx, CAST_RECEIVER, NULL,
+						"{\"type\":\"STOP\",\"requestId\":%d}", Ctx->reqId++);
+		Ctx->Status = CAST_CONNECTED;
+	}
 	pthread_mutex_unlock(&Ctx->Mutex);
 }
 

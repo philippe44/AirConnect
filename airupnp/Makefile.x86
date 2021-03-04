@@ -3,9 +3,9 @@ LDFLAGS ?= -s -lpthread -ldl -lm -lrt -lz -L.
 # -l:libssl.a -l:libcrypto.a to force link with static version
 # for LD debug -s
 
-OBJ					= bin/x86
-EXECUTABLE 			= ../bin/airupnp-x86
-#EXECUTABLE_STATIC	= ../bin/airupnp-x86-static
+OBJ			= bin/x86
+EXECUTABLE 		= ../bin/airupnp-x86
+EXECUTABLE_STATIC	= ../bin/airupnp-x86-static
 
 include Makefile
 

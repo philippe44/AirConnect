@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.43.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.44.1"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -638,6 +638,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 	Device->Raop 		= NULL;
 	Device->RaopState	= RAOP_STOP;
 	Device->Group 		= group;
+	Device->Remove		= false;
 	Device->VolumeStampRx = Device->VolumeStampTx = gettime_ms() - 2000;
 
 	if (group) {

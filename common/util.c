@@ -1118,7 +1118,7 @@ char *trim(char *s)
 /*----------------------------------------------------------------------------*/
 bool http_parse(int sock, char *method, char *resource, char *proto, key_data_t *rkd, char **body, int *len)
 {
-	char line[256], *dp;
+	char line[512], *dp;
 	unsigned j;
 	int i, timeout = 100;
 

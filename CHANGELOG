@@ -1,3 +1,9 @@
+0.2.44.1
+ - (aircast) reset "Remove" flag when adding 
+ 
+0.2.44.0
+ - openssl 1.1.x compatibility
+ 
 0.2.43.1
  - address valgrind complaints
  

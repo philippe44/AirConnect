@@ -102,3 +102,4 @@ _backup/
 *.#*
 *.bin
 *.log
+tests/

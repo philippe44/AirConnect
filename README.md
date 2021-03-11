@@ -77,7 +77,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `metadata <0|1>`	: send metadata to player (only for mp3 codec and if player supports ICY protocol)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
 - `artwork`		: an URL to an artwork to be displayed on player
-- `flush <0|1>`		: (default 1) set AirPlay *FLUSH* commands response (see also --noflush in **Misc tips** below)
+- `flush <0|1>`		: (default 1) set AirPlay *FLUSH* commands response (see also --noflush in "**Misc tips**" section)
 
 These are the global parameters
 

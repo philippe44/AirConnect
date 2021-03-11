@@ -31,7 +31,7 @@ typedef void (*http_cb_t)(void *owner, struct key_data_s *headers, struct key_da
 
 struct raop_ctx_s* raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 						  char *model, unsigned char mac[6], char *codec, bool metadata,
-						  bool drift, char *latencies, void *owner,
+						  bool drift, bool flush, char *latencies, void *owner,
 						  raop_cb_t raop_cb, http_cb_t http_cb,
 						  unsigned short port_base, unsigned short port_range,
 						  int http_length);

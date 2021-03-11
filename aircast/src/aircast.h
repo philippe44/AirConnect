@@ -54,6 +54,7 @@ typedef struct sMRConfig
 	char		Name[_STR_LEN_];
 	char		Codec[_STR_LEN_];
 	bool		Metadata;
+	bool		Flush;
 	double		MediaVolume;
 	u8_t		mac[6];
 	char		Latency[_STR_LEN_];

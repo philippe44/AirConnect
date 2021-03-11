@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.44.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.50.0"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -80,6 +80,7 @@ tMRConfig			glMRConfig = {
 							1,			// UPnPMax
 							true,		// SendMetaData
 							false,		// SendCoverArt
+							true,		// Flush
 							100,		// MaxVolume
 							"flc",	    // Codec
 							true,		// Metadata
@@ -156,7 +157,7 @@ static char usage[] =
 		   "  -b <ip>[:<port>]\tnetwork interface and UPnP port to use\n"
 		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
 		   "  -c <mp3[:<rate>]|flc[:0..9]|wav|pcm>\taudio format send to player\n"
-  		   "  -g <-3|-1|0>\t\tHTTP content-length mode (-3:chunked, -1:none, 0:fixed)\n"
+		   "  -g <-3|-1|0>\t\tHTTP content-length mode (-3:chunked, -1:none, 0:fixed)\n"
 		   "  -u <version>\tset the maximum UPnP version for search (default 1)\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
@@ -176,6 +177,7 @@ static char usage[] =
 		   "  -Z \t\t\tNOT interactive\n"
 		   "  -k \t\t\tImmediate exit on SIGQUIT and SIGTERM\n"
 		   "  -t \t\t\tLicense terms\n"
+   		   "  --noflush\t\tignore flush command (wait for teardown to stop)\n"
 		   "\n"
 		   "Build options:"
 #if LINUX
@@ -309,24 +311,21 @@ void HandleRAOP(void *owner, raop_event_t event, void *param)
 			break;
 		case RAOP_FLUSH:
 			LOG_INFO("[%p]: Flush", Device);
-			AVTBasic(Device, "Pause");
+			AVTStop(Device);
+			Device->ExpectStop = true;
 			Device->RaopState = event;
-			//Device->ExpectStop = true;
 			break;
 		case RAOP_PLAY: {
 			char *uri, *mp3radio = "";
 
-			if (Device->RaopState != RAOP_PLAY && Device->RaopState != RAOP_FLUSH) {
+			if (Device->RaopState != RAOP_PLAY) {
+				static int count;
 				if (strcasestr(Device->Config.Codec, "mp3") && *Device->Service[TOPOLOGY_IDX].ControlURL) {
 					mp3radio = "x-rincon-mp3radio://";
 					LOG_INFO("[%p]: Sonos live stream", Device);
 				}
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-				asprintf(&uri, "%shttp://%s:%u/stream.%s", mp3radio, inet_ntoa(glHost),
-							    *((short unsigned*) param),	Device->Config.Codec);
-#pragma GCC diagnostic pop
-
+				(void)!asprintf(&uri, "%shttp://%s:%u/stream-%u.%s", mp3radio, inet_ntoa(glHost),
+								*((short unsigned*) param),	count++, Device->Config.Codec);
 				AVTSetURI(Device, uri, &Device->MetaData, Device->ProtocolInfo);
 				NFREE(uri);
 			}
@@ -798,8 +797,9 @@ static void *UpdateThread(void *args)
 							Device->Master = NULL;
 							Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 								   "airupnp", Device->Config.mac, Device->Config.Codec,
-								   Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-								   Device, HandleRAOP, HandleHTTP, glPortBase, glPortRange,
+								   Device->Config.Metadata, Device->Config.Drift, Device->Config.Flush,
+								   Device->Config.Latency, Device,
+								   HandleRAOP, HandleHTTP, glPortBase, glPortRange,
 								   Device->Config.HTTPLength ? Device->Config.HTTPLength : HTTP_FIXED_LENGTH);
 							pthread_mutex_unlock(&Device->Mutex);
 						} else if (Master && (!Device->Master || Device->Master == Device)) {
@@ -853,8 +853,9 @@ static void *UpdateThread(void *args)
 					// create a new AirPlay
 					Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 									   "airupnp", Device->Config.mac, Device->Config.Codec,
-									   Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-									   Device, HandleRAOP, HandleHTTP, glPortBase, glPortRange,
+									   Device->Config.Metadata, Device->Config.Drift, Device->Config.Flush,
+									   Device->Config.Latency, Device,
+									   HandleRAOP, HandleHTTP, glPortBase, glPortRange,
 									   Device->Config.HTTPLength ? Device->Config.HTTPLength : HTTP_FIXED_LENGTH);
 					if (!Device->Raop) {
 						LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
@@ -1260,7 +1261,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < sizeof(cmdline)); i++) {
 		strcat(cmdline, argv[i]);
-		strcat(cmdline, " ");                                                                        
+		strcat(cmdline, " ");
 	}
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
@@ -1268,11 +1269,10 @@ bool ParseArgs(int argc, char **argv) {
 		if (strstr("abxdpifmnolcug", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZIkr", opt)) {
+		} else if (strstr("tzZIkr", opt) || opt[0] == '-') {
 			optarg = NULL;
 			optind += 1;
-		}
-		else {
+		} else {
 			printf("%s", usage);
 			return false;
 		}
@@ -1357,6 +1357,9 @@ bool ParseArgs(int argc, char **argv) {
 		case 't':
 			printf("%s", license);
 			return false;
+		case '-':
+			if (!strcmp(opt + 1, "noflush")) glMRConfig.Flush = false;
+			break;
 		default:
 			break;
 		}

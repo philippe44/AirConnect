@@ -61,6 +61,7 @@ struct sService {
 	int			UPnPMax;
 	bool		SendMetaData;
 	bool		SendCoverArt;
+	bool 		Flush;
 	int			MaxVolume;
 	char		Codec[_STR_LEN_];
 	bool		Metadata;

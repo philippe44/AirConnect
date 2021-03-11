@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.44.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.50.1"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -61,6 +61,7 @@ tMRConfig			glMRConfig = {
 							"",		// name
 							"flc",	// use_flac
 							true,	// metadata
+							true,	// flush
 							MEDIA_VOLUME,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 							"",		// rtp/http_latency (0 = use client's request)
@@ -118,6 +119,7 @@ static char usage[] =
 		   "  -Z \t\t\tNOT interactive\n"
 		   "  -k \t\t\tImmediate exit on SIGQUIT and SIGTERM\n"
 		   "  -t \t\t\tLicense terms\n"
+   		   "  --noflush\t\tignore flush command (wait for teardown to stop)\n"
 		   "\n"
 		   "Build options:"
 #if LINUX
@@ -206,11 +208,10 @@ void raop_cb(void *owner, raop_event_t event, void *param)
 
 			LOG_INFO("[%p]: Play", Device);
 			if (Device->RaopState != RAOP_PLAY) {
+				static int count;
 				char *uri, *ContentType;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-				asprintf(&uri, "http://%s:%u/stream", inet_ntoa(glHost), *((short unsigned*) param));
-#pragma GCC diagnostic pop
+
+				(void)!asprintf(&uri, "http://%s:%u/stream-%u", inet_ntoa(glHost), *((short unsigned*) param), count++);
 				if (!strcasecmp(Device->Config.Codec, "mp3")) ContentType = "audio/mp3";
 				else if (!strcasecmp(Device->Config.Codec, "wav")) ContentType = "audio/wav";
 				else ContentType = "audio/flac";
@@ -508,7 +509,8 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		if (AddCastDevice(Device, Name, UDN, Group, s->addr, s->port) && !glDiscovery) {
 			Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 										"aircast", Device->Config.mac, Device->Config.Codec,
-										Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
+										Device->Config.Metadata, Device->Config.Drift,
+										Device->Config.Flush, Device->Config.Latency,
 										Device, raop_cb, NULL, glPortBase, glPortRange, -1);
 			if (!Device->Raop) {
 				LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
@@ -898,6 +900,9 @@ bool ParseArgs(int argc, char **argv) {
 		case 't':
 			printf("%s", license);
 			return false;
+		case '-':
+			if (!strcmp(opt + 1, "noflush")) glMRConfig.Flush = false;
+			break;
 		default:
 			break;
 		}

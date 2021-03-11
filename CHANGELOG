@@ -1,3 +1,8 @@
+0.2.50.0
+ - flush was broken since 0.2.27.0
+ - add --noflush options (and force :f in latencies if set)
+ - increment stream index at each SetURI/LOAD to make it unique
+ 
 0.2.44.1
  - (aircast) reset "Remove" flag when adding 
  

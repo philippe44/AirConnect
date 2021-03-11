@@ -50,6 +50,7 @@ typedef struct raop_ctx_s {
 	bool running;
 	encode_t encode;
 	bool drift;
+	bool flush;
 	pthread_t thread, search_thread;
 	unsigned char mac[6];
 	struct {
@@ -92,7 +93,7 @@ extern char private_key[];
 /*----------------------------------------------------------------------------*/
 struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 						char *model, unsigned char mac[6], char *codec, bool metadata,
-						bool drift,	char *latencies, void *owner,
+						bool drift,	bool flush, char *latencies, void *owner,
 						raop_cb_t raop_cb, http_cb_t http_cb,
 						unsigned short port_base, unsigned short port_range,
 						int http_length ) {
@@ -119,7 +120,8 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	ctx->host = host;
 	ctx->raop_cb = raop_cb;
 	ctx->http_cb = http_cb;
-	ctx->latencies = latencies;
+	ctx->flush = flush;
+	(void)!asprintf(&ctx->latencies, "%s%s", latencies, flush ? "" : ":f");
 	ctx->owner = owner;
 	ctx->drift = drift;
 	if (!strcasecmp(codec, "pcm")) ctx->encode.codec = CODEC_PCM;
@@ -151,10 +153,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	}
 
 	// set model
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-	asprintf(&(txt[0]), "am=%s", model);
-#pragma GCC diagnostic pop
+	(void)!asprintf(&(txt[0]), "am=%s", model);
 	id = malloc(strlen(name) + 12 + 1 + 1);
 
 	memcpy(ctx->mac, mac, 6);
@@ -190,10 +189,7 @@ void raop_update(struct raop_ctx_s *ctx, char *name, char *model) {
 	mdns_service_remove(ctx->svr, ctx->svc);
 
 	// set model
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-	asprintf(&(txt[0]), "am=%s", model);
-#pragma GCC diagnostic pop
+	(void)!asprintf(&(txt[0]), "am=%s", model);
 	id = malloc(strlen(name) + 12 + 1 + 1);
 	for (i = 0; i < 6; i++) sprintf(id + i*2, "%02X", ctx->mac[i]);
 	// mDNS instance name length cannot be more than 63
@@ -243,6 +239,7 @@ void raop_delete(struct raop_ctx_s *ctx) {
 	NFREE(ctx->rtsp.aeskey);
 	NFREE(ctx->rtsp.aesiv);
 	NFREE(ctx->rtsp.fmtp);
+	free(ctx->latencies);
 
 	mdns_service_remove(ctx->svr, ctx->svc);
 
@@ -272,10 +269,7 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 			double Volume = *((double*) param);
 
 			Volume = Volume ? (Volume - 1) * 30 : -144;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-			asprintf(&command,"setproperty?dmcp.device-volume=%0.4lf", Volume);
-#pragma GCC diagnostic pop
+			(void)!asprintf(&command,"setproperty?dmcp.device-volume=%0.4lf", Volume);
 			break;
 		}
 		default:
@@ -300,10 +294,7 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 		int len;
 		key_data_t headers[4] = { {NULL, NULL} };
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-		asprintf(&method, "GET /ctrl-int/1/%s HTTP/1.0", command);
-#pragma GCC diagnostic pop
+		(void)!asprintf(&method, "GET /ctrl-int/1/%s HTTP/1.0", command);
 		kd_add(headers, "Active-Remote", ctx->active_remote.id);
 		kd_add(headers, "Connection", "close");
 
@@ -478,10 +469,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 		if (cport * tport * ht.cport * ht.tport * ht.aport * ht.hport && ht.ctx) {
 			char *transport;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-			asprintf(&transport, "RTP/AVP/UDP;unicast;mode=record;control_port=%u;timing_port=%u;server_port=%u", ht.cport, ht.tport, ht.aport);
-#pragma GCC diagnostic pop
+			(void) !asprintf(&transport, "RTP/AVP/UDP;unicast;mode=record;control_port=%u;timing_port=%u;server_port=%u", ht.cport, ht.tport, ht.aport);
 			LOG_DEBUG("[%p]: http=(%hu) audio=(%hu:%hu), timing=(%hu:%hu), control=(%hu:%hu)", ctx, ht.hport, 0, ht.aport, tport, ht.tport, cport, ht.cport);
 			kd_add(resp, "Transport", transport);
 			kd_add(resp, "Session", "DEADBEEF");
@@ -522,7 +510,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
         }
 
 		// only send FLUSH if useful (discards frames above buffer head and top)
-		if (ctx->ht && hairtunes_flush(ctx->ht, seqno, rtptime, true)) {
+		if (ctx->ht && ctx->flush && hairtunes_flush(ctx->ht, seqno, rtptime, true)) {
 			ctx->raop_cb(ctx->owner, RAOP_FLUSH, &ctx->hport);
 			hairtunes_flush_release(ctx->ht);
 		}

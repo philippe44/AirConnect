@@ -77,6 +77,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `metadata <0|1>`	: send metadata to player (only for mp3 codec and if player supports ICY protocol)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
 - `artwork`		: an URL to an artwork to be displayed on player
+- `flush <0|1>`		: ignore AirPlay *FLUSH* commands to avoid STOP/PLAY that happen during pause or track skip (see also --noflush below)
 
 These are the global parameters
 
@@ -180,6 +181,8 @@ Note: you can use the `-i config.xml` to generate a config file if you do not ha
 - When players disappear regularly, it might be that your router is filtering out multicast packets. For example, for a Asus AC-RT68U, you have to login by ssh and run echo 0 > /sys/class/net/br0/bridge/multicast_snooping but it does not stay after a reboot.
 
 - Lots of users seems to have problem with Unify and broadcasting / finding players. Here is a guide https://www.neilgrogan.com/ubnt-sonos/ made by somebody who fixes the issue for his Sonos
+
+- Some AirPlay controller send a FLUSH and immediately start sending new audio when skipping track. This causes AirConnect to issue a STOP and almost immediately a PLAY command which seems to be a problem for certain players (Sonos in some cases). A possible workaround is to ignore FLUSH request (see config file or use --noflush on the command line) but this has side effect on pause as silence frames are sent. At best restart is delayed and worse case it might not work with some codec (flac)
 
 ## HTTP & UPnP specificities
 ### HTTP content-length and transfer modes

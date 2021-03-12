@@ -38,7 +38,7 @@
 #include "log_util.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.50.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.50.1"" ("__DATE__" @ "__TIME__")"
 
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
@@ -310,10 +310,12 @@ void HandleRAOP(void *owner, raop_event_t event, void *param)
 			Device->RaopState = event;
 			break;
 		case RAOP_FLUSH:
-			LOG_INFO("[%p]: Flush", Device);
-			AVTStop(Device);
-			Device->ExpectStop = true;
-			Device->RaopState = event;
+			if (Device->Config.Flush) {
+				LOG_INFO("[%p]: Flush", Device);
+				AVTStop(Device);
+				Device->ExpectStop = true;
+				Device->RaopState = event;
+            }
 			break;
 		case RAOP_PLAY: {
 			char *uri, *mp3radio = "";

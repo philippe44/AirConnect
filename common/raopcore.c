@@ -121,7 +121,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	ctx->raop_cb = raop_cb;
 	ctx->http_cb = http_cb;
 	ctx->flush = flush;
-	(void)!asprintf(&ctx->latencies, "%s%s", latencies, flush ? "" : ":f");
+	ctx->latencies = strdup(latencies);
 	ctx->owner = owner;
 	ctx->drift = drift;
 	if (!strcasecmp(codec, "pcm")) ctx->encode.codec = CODEC_PCM;
@@ -510,7 +510,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
         }
 
 		// only send FLUSH if useful (discards frames above buffer head and top)
-		if (ctx->ht && ctx->flush && hairtunes_flush(ctx->ht, seqno, rtptime, true)) {
+		if (ctx->ht && hairtunes_flush(ctx->ht, seqno, rtptime, true, !ctx->flush)) {
 			ctx->raop_cb(ctx->owner, RAOP_FLUSH, &ctx->hport);
 			hairtunes_flush_release(ctx->ht);
 		}

@@ -82,7 +82,6 @@ static log_level 	*loglevel = &raop_loglevel;
 enum { DATA, CONTROL, TIMING };
 static char *mime_types[] = { "audio/mp3", "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav" };
 
-
 static struct wave_header_s {
 	u8_t 	chunk_id[4];
 	u8_t	chunk_size[4];
@@ -160,6 +159,7 @@ typedef struct hairtunes_s {
 	u32_t silence_count;	// counter for startup silence frames
 	u32_t filled_frames;    // silence frames in current silence episode
 	bool http_fill;         // fill when missing or just wait
+	bool pause;				// set when pause and silent frames must be produced
 	int skip;				// number of frames to skip to keep sync alignement
 	abuf_t audio_buffer[BUFFER_FRAMES];
 	int http_listener;
@@ -341,7 +341,6 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	}
 	ctx->http_length = http_length;
 	ctx->host = host;
-	ctx->decrypt = false;
 	ctx->rtp_host.sin_family = AF_INET;
 	ctx->rtp_host.sin_addr.s_addr = INADDR_ANY;
 	pthread_mutex_init(&ctx->ab_mutex, 0);
@@ -350,14 +349,12 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	ctx->encode.header = false;
 	ctx->latency = atoi(latencies);
 	ctx->latency = (ctx->latency * 44100) / 1000;
-	if (strstr(latencies, ":f")) ctx->http_fill = true;
 	ctx->event_cb = event_cb;
 	ctx->http_cb = http_cb;
 	ctx->owner = owner;
 	ctx->synchro.required = sync;
 	ctx->timing.drift = drift;
 	ctx->range = range;
-	ctx->http_ready = false;
 
 	// write pointer = last written, read pointer = next to read so fill = w-r+1
 	ctx->ab_read = ctx->ab_write + 1;
@@ -485,7 +482,7 @@ void hairtunes_end(hairtunes_t *ctx)
 }
 
 /*---------------------------------------------------------------------------*/
-bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtptime, bool exit_locked)
+bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtptime, bool exit_locked, bool silence)
 {
 	bool rc = true;
 	u32_t now = gettime_ms();
@@ -496,11 +493,15 @@ bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtptim
 	} else {
 		pthread_mutex_lock(&ctx->ab_mutex);
 		buffer_reset(ctx->audio_buffer);
-		ctx->playing = false;
 		ctx->flush_seqno = seqno;
-		ctx->synchro.first = false;
-		ctx->http_ready = false;
-		encoder_close(ctx);
+		if (silence) {
+			ctx->pause = true;
+		} else {
+			ctx->playing = false;
+			ctx->synchro.first = false;
+			ctx->http_ready = false;
+			encoder_close(ctx);
+		}
 		if (!exit_locked) pthread_mutex_unlock(&ctx->ab_mutex);
 	}
 
@@ -600,11 +601,14 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 		}
 	}
 
+	// release as soon as one recent frame is received
+	if (ctx->pause && seq_order(ctx->flush_seqno, seqno)) ctx->pause = false;
+
 	if (seqno == (u16_t) (ctx->ab_write + 1)) {
 		// expected packet
 		abuf = ctx->audio_buffer + BUFIDX(seqno);
 		ctx->ab_write = seqno;
-		LOG_SDEBUG("packet expected seqno:%hu rtptime:%u (W:%hu R:%hu)", seqno, rtptime, ctx->ab_write, ctx->ab_read);
+		LOG_SDEBUG("[%p]: packet expected seqno:%hu rtptime:%u (W:%hu R:%hu)", ctx, seqno, rtptime, ctx->ab_write, ctx->ab_read);
 	} else if (seq_order(ctx->ab_write, seqno)) {
 		// newer than expected
 		if (ctx->latency && seq_order(ctx->latency / ctx->frame_size, seqno - ctx->ab_write - 1)) {
@@ -919,8 +923,8 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 
 	if (!ctx->playing) return NULL;
 
-	// send silence if required to create enough buffering
-	if (ctx->silence_count && ctx->silence_count--)	{
+	// send silence if required to create enough buffering (want countdown to happen)
+	if ((ctx->silence_count && ctx->silence_count--) || ctx->pause)	{
 		*len = ctx->frame_size * 4;
 		return (short*) ctx->silence_frame;
 	}
@@ -1219,10 +1223,10 @@ static void *http_thread_func(void *arg) {
 				}
 			} else pthread_mutex_unlock(&ctx->ab_mutex);
 
-			// packet just sent, don't wait in case we have more so sent (catch-up mode)
-			timeout.tv_usec = 0;
+			// no wait if we have more to send (catch-up) or just 1 frame in pause mode
+			timeout.tv_usec = ctx->pause ? (ctx->frame_size*1000000)/44100 : 0;
 		} else {
-			// nothing to send, so probably can wait 2 frame
+			// nothing to send, so probably can wait 2 frame unless paused
 			timeout.tv_usec = (2*ctx->frame_size*1000000)/44100;
 			pthread_mutex_unlock(&ctx->ab_mutex);
 		}

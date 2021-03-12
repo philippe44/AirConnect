@@ -195,10 +195,12 @@ void raop_cb(void *owner, raop_event_t event, void *param)
 			Device->RaopState = event;
 			break;
 		case RAOP_FLUSH:
-			LOG_INFO("[%p]: Flush", Device);
-			CastStop(Device->CastCtx);
-			Device->ExpectStop = true;
-			Device->RaopState = event;
+			if (Device->Config.Flush) {
+				LOG_INFO("[%p]: Flush", Device);
+				CastStop(Device->CastCtx);
+				Device->ExpectStop = true;
+				Device->RaopState = event;
+			}
 			break;
 		case RAOP_PLAY: {
 			metadata_t MetaData = { "", "", "Streaming from AirConnect",

@@ -1,3 +1,6 @@
+0.2.50.1
+ - noflush properly send silent frames at the right speed
+
 0.2.50.0
  - flush was broken since 0.2.27.0
  - add --noflush options (and force :f in latencies if set)

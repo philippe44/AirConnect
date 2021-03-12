@@ -749,7 +749,7 @@ int shutdown_socket(int sd)
 	shutdown(sd, SHUT_RDWR);
 #endif
 
-	LOG_DEBUG("closed socket %d", sd);
+	LOG_INFO("closed socket %d", sd);
 
 	return closesocket(sd);
 }
@@ -787,7 +787,7 @@ int bind_socket(unsigned short *port, int mode)
 		*port = ntohs(addr.sin_port);
 	}
 
-	LOG_DEBUG("socket binding %d on port %d", sock, *port);
+	LOG_INFO("socket binding %d on port %d", sock, *port);
 
 	return sock;
 }
@@ -1143,7 +1143,7 @@ bool http_parse(int sock, char *method, char *resource, char *proto, key_data_t 
 
 	while (read_line(sock, line, sizeof(line), timeout) > 0) {
 
-		LOG_SDEBUG("sock: %u, received %s", sock, line);
+		LOG_DEBUG("sock: %u, received %s", sock, line);
 
 		// line folding should be deprecated
 		if (i && rkd[i].key && (line[0] == ' ' || line[0] == '\t')) {

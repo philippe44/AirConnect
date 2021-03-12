@@ -349,6 +349,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	ctx->encode.header = false;
 	ctx->latency = atoi(latencies);
 	ctx->latency = (ctx->latency * 44100) / 1000;
+	if (strstr(latencies, ":f")) ctx->http_fill = true;
 	ctx->event_cb = event_cb;
 	ctx->http_cb = http_cb;
 	ctx->owner = owner;

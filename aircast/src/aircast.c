@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.50.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.50.3"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -825,7 +825,7 @@ bool ParseArgs(int argc, char **argv) {
 		if (strstr("abxdpiflcv", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZIkr", opt)) {
+		} else if (strstr("tzZIkr", opt) || opt[0] == '-') {
 			optarg = NULL;
 			optind += 1;
 		}

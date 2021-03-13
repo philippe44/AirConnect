@@ -1,3 +1,6 @@
+0.2.50.3
+ - noflush was not effective for aircast
+ 
 0.2.50.2
  - make sslsym compatible with openSSL 1.1.x
  

@@ -1,3 +1,6 @@
+0.2.50.4
+ - fix sslsym.c macros that were still incorrect
+ 
 0.2.50.3
  - noflush was not effective for aircast
  

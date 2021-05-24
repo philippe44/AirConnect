@@ -113,6 +113,8 @@ To disable the service, type `sudo systemctl disable airupnp.service`
 
 To view the log, `journalctl -u airupnp.service`
 
+On rPi lite, add the following to the /boot/cmdline.txt: init=/bin/systemd
+
 Obviously, from the above example, only use -x if you want a custom configuration. Thanks [@cactus](https://github.com/cactus) for systemd cleaning
 
 [@1activegeek](https://github.com/1activegeek) has made a docker container [here](https://github.com/1activegeek/docker-airconnect) that follows the update of this repository - thanks!

@@ -1,3 +1,6 @@
+0.2.50.5
+ - mdns fix for blank name field
+ 
 0.2.50.4
  - fix sslsym.c macros that were still incorrect
  

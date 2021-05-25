@@ -5,6 +5,7 @@ LDFLAGS ?= -s -lpthread -ldl -lm -lrt -L.
 
 OBJ					= bin/arm
 EXECUTABLE 			= ../bin/aircast-arm
+EXECUTABLE_STATIC 		= ../bin/aircast-arm-static
 
 include Makefile
 

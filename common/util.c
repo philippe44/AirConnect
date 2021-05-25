@@ -749,7 +749,7 @@ int shutdown_socket(int sd)
 	shutdown(sd, SHUT_RDWR);
 #endif
 
-	LOG_DEBUG("closed socket %d", sd);
+	LOG_INFO("closed socket %d", sd);
 
 	return closesocket(sd);
 }
@@ -787,7 +787,7 @@ int bind_socket(unsigned short *port, int mode)
 		*port = ntohs(addr.sin_port);
 	}
 
-	LOG_DEBUG("socket binding %d on port %d", sock, *port);
+	LOG_INFO("socket binding %d on port %d", sock, *port);
 
 	return sock;
 }
@@ -947,25 +947,22 @@ char *strlwr(char *str)
 }
 #endif
 
-
+#if WIN
 /*---------------------------------------------------------------------------*/
-char *stristr(char *s1, char *s2)
+char *strcasestr(const char *haystack, const char *needle)
 {
- char *s1_lwr, *s2_lwr, *p;
+	char *haystack_lwr, *needle_lwr, *p;
 
- if (!s1 || !s2) return NULL;
+	haystack_lwr = strlwr(strdup(haystack));
+	needle_lwr = strlwr(strdup(needle));
+	p = strstr(haystack_lwr, needle_lwr);
 
- s1_lwr = strlwr(strdup(s1));
- s2_lwr = strlwr(strdup(s2));
- p = strstr(s1_lwr, s2_lwr);
-
- if (p) p = s1 + (p - s1_lwr);
- free(s1_lwr);
- free(s2_lwr);
- return p;
+	if (p) p = haystack + (p - haystack_lwr);
+	free(haystack_lwr);
+	free(needle_lwr);
+	return p;
 }
 
-#if WIN
 /*---------------------------------------------------------------------------*/
 char* strsep(char** stringp, const char* delim)
 {
@@ -994,17 +991,16 @@ char *strndup(const char *s, size_t n) {
 }
 #endif
 
-
 /*----------------------------------------------------------------------------*/
 char* strextract(char *s1, char *beg, char *end)
 {
 	char *p1, *p2, *res;
 
-	p1 = stristr(s1, beg);
+	p1 = strcasestr(s1, beg);
 	if (!p1) return NULL;
 
 	p1 += strlen(beg);
-	p2 = stristr(p1, end);
+	p2 = strcasestr(p1, end);
 	if (!p2) return strdup(p1);
 
 	res = malloc(p2 - p1 + 1);
@@ -1019,7 +1015,7 @@ char* strextract(char *s1, char *beg, char *end)
 /*----------------------------------------------------------------------------*/
 int asprintf(char **strp, const char *fmt, ...)
 {
-	va_list args, cp;
+	va_list args;
 	int len, ret = 0;
 
 	va_start(args, fmt);
@@ -1031,6 +1027,48 @@ int asprintf(char **strp, const char *fmt, ...)
 	va_end(args);
 
 	return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+int vasprintf(char **strp, const char *fmt, va_list args)
+{
+	int len, ret = 0;
+
+	len = vsnprintf(NULL, 0, fmt, args);
+	*strp = malloc(len + 1);
+
+	if (*strp) ret = vsprintf(*strp, fmt, args);
+
+	return ret;
+}
+
+#else
+ /*---------------------------------------------------------------------------*/
+char* itoa(int value, char* str, int radix) {
+	static char dig[] =
+		"0123456789"
+		"abcdefghijklmnopqrstuvwxyz";
+	int n = 0, neg = 0;
+	unsigned int v;
+	char* p, *q;
+	char c;
+
+	if (radix == 10 && value < 0) {
+		value = -value;
+		neg = 1;
+	}
+	v = value;
+	do {
+		str[n++] = dig[v%radix];
+		v /= radix;
+	} while (v);
+	if (neg)
+		str[n++] = '-';
+	str[n] = '\0';
+
+	for (p = str, q = p + (n-1); p < q; ++p, --q)
+		c = *p, *p = *q, *q = c;
+	return str;
 }
 #endif
 
@@ -1078,9 +1116,9 @@ char *trim(char *s)
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-bool http_parse(int sock, char *method, key_data_t *rkd, char **body, int *len)
+bool http_parse(int sock, char *method, char *resource, char *proto, key_data_t *rkd, char **body, int *len)
 {
-	char line[256], *dp;
+	char line[512], *dp;
 	unsigned j;
 	int i, timeout = 100;
 
@@ -1098,11 +1136,14 @@ bool http_parse(int sock, char *method, key_data_t *rkd, char **body, int *len)
 		return false;
 	}
 
+	if (resource) sscanf(line, "%*s%s", resource);
+	if (proto) sscanf(line, "%*s%*s%s", proto);
+
 	i = *len = 0;
 
 	while (read_line(sock, line, sizeof(line), timeout) > 0) {
 
-		LOG_SDEBUG("sock: %u, received %s", line);
+		LOG_DEBUG("sock: %u, received %s", sock, line);
 
 		// line folding should be deprecated
 		if (i && rkd[i].key && (line[0] == ' ' || line[0] == '\t')) {
@@ -1238,7 +1279,27 @@ bool kd_add(key_data_t *kd, char *key, char *data)
 	kd[i].data = strdup(data);
 	kd[i+1].key = NULL;
 
-	return NULL;
+	return true;
+}
+
+/*----------------------------------------------------------------------------*/
+bool kd_vadd(key_data_t *kd, char *key, char *fmt, ...)
+{
+	int i = 0;
+	va_list args;
+	while (kd && kd[i].key) i++;
+
+	va_start(args, fmt);
+
+	if (vasprintf(&kd[i].data, fmt, args)) {
+		kd[i].key = strdup(key);
+		kd[i+1].key = NULL;
+		va_end(args);
+		return true;
+	}
+
+	va_end(args);
+	return false;
 }
 
 
@@ -1365,9 +1426,13 @@ char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict)
 		if (tmpNode) {
 			textNode = ixmlNode_getFirstChild(tmpNode);
 			if (textNode) {
-				ret = strdup(ixmlNode_getNodeValue(textNode));
-				if (ret) break;
-				LOG_WARN("ixmlNode_getNodeValue returned NULL", NULL);
+				ret = (char*) ixmlNode_getNodeValue(textNode);
+				if (ret) {
+					ret = strdup(ret);
+					break;
+				 } else {
+					LOG_WARN("ixmlNode_getNodeValue returned NULL", NULL);
+				 }
 			} else {
 				LOG_WARN("(BUG) ixmlNode_getFirstChild(tmpNode) returned NULL", NULL);
 			}
@@ -1389,13 +1454,14 @@ char *XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict)
 
 
 /*----------------------------------------------------------------------------*/
-bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s)
+bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s, bool match)
 {
 	IXML_NodeList *nodeList = NULL;
 	IXML_Node *textNode = NULL;
 	IXML_Node *tmpNode = NULL;
 	int i;
 	bool ret = false;
+	const char *value;
 
 	nodeList = ixmlDocument_getElementsByTagName(doc, (char *)item);
 
@@ -1404,7 +1470,8 @@ bool XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s)
 		if (!tmpNode) continue;
 		textNode = ixmlNode_getFirstChild(tmpNode);
 		if (!textNode) continue;
-		if (!strcmp(ixmlNode_getNodeValue(textNode), s)) {
+		value = ixmlNode_getNodeValue(textNode);
+		if ((match && !strcmp(value, s)) || (!match && value && strcasestr(value, s))) {
 			ret = true;
 			break;
 		}

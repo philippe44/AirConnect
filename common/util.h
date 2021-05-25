@@ -88,24 +88,26 @@ void 		dup_metadata(struct metadata_s *dst, struct metadata_s *src);
 int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait);
 
 #ifdef _USE_XML_
-const char 	*XMLGetLocalName(IXML_Document *doc, int Depth);
-IXML_Node  	*XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
-IXML_Node  	*XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);
+const char*	XMLGetLocalName(IXML_Document *doc, int Depth);
+IXML_Node*	XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
+IXML_Node*	XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);
 int 	   	XMLAddAttribute(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
-char 	   	*XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict);
-char 		*XMLGetFirstElementItem(IXML_Element *element, const char *item);
-bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s);
+char*		XMLGetFirstDocumentItem(IXML_Document *doc, const char *item, bool strict);
+char*		XMLGetFirstElementItem(IXML_Element *element, const char *item);
+bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s, bool match);
 #endif
 
 u32_t 		gettime_ms(void);
 
-char*		stristr(char *s1, char *s2);
 #if WIN
+char*		strcasestr(const char *haystack, const char *needle);
 char* 		strsep(char** stringp, const char* delim);
-char 		*strndup(const char *s, size_t n);
+char*		strndup(const char *s, size_t n);
 int 		asprintf(char **strp, const char *fmt, ...);
+int 		vasprintf(char **strp, const char *fmt, va_list args);
 #else
-char 		*strlwr(char *str);
+char*		strlwr(char *str);
+char* 		itoa(int value, char* str, int radix);
 #endif
 char* 		strextract(char *s1, char *beg, char *end);
 u32_t 		hash32(char *str);
@@ -121,18 +123,19 @@ void 		winsock_close(void);
 int 		shutdown_socket(int sd);
 int 		bind_socket(short unsigned *port, int mode);
 int 		conn_socket(unsigned short port);#if !WINint SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size);#endif
-typedef struct {
+typedef struct key_data_s {
 	char *key;
 	char *data;
 } key_data_t;
 
-bool 		http_parse(int sock, char *method, key_data_t *rkd, char **body, int *len);
+bool 		http_parse(int sock, char *method, char *resource, char *proto, key_data_t *rkd, char **body, int *len);
 char*		http_send(int sock, char *method, key_data_t *rkd);
 int 		read_line(int fd, char *line, int maxlen, int timeout);
 int 		send_response(int sock, char *response);
 
 char*		kd_lookup(key_data_t *kd, char *key);
 bool 		kd_add(key_data_t *kd, char *key, char *value);
+bool 		kd_vadd(key_data_t *kd, char *key, char *fmt, ...);
 char* 		kd_dump(key_data_t *kd);
 void 		kd_free(key_data_t *kd);
 

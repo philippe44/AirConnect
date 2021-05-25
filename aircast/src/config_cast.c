@@ -70,10 +70,13 @@ void SaveConfig(char *name, void *ref, bool full)
 		common = (IXML_Node*) XMLAddNode(doc, root, "common", NULL);
 	}
 
-	XMLUpdateNode(doc, root, false, "main_log",level2debug(main_loglevel));
-	XMLUpdateNode(doc, root, false, "cast_log",level2debug(cast_loglevel));
-	XMLUpdateNode(doc, root, false, "util_log",level2debug(util_loglevel));
+	XMLUpdateNode(doc, root, false, "main_log", level2debug(main_loglevel));
+	XMLUpdateNode(doc, root, false, "cast_log", level2debug(cast_loglevel));
+	XMLUpdateNode(doc, root, false, "util_log", level2debug(util_loglevel));
 	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
+	XMLUpdateNode(doc, root, false, "max_players", "%d", (int) glMaxDevices);
+	XMLUpdateNode(doc, root, false, "ports", "%hu:%hu", glPortBase, glPortRange);
+	XMLUpdateNode(doc, root, false, "binding", glBinding);
 
 	XMLUpdateNode(doc, common, false, "enabled", "%d", (int) glMRConfig.Enabled);
 	XMLUpdateNode(doc, common, false, "stop_receiver", "%d", (int) glMRConfig.StopReceiver);
@@ -82,9 +85,10 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, common, false, "drift", "%d", glMRConfig.Drift);
 	XMLUpdateNode(doc, common, false, "codec", glMRConfig.Codec);
 	XMLUpdateNode(doc, common, false, "metadata", "%d", glMRConfig.Metadata);
-	XMLUpdateNode(doc, common, false, "artwork", glMRConfig.ArtWork);
+	XMLUpdateNode(doc, common, false, "flush", "%d", glMRConfig.Flush);
+	XMLUpdateNode(doc, common, false, "artwork", "%s", glMRConfig.ArtWork);
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		IXML_Node *dev_node;
 
 		if (!glMRDevices[i].Running) continue;
@@ -138,6 +142,7 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val)
 	if (!strcmp(name, "media_volume")) Conf->MediaVolume = atof(val);
 	if (!strcmp(name, "codec")) strcpy(Conf->Codec, val);
 	if (!strcmp(name, "metadata")) Conf->Metadata = atoi(val);
+	if (!strcmp(name, "flush")) Conf->Flush = atoi(val);
 	if (!strcmp(name, "artwork")) strcpy(Conf->ArtWork, val);
 	if (!strcmp(name, "latency")) strcpy(Conf->Latency, val);
 	if (!strcmp(name, "drift")) Conf->Drift = atoi(val);
@@ -160,6 +165,9 @@ static void LoadGlobalItem(char *name, char *val)
 	if (!strcmp(name, "cast_log")) cast_loglevel = debug2level(val);
 	if (!strcmp(name, "util_log")) util_loglevel = debug2level(val);
 	if (!strcmp(name, "log_limit")) glLogLimit = atol(val);
+	if (!strcmp(name, "max_players")) glMaxDevices = atol(val);
+	if (!strcmp(name, "ports")) sscanf(val, "%hu:%hu", &glPortBase, &glPortRange);
+	if (!strcmp(name, "binding")) strcpy(glBinding, val);
  }
 
 

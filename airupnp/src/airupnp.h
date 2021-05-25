@@ -55,11 +55,13 @@ struct sService {
 
 typedef struct sMRConfig
 {
-	char		StreamLength[_STR_LEN_];
+	int			HTTPLength;
 	bool		Enabled;
 	char		Name[_STR_LEN_];
+	int			UPnPMax;
 	bool		SendMetaData;
 	bool		SendCoverArt;
+	bool 		Flush;
 	int			MaxVolume;
 	char		Codec[_STR_LEN_];
 	bool		Metadata;
@@ -102,12 +104,16 @@ struct sMR {
 	u32_t			VolumeStampRx, VolumeStampTx;
 	u16_t			ErrorCount;
 	bool			TimeOut;
+	char 			*ProtocolInfo;
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;
 extern s32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
-extern struct sMR			glMRDevices[MAX_RENDERERS];
+extern struct sMR			*glMRDevices;
+extern int					glMaxDevices;
+extern char					glBinding[128];
+extern unsigned short		glPortBase, glPortRange;
 
 int 			MasterHandler(Upnp_EventType EventType, void *Event, void *Cookie);
 int 			ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie);

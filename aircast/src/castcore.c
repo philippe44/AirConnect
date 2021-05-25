@@ -231,7 +231,7 @@ bool SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, 
 
 	free(buffer);
 
-	if (!stristr(message.payload_utf8, "PING")) {
+	if (!strcasestr(message.payload_utf8, "PING")) {
 		LOG_DEBUG("[%p]: Cast sending: %s", Ctx->ssl, message.payload_utf8);
 	}
 
@@ -404,6 +404,7 @@ void CastDisconnect(struct sCastCtx *Ctx)
 	CastQueueFlush(&Ctx->reqQueue);
 
 	SSL_shutdown(Ctx->ssl);
+	SSL_clear(Ctx->ssl);
 	closesocket(Ctx->sock);
 
 	pthread_mutex_unlock(&Ctx->Mutex);
@@ -435,7 +436,6 @@ void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_add
 	Ctx->waitId 	= Ctx->waitMedia = Ctx->mediaSessionId = 0;
 	Ctx->sessionId 	= Ctx->transportId = NULL;
 	Ctx->owner 		= owner;
-	Ctx->ssl 		= NULL;
 	Ctx->Status 	= CAST_DISCONNECTED;
 	Ctx->ip 		= ip;
 	Ctx->port		= port;
@@ -732,8 +732,8 @@ static void *CastSocketThread(void *args)
 
 			LOG_SDEBUG("(s:%s) (d:%s)\n%s", Message.source_id, Message.destination_id, Message.payload_utf8);
 
-			// Connection closed by peer
 			if (!strcasecmp(str, "CLOSE")) {
+				// Connection closed by peer
 				Ctx->Status = CAST_CONNECTED;
 				Ctx->waitId = 0;
 				ProcessQueue(Ctx);
@@ -742,17 +742,13 @@ static void *CastSocketThread(void *args)
 					json_decref(root);
 					forward = false;
 				}
-			}
-
-			// respond to device ping
-			if (!strcasecmp(str,"PING")) {
+			} else if (!strcasecmp(str,"PING")) {
+				// respond to device ping
 				SendCastMessage(Ctx, CAST_BEAT, Message.source_id, "{\"type\":\"PONG\"}");
 				json_decref(root);
 				forward = false;
-			}
-
-			// receiving pong
-			if (!strcasecmp(str,"PONG")) {
+			} else if (!strcasecmp(str,"PONG")) {
+				// receiving pong
 				Ctx->lastPong = gettime_ms();
 				// connection established, start receiver was requested
 				if (Ctx->Status == CAST_AUTOLAUNCH) {
@@ -768,14 +764,14 @@ static void *CastSocketThread(void *args)
 
 			LOG_SDEBUG("[%p]: recvID %u (waitID %u)", Ctx, requestId, Ctx->waitId);
 
-			// expected request acknowledge
+			// expected request acknowledge (we know that str is still valid)
 			if (Ctx->waitId && Ctx->waitId == requestId) {
 
 				// reset waitId, might be set below
 				Ctx->waitId = 0;
 
-				// receiver status before connection is fully established
 				if (!strcasecmp(str,"RECEIVER_STATUS") && Ctx->Status == CAST_LAUNCHING) {
+					// receiver status before connection is fully established
 					const char *str;
 
 					NFREE(Ctx->sessionId);
@@ -794,10 +790,8 @@ static void *CastSocketThread(void *args)
 
 					json_decref(root);
 					forward = false;
-				}
-
-				// media status only acquired for expected id
-				if (!strcasecmp(str,"MEDIA_STATUS") && Ctx->waitMedia == requestId) {
+				} else if (!strcasecmp(str,"MEDIA_STATUS") && Ctx->waitMedia == requestId) {
+					// media status only acquired for expected id
 					int id = GetMediaItem_I(root, 0, "mediaSessionId");
 
 					if (id) {

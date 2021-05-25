@@ -36,14 +36,19 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.24.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.50.5"" ("__DATE__" @ "__TIME__")"
 
-#define DISCOVERY_TIME 20
+#define DISCOVERY_TIME 	20
+#define MEDIA_VOLUME	0.5
 
 /*----------------------------------------------------------------------------*/
-/* globals initialized */
+/* globals */
 /*----------------------------------------------------------------------------*/
+struct sMR	*glMRDevices;
+u16_t		glPortBase, glPortRange;
 s32_t		glLogLimit = -1;
+int			glMaxDevices = 32;
+char		glBinding[16] = "?";
 
 log_level	main_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
@@ -56,17 +61,15 @@ tMRConfig			glMRConfig = {
 							"",		// name
 							"flc",	// use_flac
 							true,	// metadata
-							0.5,	// media volume (0..1)
+							true,	// flush
+							MEDIA_VOLUME,	// media volume (0..1)
 							{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 							"",		// rtp/http_latency (0 = use client's request)
 							false,	// drift
 							"", 	// artwork
 					};
 
-/*----------------------------------------------------------------------------*/
-/* globals */
-/*----------------------------------------------------------------------------*/
-struct sMR			glMRDevices[MAX_RENDERERS];
+
 
 /*----------------------------------------------------------------------------*/
 /* consts or pseudo-const*/
@@ -90,7 +93,6 @@ static bool					glInteractive = true;
 static char					*glPidFile = NULL;
 static bool					glAutoSaveConfigFile = false;
 static bool					glGracefullShutdown = true;
-static char 				glInterface[16] = "?";
 static void					*glConfigID = NULL;
 static char					glConfigName[_STR_LEN_] = "./config.xml";
 static struct mdnsd*		glmDNSServer = NULL;
@@ -99,8 +101,10 @@ static char usage[] =
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -b <address>\t\tnetwork address to bind to\n"
-  		   "  -c <mp3[:<rate>]|flc[:0..9]|wav>\taudio format send to player\n"
+		   "  -b <ip>\t\tnetwork address to bind to\n"
+		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
+		   "  -c <mp3[:<rate>]|flc[:0..9]|wav>\taudio format send to player\n"
+   		   "  -v <0..1>\t\t group MediaVolume factor\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
@@ -115,6 +119,7 @@ static char usage[] =
 		   "  -Z \t\t\tNOT interactive\n"
 		   "  -k \t\t\tImmediate exit on SIGQUIT and SIGTERM\n"
 		   "  -t \t\t\tLicense terms\n"
+   		   "  --noflush\t\tignore flush command (wait for teardown to stop)\n"
 		   "\n"
 		   "Build options:"
 #if LINUX
@@ -162,7 +167,7 @@ static void  RemoveCastDevice(struct sMR *Device);
 static bool	 Start(bool cold);
 static bool	 Stop(bool exit);
 
-void callback(void *owner, raop_event_t event, void *param)
+void raop_cb(void *owner, raop_event_t event, void *param)
 {
 	struct sMR *Device = (struct sMR*) owner;
 
@@ -190,10 +195,12 @@ void callback(void *owner, raop_event_t event, void *param)
 			Device->RaopState = event;
 			break;
 		case RAOP_FLUSH:
-			LOG_INFO("[%p]: Flush", Device);
-			CastStop(Device->CastCtx);
-			Device->ExpectStop = true;
-			Device->RaopState = event;
+			if (Device->Config.Flush) {
+				LOG_INFO("[%p]: Flush", Device);
+				CastStop(Device->CastCtx);
+				Device->ExpectStop = true;
+				Device->RaopState = event;
+			}
 			break;
 		case RAOP_PLAY: {
 			metadata_t MetaData = { "", "", "Streaming from AirConnect",
@@ -203,11 +210,10 @@ void callback(void *owner, raop_event_t event, void *param)
 
 			LOG_INFO("[%p]: Play", Device);
 			if (Device->RaopState != RAOP_PLAY) {
+				static int count;
 				char *uri, *ContentType;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-				asprintf(&uri, "http://%s:%u/stream", inet_ntoa(glHost), *((short unsigned*) param));
-#pragma GCC diagnostic pop
+
+				(void)!asprintf(&uri, "http://%s:%u/stream-%u", inet_ntoa(glHost), *((short unsigned*) param), count++);
 				if (!strcasecmp(Device->Config.Codec, "mp3")) ContentType = "audio/mp3";
 				else if (!strcasecmp(Device->Config.Codec, "wav")) ContentType = "audio/wav";
 				else ContentType = "audio/flac";
@@ -366,7 +372,7 @@ static struct sMR *SearchUDN(char *UDN)
 {
 	int i;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		if (glMRDevices[i].Running && !strcmp(glMRDevices[i].UDN, UDN))
 			return glMRDevices + i;
 	}
@@ -378,7 +384,7 @@ static struct sMR *SearchUDN(char *UDN)
 /*----------------------------------------------------------------------------*/
 static bool isMember(struct in_addr host) {
 	int i;
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		 if (glMRDevices[i].Running && GetAddr(glMRDevices[i].CastCtx).s_addr == host.s_addr)
 			return true;
 	}
@@ -391,6 +397,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 {
 	struct sMR *Device;
 	mDNSservice_t *s;
+	int j;
 
 	if (*loglevel == lDEBUG) {
 		LOG_DEBUG("----------------- round ------------------", NULL);
@@ -418,7 +425,6 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		char *UDN = NULL, *Name = NULL;
 		char *Model;
 		bool Group;
-		int j;
 
 		// is the mDNS record usable or announce made on behalf
 		if ((UDN = GetmDNSAttribute(s->attr, s->attr_count, "id")) == NULL ||
@@ -427,18 +433,17 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		// is that device already here
 		if ((Device = SearchUDN(UDN)) != NULL) {
 			// a service is being removed
+			Device->Remove = s->expired;
 			if (s->expired) {
-				bool Remove = true;
 				// groups need to find if the removed service is the master
 				if (Device->Group) {
 					// there are some other master candidates
 					if (Device->GroupMaster->Next) {
-						Remove = false;
+						Device->Remove = false;
 						// changing the master, so need to update cast params
 						if (Device->GroupMaster->Host.s_addr == s->host.s_addr) {
 							free(pop_item((list_t**) &Device->GroupMaster));
 							UpdateCastDevice(Device->CastCtx, Device->GroupMaster->Host, Device->GroupMaster->Port);
-							Remove = false;
 						} else {
 							struct sGroupMember *Member = Device->GroupMaster;
 							while (Member && (Member->Host.s_addr != s->host.s_addr)) Member = Member->Next;
@@ -446,14 +451,10 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 						}
 					}
 				}
-				if (Remove) {
-					LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
-					raop_delete(Device->Raop);
-					RemoveCastDevice(Device);
-				}
 			// device update - when playing ChromeCast update their TXT records
 			} else {
 				char *Name = GetmDNSAttribute(s->attr, s->attr_count, "fn");
+
 				// new master in election, update and put it in the queue
 				if (Device->Group && Device->GroupMaster->Host.s_addr != s->addr.s_addr) {
 					struct sGroupMember *Member = calloc(1, sizeof(struct sGroupMember));
@@ -487,10 +488,10 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		}
 
 		// device creation so search a free spot.
-		for (j = 0; j < MAX_RENDERERS && glMRDevices[j].Running; j++);
+		for (j = 0; j < glMaxDevices && glMRDevices[j].Running; j++);
 
 		// no more room !
-		if (j == MAX_RENDERERS) {
+		if (j == glMaxDevices) {
 			LOG_ERROR("Too many Cast devices", NULL);
 			NFREE(UDN);
 			break;
@@ -500,7 +501,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 
 		// if model is a group
 		Model = GetmDNSAttribute(s->attr, s->attr_count, "md");
-		if (Model && !stristr(Model, "Group")) Group = false;
+		if (Model && !strcasestr(Model, "Group")) Group = false;
 		else Group = true;
 		NFREE(Model);
 
@@ -510,8 +511,9 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		if (AddCastDevice(Device, Name, UDN, Group, s->addr, s->port) && !glDiscovery) {
 			Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
 										"aircast", Device->Config.mac, Device->Config.Codec,
-										Device->Config.Metadata, Device->Config.Drift, Device->Config.Latency,
-										Device, callback);
+										Device->Config.Metadata, Device->Config.Drift,
+										Device->Config.Flush, Device->Config.Latency,
+										Device, raop_cb, NULL, glPortBase, glPortRange, -1);
 			if (!Device->Raop) {
 				LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 				RemoveCastDevice(Device);
@@ -520,6 +522,16 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 
 		NFREE(UDN);
 		NFREE(Name);
+	}
+
+	// look for devices to be removed
+	for (j = 0; j < glMaxDevices; j++) {
+		Device = glMRDevices + j;
+		if (Device->Running && Device->Remove && !CastIsConnected(Device->CastCtx)) {
+			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
+			raop_delete(Device->Raop);
+			RemoveCastDevice(Device);
+		}
 	}
 
 	if (glAutoSaveConfigFile || glDiscovery) {
@@ -575,7 +587,7 @@ static void *MainThread(void *args)
 		}
 
 		// try to detect IP change when auto-detect
-		if (strstr(glInterface, "?")) {
+		if (strstr(glBinding, "?")) {
 			struct in_addr host;
 			host.s_addr = get_localhost(NULL);
 			if (host.s_addr != INADDR_ANY && host.s_addr != glHost.s_addr) {
@@ -596,7 +608,7 @@ void MakeMacUnique(struct sMR *Device)
 {
 	int i;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
 		if (!memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
 			u32_t hash = hash32(Device->UDN);
@@ -630,6 +642,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 	Device->Raop 		= NULL;
 	Device->RaopState	= RAOP_STOP;
 	Device->Group 		= group;
+	Device->Remove		= false;
 	Device->VolumeStampRx = Device->VolumeStampTx = gettime_ms() - 2000;
 
 	if (group) {
@@ -669,7 +682,7 @@ void FlushCastDevices(void)
 {
 	int i;
 
-	for (i = 0; i < MAX_RENDERERS; i++) {
+	for (i = 0; i < glMaxDevices; i++) {
 		struct sMR *p = &glMRDevices[i];
 		if (p->Running) {
 			raop_delete(p->Raop);
@@ -701,7 +714,7 @@ static bool Start(bool cold)
 	char hostname[_STR_LEN_];
 
 	glHost.s_addr = get_localhost(&glHostName);
-	if (!strstr(glInterface, "?")) glHost.s_addr = inet_addr(glInterface);
+	if (!strstr(glBinding, "?")) glHost.s_addr = inet_addr(glBinding);
 	snprintf(hostname, _STR_LEN_, "%s.local", glHostName);
 
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
@@ -714,8 +727,8 @@ static bool Start(bool cold)
 		}
 
 		// mutexes must always be valid
-		memset(&glMRDevices, 0, sizeof(glMRDevices));
-		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
+		glMRDevices = calloc(glMaxDevices, sizeof(struct sMR));
+		for (i = 0; i < glMaxDevices; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
 		InitUtils();
 		InitSSL();
@@ -760,7 +773,7 @@ static bool Stop(bool exit)
 		LOG_DEBUG("terminate main thread ...", NULL);
 		WakeAll();
 		pthread_join(glMainThread, NULL);
-		for (i = 0; i < MAX_RENDERERS; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
+		for (i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
 		EndSSL();
 		EndUtils();
@@ -783,7 +796,7 @@ static void sighandler(int signum) {
 	int i;
 
 	if (!glGracefullShutdown) {
-		for (i = 0; i < MAX_RENDERERS; i++) {
+		for (i = 0; i < glMaxDevices; i++) {
 			struct sMR *p = &glMRDevices[i];
 			if (p->Running && p->State == PLAYING) CastStop(p->CastCtx);
 		}
@@ -799,23 +812,20 @@ static void sighandler(int signum) {
 /*---------------------------------------------------------------------------*/
 bool ParseArgs(int argc, char **argv) {
 	char *optarg = NULL;
-	int optind = 1;
-	int i;
+	int i, optind = 1;
+	char cmdline[256] = "";
 
-#define MAXCMDLINE 256
-	char cmdline[MAXCMDLINE] = "";
-
-	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < MAXCMDLINE); i++) {
+	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < sizeof(cmdline)); i++) {
 		strcat(cmdline, argv[i]);
 		strcat(cmdline, " ");
 	}
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("bxdpiflc", opt) && optind < argc - 1) {
+		if (strstr("abxdpiflcv", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
-		} else if (strstr("tzZIkr", opt)) {
+		} else if (strstr("tzZIkr", opt) || opt[0] == '-') {
 			optarg = NULL;
 			optind += 1;
 		}
@@ -828,11 +838,17 @@ bool ParseArgs(int argc, char **argv) {
 		case 'f':
 			glLogFile = optarg;
 			break;
+		case 'v':
+			glMRConfig.MediaVolume = atof(optarg);
+			break;
 		case 'c':
 			strcpy(glMRConfig.Codec, optarg);
 			break;
 		case 'b':
-			strcpy(glInterface, optarg);
+			strcpy(glBinding, optarg);
+			break;
+		case 'a':
+			sscanf(optarg, "%hu:%hu", &glPortBase, &glPortRange);
 			break;
 		case 'i':
 			strcpy(glConfigName, optarg);
@@ -886,6 +902,9 @@ bool ParseArgs(int argc, char **argv) {
 		case 't':
 			printf("%s", license);
 			return false;
+		case '-':
+			if (!strcmp(opt + 1, "noflush")) glMRConfig.Flush = false;
+			break;
 		default:
 			break;
 		}
@@ -928,6 +947,9 @@ int main(int argc, char *argv[])
 
 	// potentially overwrite with some cmdline parameters
 	if (!ParseArgs(argc, argv)) exit(1);
+
+	// make sure port range is correct
+	if (glPortBase && !glPortRange) glPortRange = glMaxDevices*4;
 
 	if (glLogFile) {
 		if (!freopen(glLogFile, "a", stderr)) {
@@ -1031,7 +1053,7 @@ int main(int argc, char *argv[])
 		if (!strcmp(resp, "dump") || !strcmp(resp, "dumpall"))	{
 			bool all = !strcmp(resp, "dumpall");
 
-			for (i = 0; i < MAX_RENDERERS; i++) {
+			for (i = 0; i < glMaxDevices; i++) {
 				struct sMR *p = &glMRDevices[i];
 				bool Locked = pthread_mutex_trylock(&p->Mutex);
 

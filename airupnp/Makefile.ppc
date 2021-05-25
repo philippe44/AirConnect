@@ -4,7 +4,7 @@ LDFLAGS ?= -s -lpthread -ldl -lm -lrt -L.
 
 OBJ					= bin/ppc
 EXECUTABLE 			= ../bin/airupnp-ppc
-#EXECUTABLE_STATIC	= ../bin/airupnp-ppc-static
+EXECUTABLE_STATIC	= ../bin/airupnp-ppc-static
 
 include Makefile
 

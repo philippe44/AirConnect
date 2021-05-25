@@ -10,20 +10,28 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 1. Pre-built binaries are in bin/ directory of this repository. You can download the whole repository as a zip file, clone it using git, or go to the [bin/ folder in the web interface](https://github.com/philippe44/AirConnect/tree/master/bin) and download the version that matches your OS. It's also possible to download files manually in a terminal by typing (e.g. for aircast arm version)<br/>`wget https://raw.githubusercontent.com/philippe44/AirConnect/master/bin/aircast-arm` 
 
-* For **Chromecast**, the file is `aircast-[platform]` (so `aircast-osx-multi` for Chromecast on OS X.) 
-* For **UPnP/Sonos**, the file is `airupnp-[platform]` (so `airupnp-osx-multi` for UPnP/Sonos on OS X.) 
+	* For **Chromecast**, the file is `aircast-<platform>` (so `aircast-osx-multi` for Chromecast on OS X.) 
+	* For **UPnP/Sonos**, the file is `airupnp-<platform>` (so `airupnp-osx-multi` for UPnP/Sonos on OS X.) 
 
 2. For Windows, download all the .dll as well.
 
-3. Store the [executable] (e.g. `airupnp-osx-multi`) in any directory. 
+3. Store the \<executable\> (e.g. `airupnp-osx-multi`) in any directory. 
 
-4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x [executable]`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
+4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
-5. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 
+5. Don't use firewall or set ports using options below and open them. 
+	- Port 5353 (UDP) is needed to listen to mDNS messages
+	- Each device uses 1 port permanently (RTSP) and when playing adds 1 port for HTTP and 3 ports for RTP (use `-g`or \<ports\> parameter, default is random)
+	- UPnP adds one extra port for discovery (use `-b` or \<upnp_socket\> parameter, default is 49152 and user value must be *above* this)
+
+6. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 
+ter)
+
+7. In Docker, you must use 'host' mode to enable audio webserver. Note that you can't have a NAT between your devices and the machine where AirConnect runs.
 
 ## Running
 
-Double click the [executable] or launch it by typing `./[executable]` in the same command line window. 
+Double click the \<executable\> or launch it by typing `./<executable>` in the same command line window. 
 
 <strong>For Sonos & Heos players, set latency by adding `-l 1000:2000` on the command line.</strong> (Example: `./airupnp-osx-multi -l 1000:2000`) 
 
@@ -36,21 +44,25 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 <strong>Use `-h` for command line details</strong>
 - When started in interactive mode (w/o -Z or -z option) a few commands can be typed at the prompt
 	- `exit`
-	- `save [name]` : save the current configuration in file named [name]
+	- `save <file>` : save the current configuration in file named [name]
 - Volume changes made in native control applications are synchronized with AirPlay client
 - Pause, Stop, Next, Prev using native control application are sent to AirPlay client - once paused, "native" play will not work
 - Re-scan for new / lost players happens every 30s
-- A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i [config file name]` command line)
-- Chromecast groups are supported
+- A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i <file>` command line)
+- Chromecast groups are supported. Use `-v` to set the media volume factor for all devices (0.5 by default)
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
-- Use of -z disables interactive mode (no TTY) **and** self-daemonizes (use -p <file> to get the PID). Use of -Z only disables interactive mode 
+- Use `-u <version>` to set the maximum UPnP searched version
+- Use `-b [ip][:port]`to set network interface to use and, for airupnp only, UPnP port to listen to (must be above the default 49152)
+- Use `-a <port>[:<count>]`to specify a port range (default count is 128)
+- Use `-g -3|-1|0|` to tweak http transfer mode where -3 = chunked, -1 = no content-length and 0 = fixed (dummy) length (see "HTTP content-length" below)"
+- Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 
 - <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`), otherwise it will consume all CPU. On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
 - A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements (or use `<drift>` option in config file), but that might cause overrun or underrun on long playbacks
 - <strong>This is an audio-only application. Do not expect to play a video on your device and have the audio from UPnP/Sonos or ChromeCast synchronized. It does not, cannot and will not work, regardless of any latency parameter. Please do not open tickets requesting this (see details below to understand why)</strong>
 
 ## Config file parameters 
 
-The default configuration file is `config.xml`, stored in the same directory as the [executable]. Each of parameters below can be set in the `<common>` section to apply to all devices. It can also be set in any `<device>` section to apply only to a specific device and overload the value set in `<common>`
+The default configuration file is `config.xml`, stored in the same directory as the \<executable\>. Each of parameters below can be set in the `<common>` section to apply to all devices. It can also be set in any `<device>` section to apply only to a specific device and overload the value set in `<common>`. Use the `-x <config>`command line option to use a config file of your choice.
 
 - `latency <[rtp][:http][:f]>` 	: (default: (0:0))buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
 	* [rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay. A negative value force sending of silence frames when no AirPlay audio has been received after 'RTP' ms, to force a continuous stream. If not, the UPnP/CC player will be not receive audio and some might close the connection after a while, although most players will simply be silent until stream restarts. This shall not be necessary in most of the case.
@@ -59,11 +71,19 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `drift <0|1>`	: enable adding or dropping a frame when case source frames producion is too fast or too slow
 - `enabled <0|1>`	: in common section, enables new discovered players by default. In a dedicated section, enables the player
 - `name` 		: The name that will appear for the device in AirPlay. You can change the default name.
-- `log_limit <-1 | n>` 	: (default -1) when using log file, limits its size to 'n' MB (-1 = no limit)
+- `upnp_max`		: set the maximum UPnP version use to search players (default 1)
 - `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
+- `http_length`		: same as `-g` command line parameter
 - `metadata <0|1>`	: send metadata to player (only for mp3 codec and if player supports ICY protocol)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
 - `artwork`		: an URL to an artwork to be displayed on player
+- `flush <0|1>`		: (default 1) set AirPlay *FLUSH* commands response (see also --noflush in "**Misc tips**" section)
+
+These are the global parameters
+
+- `log_limit <-1 | n>` 		: (default -1) when using log file, limits its size to 'n' MB (-1 = no limit)
+- `max_players`			: set the maximum of players (default 32)
+- `ports <port>[:<count>]` 	: set port range to use (see -a)
 
 ## Start automatically in Linux
 
@@ -92,6 +112,8 @@ To start or stop manually the service, type `sudo service airupnp start|stop` in
 To disable the service, type `sudo systemctl disable airupnp.service`
 
 To view the log, `journalctl -u airupnp.service`
+
+On rPi lite, add the following to the /boot/cmdline.txt: init=/bin/systemd
 
 Obviously, from the above example, only use -x if you want a custom configuration. Thanks [@cactus](https://github.com/cactus) for systemd cleaning
 
@@ -135,9 +157,7 @@ There are many tools that allow an application to be run as a service. You can t
 
 ## Synology installation
 
-[@bandesz](https://github.com/bandesz) has made a nice package for automatic installation & launch of airupnp on Syno's
-
-https://github.com/bandesz/AirConnect-Synology
+[@eizedev](https://github.com/eizedev) is now maitaining a package for automatic installation & launch of airupnp on Syno's [here](https://github.com/eizedev/AirConnect-Synology)
 
 ## Player specific hints and tips
 
@@ -152,7 +172,7 @@ To identify your Sonos players, pick an identified IP address, and visit the Son
 [@chpusch](https://github.com/chpusch) has found that Bose SoundTouch work well including synchonisation (as for Sonos, you need to use Bose's native application for grouping / ungrouping). I don't have a SoundTouch system so I cannot do the level of slave/master detection I did for Sonos
 
 #### Pioneer/Phorus/Play-Fi
-Some of these speakers only support mp3 and require a modified `ProtocolInfo` to stream correctly. This can be done by editing the config file and changing `<codec>flac</codec>` to `<codec>mp3</codec>` and replacing the `<mp3>..</mp3>` line with: 
+Some of these speakers only support mp3 and require a modified `ProtocolInfo` to stream correctly. This can be done by editing the config file and changing `<codec>flc</codec>` to `<codec>mp3</codec>` and replacing the `<mp3>..</mp3>` line with: 
 ```
 <mp3>http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000</mp3>
 ```
@@ -160,7 +180,26 @@ Note: you can use the `-i config.xml` to generate a config file if you do not ha
 
 ## Misc tips
  
-- When players disappear regularly, it might be that your router is filtering out multicast packets. For example, for a Asus AC-RT68U, you have to login by ssh and run echo 0 > /sys/class/net/br0/bridge/multicast_snooping but it does not stay after a reboot.     
+- When players disappear regularly, it might be that your router is filtering out multicast packets. For example, for a Asus AC-RT68U, you have to login by ssh and run echo 0 > /sys/class/net/br0/bridge/multicast_snooping but it does not stay after a reboot.
+
+- Lots of users seems to have problem with Unify and broadcasting / finding players. Here is a guide https://www.neilgrogan.com/ubnt-sonos/ made by somebody who fixes the issue for his Sonos
+
+- Some AirPlay controller send a FLUSH and immediately start sending new audio when skipping track. This causes AirConnect to issue a STOP and almost immediately a PLAY command which seems to be a problem for certain players (Sonos in some cases). A possible workaround is to ignore FLUSH request (see config file or use --noflush on the command line) but this has side effect on pause as silence frames are sent. At best restart is delayed and worse case it might not work with some codec (flac)
+
+## HTTP & UPnP specificities
+### HTTP content-length and transfer modes
+Lots of UPnP player have very poor quality HTTP and UPnP stacks, in addition of UPnP itself being a poorly defined/certified standard. One of the main difficulty comes from the fact that AirConnect cannot provide the length of the file being streamed as the source is an infinite real time RTP flow coming from the AirPlay source.
+
+The HTTP standard is clear that the "content-length" header is optional and can be omitted when server does not know the size of the source. If the client is HTTP 1.1 there is another possibility which is to use "chunked" mode where the body of the message is divided into chunks of variable length. This is *explicitely* made for case of unknown source length and an HTTP client that claims to support 1.1 **must** support chunked-encoding.
+
+The default mode of AirUPnP is "no content-length" (\<http_length\> = -1) but unfortunately, some players can't deal with that. You can then try "chunked-encoding" (\<http_length> = -3) but some players who claim to be HTTP 1.1 do not support it. There is a last resort option to add a large fake `content-length` (\<http_length\> = 0). It is set to 2^31-1, so around 5 hours of playback with flac re-encoding. Note that if player is HTTP 1.0 and http_header is set to -3, AirUPnP will fallback no content-length. The command line option `-g` has the same effect that \<http_length\> in the \<common\> section of a config file.
+
+This might still not work as some players do not understand that the source is not a randomly accessible (searchable) file and want to get the first(e.g.) 128kB to try to do some smart guess on the length, close the connection, re-open it from the beginning and expect to have the same content. I'm trying to keep a buffer of last recently sent bytes to be able to resend-it, but that does not always works. Normally, players should understand that when they ask for a range and the response is 200 (full content), it *means* the source does not support range request but some don't (I've tried to add a header "accept: no-range but that makes things worse most of the time).
+
+### UPnP/DLNA ProtocolInfo
+When sending DLNA/UPnP content, there is a special parameter named `ProtocolInfo` that is found in the UPnP command (DIDL-lite header) and can be also explicitly requested by the player during a GET. That field is automatically built but is subject to a lot of intepretations, so it might be helpful to manually define it and you can do that for pcm, wav, flac and mp3 format using the field in the section \<protocol_info\> in your config file.
+
+The description of DIDL-lite, ProtocolInfo and DLNA is way beyond the scope of this README, so you should seek for information before tweaking these.
 
 ## Delay when switching track or source
 
@@ -208,7 +247,7 @@ If you want to recompile, you'll need:
 - https://github.com/akheron/jansson
 - https://github.com/philippe44/mDNS-SD (use fork v2)
 - https://github.com/philippe44/TinySVCmDNS
-- https://github.com/macosforge/alac
+- https://github.com/philippe44/alac
 - https://github.com/mrjimenez/pupnp (I'm using 1.6.19)
 - https://xiph.org/flac/
 - http://www.sourceware.org/pthreads-win32/

@@ -82,7 +82,6 @@ static log_level 	*loglevel = &raop_loglevel;
 enum { DATA, CONTROL, TIMING };
 static char *mime_types[] = { "audio/mp3", "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav" };
 
-
 static struct wave_header_s {
 	u8_t 	chunk_id[4];
 	u8_t	chunk_size[4];
@@ -160,6 +159,7 @@ typedef struct hairtunes_s {
 	u32_t silence_count;	// counter for startup silence frames
 	u32_t filled_frames;    // silence frames in current silence episode
 	bool http_fill;         // fill when missing or just wait
+	bool pause;				// set when pause and silent frames must be produced
 	int skip;				// number of frames to skip to keep sync alignement
 	abuf_t audio_buffer[BUFFER_FRAMES];
 	int http_listener;
@@ -182,10 +182,12 @@ typedef struct hairtunes_s {
 	alac_file *alac_codec;
 	int flush_seqno;
 	bool playing, silence, http_ready;
-	hairtunes_cb_t callback;
+	event_cb_t event_cb;
+	http_cb_t http_cb;
 	void *owner;
 	char *http_tail;
 	size_t http_count;
+	int http_length;
 } hairtunes_t;
 
 
@@ -313,7 +315,10 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 								bool sync, bool drift, bool range, char *latencies,
 								char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
-								void *owner, hairtunes_cb_t callback)
+								void *owner,
+								event_cb_t event_cb, http_cb_t http_cb,
+								unsigned short port_base, unsigned short port_range,
+								int http_length)
 {
 	int i = 0;
 	char *arg, *p;
@@ -321,6 +326,11 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	bool rc = true;
 	hairtunes_t *ctx = calloc(1, sizeof(hairtunes_t));
 	hairtunes_resp_t resp = { 0, 0, 0, 0, NULL };
+	struct {
+		unsigned short count, offset;
+	} port = { 0 };
+	if (!port_base) port_range = 1;
+	port.offset = rand() % port_range;
 
 	if (!ctx) return resp;
 
@@ -329,8 +339,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 		free(ctx);
 		return resp;
 	}
+	ctx->http_length = http_length;
 	ctx->host = host;
-	ctx->decrypt = false;
 	ctx->rtp_host.sin_family = AF_INET;
 	ctx->rtp_host.sin_addr.s_addr = INADDR_ANY;
 	pthread_mutex_init(&ctx->ab_mutex, 0);
@@ -340,12 +350,12 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	ctx->latency = atoi(latencies);
 	ctx->latency = (ctx->latency * 44100) / 1000;
 	if (strstr(latencies, ":f")) ctx->http_fill = true;
-	ctx->callback = callback;
+	ctx->event_cb = event_cb;
+	ctx->http_cb = http_cb;
 	ctx->owner = owner;
 	ctx->synchro.required = sync;
 	ctx->timing.drift = drift;
 	ctx->range = range;
-	ctx->http_ready = false;
 
 	// write pointer = last written, read pointer = next to read so fill = w-r+1
 	ctx->ab_read = ctx->ab_write + 1;
@@ -381,14 +391,23 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 
 	buffer_alloc(ctx->audio_buffer, ctx->frame_size*4);
 
-	// create rtp ports
-	for (i = 0; i < 3; i++) {
-		ctx->rtp_sockets[i].sock = bind_socket(&ctx->rtp_sockets[i].lport, SOCK_DGRAM);
+	for (i = 0; rc && i < 3; i++) {
+		do {
+			ctx->rtp_sockets[i].lport = port_base + ((port.offset + port.count++) % port_range);
+			ctx->rtp_sockets[i].sock = bind_socket(&ctx->rtp_sockets[i].lport, SOCK_DGRAM);
+		} while (ctx->rtp_sockets[i].sock < 0 && port.count < port_range);
+
 		rc &= ctx->rtp_sockets[i].sock > 0;
+
+		LOG_INFO("[%p]: UDP port-%d %hu", ctx, i, ctx->rtp_sockets[i].lport);
 	}
 
 	// create http port and start listening
-	ctx->http_listener = bind_socket(&resp.hport, SOCK_STREAM);
+	do {
+		resp.hport = port_base + ((port.offset + port.count++) % port_range);
+		ctx->http_listener = bind_socket(&resp.hport, SOCK_STREAM);
+	} while (ctx->http_listener < 0 && port.count < port_range);
+
 	i = 128*1024;
 	setsockopt(ctx->http_listener, SOL_SOCKET, SO_SNDBUF, (void*) &i, sizeof(i));
 	rc &= ctx->http_listener > 0;
@@ -397,6 +416,8 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	resp.cport = ctx->rtp_sockets[CONTROL].lport;
 	resp.tport = ctx->rtp_sockets[TIMING].lport;
 	resp.aport = ctx->rtp_sockets[DATA].lport;
+
+	LOG_INFO("[%p]: HTTP listening port %hu", ctx, resp.hport);
 
 	if (rc) {
 		ctx->running = true;
@@ -435,7 +456,7 @@ void hairtunes_end(hairtunes_t *ctx)
 	}
 
 	shutdown_socket(ctx->http_listener);
-	for (i = 0; i < 3; i++) closesocket(ctx->rtp_sockets[i].sock);
+	for (i = 0; i < 3; i++) if (ctx->rtp_sockets[i].sock > 0) closesocket(ctx->rtp_sockets[i].sock);
 
 	delete_alac(ctx->alac_codec);
 	if (ctx->encode.codec) {
@@ -462,7 +483,7 @@ void hairtunes_end(hairtunes_t *ctx)
 }
 
 /*---------------------------------------------------------------------------*/
-bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtptime)
+bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtptime, bool exit_locked, bool silence)
 {
 	bool rc = true;
 	u32_t now = gettime_ms();
@@ -473,17 +494,27 @@ bool hairtunes_flush(hairtunes_t *ctx, unsigned short seqno, unsigned int rtptim
 	} else {
 		pthread_mutex_lock(&ctx->ab_mutex);
 		buffer_reset(ctx->audio_buffer);
-		ctx->playing = false;
 		ctx->flush_seqno = seqno;
-		ctx->synchro.first = false;
-		ctx->http_ready = false;
-		encoder_close(ctx);
-		pthread_mutex_unlock(&ctx->ab_mutex);
+		if (silence) {
+			ctx->pause = true;
+		} else {
+			ctx->playing = false;
+			ctx->synchro.first = false;
+			ctx->http_ready = false;
+			encoder_close(ctx);
+		}
+		if (!exit_locked) pthread_mutex_unlock(&ctx->ab_mutex);
 	}
 
 	LOG_INFO("[%p]: flush %hu %u", ctx, seqno, rtptime);
 
 	return rc;
+}
+
+/*---------------------------------------------------------------------------*/
+void hairtunes_flush_release(hairtunes_t *ctx)
+{
+	pthread_mutex_unlock(&ctx->ab_mutex);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -571,11 +602,14 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 		}
 	}
 
+	// release as soon as one recent frame is received
+	if (ctx->pause && seq_order(ctx->flush_seqno, seqno)) ctx->pause = false;
+
 	if (seqno == (u16_t) (ctx->ab_write + 1)) {
 		// expected packet
 		abuf = ctx->audio_buffer + BUFIDX(seqno);
 		ctx->ab_write = seqno;
-		LOG_SDEBUG("packet expected seqno:%hu rtptime:%u (W:%hu R:%hu)", seqno, rtptime, ctx->ab_write, ctx->ab_read);
+		LOG_SDEBUG("[%p]: packet expected seqno:%hu rtptime:%u (W:%hu R:%hu)", ctx, seqno, rtptime, ctx->ab_write, ctx->ab_read);
 	} else if (seq_order(ctx->ab_write, seqno)) {
 		// newer than expected
 		if (ctx->latency && seq_order(ctx->latency / ctx->frame_size, seqno - ctx->ab_write - 1)) {
@@ -622,7 +656,7 @@ static void buffer_put_packet(hairtunes_t *ctx, seq_t seqno, unsigned rtptime, b
 		fwrite(abuf->data, abuf->len, 1, ctx->rtpOUT);
 #endif
 		if (ctx->silence && memcmp(abuf->data, ctx->silence_frame, abuf->len)) {
-			ctx->callback(ctx->owner, HAIRTUNES_PLAY);
+			ctx->event_cb(ctx->owner, HAIRTUNES_PLAY);
 			ctx->silence = false;
 		}
 	}
@@ -640,7 +674,7 @@ static void *rtp_thread_func(void *arg) {
 
 	for (i = 0; i < 3; i++) {
 		if (ctx->rtp_sockets[i].sock > sock) sock = ctx->rtp_sockets[i].sock;
-		// send synchro requets 3 times
+		// send synchro requests 3 times
 		ntp_sent = rtp_request_timing(ctx);
 	}
 
@@ -749,7 +783,7 @@ static void *rtp_thread_func(void *arg) {
 				u64_t remote 	  =(((u64_t) ntohl(*(u32_t*)(pktp+16))) << 32) + ntohl(*(u32_t*)(pktp+20));
 				u32_t roundtrip   = gettime_ms() - reference;
 
-				// better discard sync packets when roundtrip is suspicious
+				// better discard sync packets when roundtrip is suspicious and get another one
 				if (roundtrip > 100) {
 					LOG_WARN("[%p]: discarding NTP roundtrip of %u ms", ctx, roundtrip);
 					break;
@@ -860,7 +894,7 @@ static bool rtp_request_resend(hairtunes_t *ctx, seq_t first, seq_t last) {
 	// do not request silly ranges (happens in case of network large blackouts)
 	if (seq_order(last, first) || last - first > BUFFER_FRAMES / 2) return false;
 
-	ctx->resent_frames += last - first + 1;
+	ctx->resent_frames += (seq_t) (last - first) + 1;
 
 	LOG_DEBUG("resend request [W:%hu R:%hu first=%hu last=%hu]", ctx->ab_write, ctx->ab_read, first, last);
 
@@ -868,7 +902,7 @@ static bool rtp_request_resend(hairtunes_t *ctx, seq_t first, seq_t last) {
 	req[1] = 0x55|0x80;  // Apple 'resend'
 	*(u16_t*)(req+2) = htons(1);  // our seqnum
 	*(u16_t*)(req+4) = htons(first);  // missed seqnum
-	*(u16_t*)(req+6) = htons(last-first+1);  // count
+	*(u16_t*)(req+6) = htons((seq_t) (last-first)+1);  // count
 
 	ctx->rtp_host.sin_port = htons(ctx->rtp_sockets[CONTROL].rport);
 
@@ -890,8 +924,8 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 
 	if (!ctx->playing) return NULL;
 
-	// send silence if required to create enough buffering
-	if (ctx->silence_count && ctx->silence_count--)	{
+	// send silence if required to create enough buffering (want countdown to happen)
+	if ((ctx->silence_count && ctx->silence_count--) || ctx->pause)	{
 		*len = ctx->frame_size * 4;
 		return (short*) ctx->silence_frame;
 	}
@@ -978,30 +1012,29 @@ static short *_buffer_get_frame(hairtunes_t *ctx, int *len) {
 }
 
 /*---------------------------------------------------------------------------*/
-#ifdef CHUNKED
-int send_data(int sock, void *data, int len, int flags) {
-	char *chunk;
+int send_data(bool chunked, int sock, void *data, int len, int flags) {
+	char chunk[16];
 	int bytes = len;
 
-	asprintf(&chunk, "%x\r\n", len);
-	send(sock, chunk, strlen(chunk), flags);
-	free(chunk);
+	if (chunked) {
+		itoa(len, chunk, 16);
+		strcat(chunk, "\r\n");
+		send(sock, chunk, strlen(chunk), flags);
+	}
+
 	while (bytes) {
-		int sent = send(sock, data + len - bytes, bytes, flags);
+		int sent = send(sock, (u8_t*) data + len - bytes, bytes, flags);
 		if (sent < 0) {
 			LOG_ERROR("Error sending data %u", len);
 			return -1;
 		}
 		bytes -= sent;
 	}
-	send(sock, "\r\n", 2, flags);
 
-	return sent;
+	if (chunked) send(sock, "\r\n", 2, flags);
+
+	return len;
 }
-#else
-#define send_data send
-#endif
-
 
 /*---------------------------------------------------------------------------*/
 static void *http_thread_func(void *arg) {
@@ -1086,7 +1119,7 @@ static void *http_thread_func(void *arg) {
 					ctx->http_count = ctx->encode.len;
 
 					// should be fast enough and can't release mutex anyway
-					send_data(sock, (void*) ctx->encode.buffer, ctx->encode.len, 0);
+					send_data(ctx->http_length == -3, sock, (void*) ctx->encode.buffer, ctx->encode.len, 0);
 					ctx->encode.len = 0;
 					ctx->encode.header = false;
 				}
@@ -1116,7 +1149,7 @@ static void *http_thread_func(void *arg) {
 #endif
 					ctx->http_count = sizeof(wave_header);
 					memcpy(ctx->http_tail, &wave_header, sizeof(wave_header));
-					send_data(sock, (void*) &wave_header, sizeof(wave_header), 0);
+					send_data(ctx->http_length == -3, sock, (void*) &wave_header, sizeof(wave_header), 0);
 					ctx->encode.header = false;
 				}
 				len = size;
@@ -1161,11 +1194,11 @@ static void *http_thread_func(void *arg) {
 
 					// send remaining data first
 					offset = ctx->icy.remain;
-					send_data(sock, (void*) inbuf, offset, 0);
+					if (offset) send_data(ctx->http_length == -3, sock, (void*) inbuf, offset, 0);
 					len -= offset;
 
 					// then send icy data
-					send_data(sock, (void*) buffer, len_16 * 16 + 1, 0);
+					send_data(ctx->http_length == -3, sock, (void*) buffer, len_16 * 16 + 1, 0);
 					ctx->icy.remain = ctx->icy.interval;
 
 					LOG_SDEBUG("[%p]: ICY checked %u", ctx, ctx->icy.remain);
@@ -1175,7 +1208,7 @@ static void *http_thread_func(void *arg) {
 				}
 
 				LOG_SDEBUG("[%p]: HTTP sent frame count:%u bytes:%u (W:%hu R:%hu)", ctx, frame_count++, len+offset, ctx->ab_write, ctx->ab_read);
-				sent = send_data(sock, (u8_t*) inbuf + offset , len, 0);
+				sent = send_data(ctx->http_length == -3, sock, (u8_t*) inbuf + offset , len, 0);
 
 				// update remaining count with desired length
 				if (ctx->icy.interval) ctx->icy.remain -= len;
@@ -1191,10 +1224,10 @@ static void *http_thread_func(void *arg) {
 				}
 			} else pthread_mutex_unlock(&ctx->ab_mutex);
 
-			// packet just sent, don't wait in case we have more so sent (catch-up mode)
-			timeout.tv_usec = 0;
+			// no wait if we have more to send (catch-up) or just 1 frame in pause mode
+			timeout.tv_usec = ctx->pause ? (ctx->frame_size*1000000)/44100 : 0;
 		} else {
-			// nothing to send, so probably can wait 2 frame
+			// nothing to send, so probably can wait 2 frame unless paused
 			timeout.tv_usec = (2*ctx->frame_size*1000000)/44100;
 			pthread_mutex_unlock(&ctx->ab_mutex);
 		}
@@ -1210,7 +1243,6 @@ static void *http_thread_func(void *arg) {
 }
 
 
-#ifdef CHUNKED
 /*----------------------------------------------------------------------------*/
 static void mirror_header(key_data_t *src, key_data_t *rsp, char *key) {
 	char *data;
@@ -1218,20 +1250,25 @@ static void mirror_header(key_data_t *src, key_data_t *rsp, char *key) {
 	data = kd_lookup(src, key);
 	if (data) kd_add(rsp, key, data);
 }
-#endif
 
 
 /*----------------------------------------------------------------------------*/
 static bool handle_http(hairtunes_t *ctx, int sock)
 {
-	char *body = NULL, method[16] = "", *str, *head = NULL;
+	char *body = NULL, method[16] = "", proto[16] = "", *str, *head = NULL;
 	key_data_t headers[64], resp[16] = { { NULL, NULL } };
 	size_t offset = 0;
 	int len;
+	bool HTTP_11;
 
-	if (!http_parse(sock, method, headers, &body, &len)) return false;
+	if (!http_parse(sock, method, NULL, proto, headers, &body, &len)) return false;
+	HTTP_11 = strstr(proto, "1.1") != NULL;
 
-	LOG_INFO("[%p]: received %s", ctx, method);
+	if (*loglevel >= lINFO) {
+		char *p = kd_dump(headers);
+		LOG_INFO("[%p]: received %s %s\n%s", ctx, method, proto, p);
+		NFREE(p);
+	}
 
 	kd_add(resp, "Server", "HairTunes");
 	kd_add(resp, "Content-Type", mime_types[ctx->encode.config.codec]);
@@ -1243,43 +1280,38 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 #else
 		sscanf(str, "bytes=%zu", &offset);
 #endif
+		offset = ctx->http_count && ctx->http_count > TAIL_SIZE ? min(offset, ctx->http_count - TAIL_SIZE - 1) : 0;
 		if (offset) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-			asprintf(&str, "bytes %zu-%zu/*", offset, ctx->http_count);
-#pragma GCC diagnostic pop            }
-			head = "HTTP/1.1 206 Partial Content";
-			kd_add(resp, "Content-Range", str);
-			free(str);
+			if (ctx->http_length == -3 && HTTP_11) head = "HTTP/1.1 206 Partial Content";
+			else head = "HTTP/1.0 206 Partial Content";
+			kd_vadd(resp, "Content-Range", "bytes %zu-%zu/*", offset, ctx->http_count);
 		}
 	}
 
 	// check if add ICY metadata is needed (only on live stream)
 	if (ctx->encode.config.codec == CODEC_MP3 && ctx->encode.config.mp3.icy &&
 		((str = kd_lookup(headers, "Icy-MetaData")) != NULL) && atoi(str)) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-		asprintf(&str, "%u", ICY_INTERVAL);
-#pragma GCC diagnostic pop
-		kd_add(resp, "icy-metaint", str);
+		kd_vadd(resp, "icy-metaint", "%u", ICY_INTERVAL);
 		ctx->icy.interval = ctx->icy.remain = ICY_INTERVAL;
-		free(str);
 	} else ctx->icy.interval = 0;
+	//ctx->icy.interval = 0;
 
-#ifdef CHUNKED
-	mirror_header(headers, resp, "Connection");
-	mirror_header(headers, resp, "transferMode.dlna.org");
-	kd_add(resp, "Transfer-Encoding", "chunked");
-	str = http_send(sock, head ? head : "HTTP/1.1 200 OK", resp);
-#else
-	kd_add(resp, "Connection", "close");
-	str = http_send(sock, head ? head : "HTTP/1.0 200 OK", resp);
-#endif
+	// let owner modify HTTP response if needed
+	if (ctx->http_cb) ctx->http_cb(ctx->owner, headers, resp);
 
-	LOG_INFO("[%p]: responding:\n%s", ctx, str);
+	if (ctx->http_length == -3 && HTTP_11) {
+		mirror_header(headers, resp, "Connection");
+		kd_add(resp, "Transfer-Encoding", "chunked");
+		str = http_send(sock, head ? head : "HTTP/1.1 200 OK", resp);
+	} else {
+		if (ctx->http_length > 0) kd_vadd(resp, "Content-Length", "%d", ctx->http_length);
+		kd_add(resp, "Connection", "close");
+		str = http_send(sock, head ? head : "HTTP/1.0 200 OK", resp);
+	}
+
+	LOG_INFO("[%p]: responding: %s", ctx, str);
 
 	NFREE(body);
-	NFREE(str);
 	kd_free(resp);
 	kd_free(headers);
 
@@ -1297,7 +1329,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 			int sent;
 
 			bytes = min(bytes, ctx->http_count - offset - count);
-			sent = send_data(sock, ctx->http_tail + ((offset + count) % TAIL_SIZE), bytes, 0);
+			sent = send_data(ctx->http_length == -3, sock, ctx->http_tail + ((offset + count) % TAIL_SIZE), bytes, 0);
 
 			if (sent < 0) {
 				LOG_ERROR("[%p]: error re-sending range %u", ctx, offset);
@@ -1310,7 +1342,7 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 			if (ctx->icy.interval) {
 				ctx->icy.remain -= sent;
 				if (!ctx->icy.remain) {
-					send_data(sock, "\1", 1, 0);
+					send_data(ctx->http_length == -3, sock, "\1", 1, 0);
 					ctx->icy.remain = ctx->icy.interval;
 				}
 			}

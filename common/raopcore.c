@@ -50,6 +50,7 @@ typedef struct raop_ctx_s {
 	bool running;
 	encode_t encode;
 	bool drift;
+	bool flush;
 	pthread_t thread, search_thread;
 	unsigned char mac[6];
 	struct {
@@ -57,7 +58,8 @@ typedef struct raop_ctx_s {
 		char *fmtp;
 	} rtsp;
 	struct hairtunes_s *ht;
-	raop_cb_t	callback;
+	raop_cb_t	raop_cb;
+	http_cb_t	http_cb;
 	struct {
 		char				DACPid[32], id[32];
 		struct in_addr		host;
@@ -65,6 +67,10 @@ typedef struct raop_ctx_s {
 		struct mDNShandle_s *handle;
 	} active_remote;
 	void *owner;
+	struct {
+		u16_t base, range;
+	} ports;
+	int http_length;
 } raop_ctx_t;
 
 extern log_level	raop_loglevel;
@@ -75,7 +81,8 @@ static bool 	handle_rtsp(raop_ctx_t *ctx, int sock);
 
 static char*	rsa_apply(unsigned char *input, int inlen, int *outlen, int mode);
 static int  	base64_pad(char *src, char **padded);
-static void 	hairtunes_cb(void *owner, hairtunes_event_t event);
+static void 	event_cb(void *owner, hairtunes_event_t event);
+static void 	http_cb(void *owner, struct key_data_s *headers, struct key_data_s *response);
 static void* 	search_remote(void *args);
 
 extern char private_key[];
@@ -86,12 +93,17 @@ extern char private_key[];
 /*----------------------------------------------------------------------------*/
 struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 						char *model, unsigned char mac[6], char *codec, bool metadata,
-						bool drift,	char *latencies, void *owner, raop_cb_t callback) {
+						bool drift,	bool flush, char *latencies, void *owner,
+						raop_cb_t raop_cb, http_cb_t http_cb,
+						unsigned short port_base, unsigned short port_range,
+						int http_length ) {
 	struct raop_ctx_s *ctx = malloc(sizeof(struct raop_ctx_s));
-	struct sockaddr_in addr;
-	socklen_t nlen = sizeof(struct sockaddr);
-	char *id;
-	int i;
+	char *id;
+	int i;
+	struct {
+		unsigned short count, offset;
+	} port = { 0 };
+
 	char *txt[] = { NULL, "tp=UDP", "sm=false", "sv=false", "ek=1",
 					"et=0,1", "md=0,1,2", "cn=0,1", "ch=2",
 					"ss=16", "sr=44100", "vn=3", "txtvers=1",
@@ -102,14 +114,19 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	// make sure we have a clean context
 	memset(ctx, 0, sizeof(raop_ctx_t));
 
-	ctx->sock = socket(AF_INET, SOCK_STREAM, 0);
-	ctx->callback = callback;
-	ctx->latencies = latencies;
+	ctx->http_length = http_length;
+	ctx->ports.base = port_base;
+	ctx->ports.range = port_range;
+	ctx->host = host;
+	ctx->raop_cb = raop_cb;
+	ctx->http_cb = http_cb;
+	ctx->flush = flush;
+	ctx->latencies = strdup(latencies);
 	ctx->owner = owner;
 	ctx->drift = drift;
 	if (!strcasecmp(codec, "pcm")) ctx->encode.codec = CODEC_PCM;
 	else if (!strcasecmp(codec, "wav")) ctx->encode.codec = CODEC_WAV;
-	else if (stristr(codec, "mp3")) {
+	else if (strcasestr(codec, "mp3")) {
 		ctx->encode.codec = CODEC_MP3;
 		ctx->encode.mp3.icy = metadata;
 		if (strchr(codec, ':')) ctx->encode.mp3.bitrate = atoi(strchr(codec, ':') + 1);
@@ -118,33 +135,25 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 		if (strchr(codec, ':')) ctx->encode.flac.level = atoi(strchr(codec, ':') + 1);
 	}
 
-	if (ctx->sock == -1) {
-		LOG_ERROR("Cannot create listening socket", NULL);
-		free(ctx);
-		return NULL;
-	}
+	// find a free port
+	if (!port_base) port_range = 1;
+	port.offset = rand() % port_range;
 
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_addr.s_addr = host.s_addr;
-	addr.sin_family = AF_INET;
-	addr.sin_port = 0;
+	do {
+		ctx->port = port_base + ((port.offset + port.count++) % port_range);
+		ctx->sock = bind_socket(&ctx->port, SOCK_STREAM);
+	} while (ctx->sock < 0 && port.count < port_range);
 
-	if (bind(ctx->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0 || listen(ctx->sock, 1)) {
+	// then listen for RTSP incoming connections
+	if (ctx->sock < 0 || listen(ctx->sock, 1)) {
 		LOG_ERROR("Cannot bind or listen RTSP listener: %s", strerror(errno));
-		free(ctx);
 		closesocket(ctx->sock);
+		free(ctx);
 		return NULL;
 	}
 
-	getsockname(ctx->sock, (struct sockaddr *) &addr, &nlen);
-	ctx->port = ntohs(addr.sin_port);
-	ctx->host = host;
-
-	// set model
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-	asprintf(&(txt[0]), "am=%s", model);
-#pragma GCC diagnostic pop
+	// set model
+	(void)!asprintf(&(txt[0]), "am=%s", model);
 	id = malloc(strlen(name) + 12 + 1 + 1);
 
 	memcpy(ctx->mac, mac, 6);
@@ -178,12 +187,9 @@ void raop_update(struct raop_ctx_s *ctx, char *name, char *model) {
 	if (!ctx) return;
 
 	mdns_service_remove(ctx->svr, ctx->svc);
-	
+
 	// set model
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-	asprintf(&(txt[0]), "am=%s", model);
-#pragma GCC diagnostic pop
+	(void)!asprintf(&(txt[0]), "am=%s", model);
 	id = malloc(strlen(name) + 12 + 1 + 1);
 	for (i = 0; i < 6; i++) sprintf(id + i*2, "%02X", ctx->mac[i]);
 	// mDNS instance name length cannot be more than 63
@@ -233,6 +239,7 @@ void raop_delete(struct raop_ctx_s *ctx) {
 	NFREE(ctx->rtsp.aeskey);
 	NFREE(ctx->rtsp.aesiv);
 	NFREE(ctx->rtsp.fmtp);
+	free(ctx->latencies);
 
 	mdns_service_remove(ctx->svr, ctx->svc);
 
@@ -262,10 +269,7 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 			double Volume = *((double*) param);
 
 			Volume = Volume ? (Volume - 1) * 30 : -144;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-			asprintf(&command,"setproperty?dmcp.device-volume=%0.4lf", Volume);
-#pragma GCC diagnostic pop
+			(void)!asprintf(&command,"setproperty?dmcp.device-volume=%0.4lf", Volume);
 			break;
 		}
 		default:
@@ -290,10 +294,7 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 		int len;
 		key_data_t headers[4] = { {NULL, NULL} };
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-		asprintf(&method, "GET /ctrl-int/1/%s HTTP/1.0", command);
-#pragma GCC diagnostic pop
+		(void)!asprintf(&method, "GET /ctrl-int/1/%s HTTP/1.0", command);
 		kd_add(headers, "Active-Remote", ctx->active_remote.id);
 		kd_add(headers, "Connection", "close");
 
@@ -365,7 +366,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 	int len;
 	bool success = true;
 
-	if (!http_parse(sock, method, headers, &body, &len)) {
+	if (!http_parse(sock, method, NULL, NULL, headers, &body, &len)) {
 		NFREE(body);
 		kd_free(headers);
 		return false;
@@ -405,14 +406,14 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 		kd_add(resp, "Public", "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER");
 
-	} else if (!strcmp(method, "ANNOUNCE")) {
+	} else if (!strcmp(method, "ANNOUNCE") && body) {
 		char *padded, *p;
 
 		NFREE(ctx->rtsp.aeskey);
 		NFREE(ctx->rtsp.aesiv);
 		NFREE(ctx->rtsp.fmtp);
 
-		if ((p = stristr(body, "rsaaeskey")) != NULL) {
+		if ((p = strcasestr(body, "rsaaeskey")) != NULL) {
 			unsigned char *aeskey;
 			int len, outlen;
 
@@ -427,7 +428,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 			NFREE(padded);
 		}
 
-		if ((p = stristr(body, "aesiv")) != NULL) {
+		if ((p = strcasestr(body, "aesiv")) != NULL) {
 			p = strextract(p, ":", "\r\n");
 			base64_pad(p, &padded);
 			ctx->rtsp.aesiv = malloc(strlen(padded));
@@ -437,7 +438,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 			NFREE(padded);
 		}
 
-		if ((p = stristr(body, "fmtp")) != NULL) {
+		if ((p = strcasestr(body, "fmtp")) != NULL) {
 			p = strextract(p, ":", "\r\n");
 			ctx->rtsp.fmtp = strdup(p);
 			NFREE(p);
@@ -455,22 +456,20 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		hairtunes_resp_t ht;
 		short unsigned tport = 0, cport = 0;
 
-		if ((p = stristr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
-		if ((p = stristr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
+		if ((p = strcasestr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
+		if ((p = strcasestr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
 
 		ht = hairtunes_init(ctx->peer, ctx->encode, false, ctx->drift, true, ctx->latencies,
 							ctx->rtsp.aeskey, ctx->rtsp.aesiv, ctx->rtsp.fmtp,
-							cport, tport, ctx, hairtunes_cb);
+							cport, tport, ctx, event_cb, http_cb, ctx->ports.base,
+							ctx->ports.range, ctx->http_length);
 
 		ctx->hport = ht.hport;
 		ctx->ht = ht.ctx;
 
 		if (cport * tport * ht.cport * ht.tport * ht.aport * ht.hport && ht.ctx) {
 			char *transport;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-			asprintf(&transport, "RTP/AVP/UDP;unicast;mode=record;control_port=%u;timing_port=%u;server_port=%u", ht.cport, ht.tport, ht.aport);
-#pragma GCC diagnostic pop
+			(void) !asprintf(&transport, "RTP/AVP/UDP;unicast;mode=record;control_port=%u;timing_port=%u;server_port=%u", ht.cport, ht.tport, ht.aport);
 			LOG_DEBUG("[%p]: http=(%hu) audio=(%hu:%hu), timing=(%hu:%hu), control=(%hu:%hu)", ctx, ht.hport, 0, ht.aport, tport, ht.tport, cport, ht.cport);
 			kd_add(resp, "Transport", transport);
 			kd_add(resp, "Session", "DEADBEEF");
@@ -491,26 +490,30 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 			kd_add(resp, "Audio-Latency", latency);
 		}
 
-		buf = kd_lookup(headers, "RTP-Info");
-		if ((p = stristr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
-		if ((p = stristr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
+		if ((buf = kd_lookup(headers, "RTP-Info")) != NULL) {
+			if ((p = strcasestr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
+			if ((p = strcasestr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
+		}
 
 		if (ctx->ht) hairtunes_record(ctx->ht, seqno, rtptime);
 
-		ctx->callback(ctx->owner, RAOP_STREAM, &ctx->hport);
+		ctx->raop_cb(ctx->owner, RAOP_STREAM, &ctx->hport);
 
 	}  else if (!strcmp(method, "FLUSH")) {
 		unsigned short seqno = 0;
 		unsigned rtptime = 0;
 		char *p;
 
-		buf = kd_lookup(headers, "RTP-Info");
-		if ((p = stristr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
-		if ((p = stristr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
+		if ((buf = kd_lookup(headers, "RTP-Info")) != NULL) {
+			if ((p = strcasestr(buf, "seq")) != NULL) sscanf(p, "%*[^=]=%hu", &seqno);
+			if ((p = strcasestr(buf, "rtptime")) != NULL) sscanf(p, "%*[^=]=%u", &rtptime);
+        }
 
 		// only send FLUSH if useful (discards frames above buffer head and top)
-		if (ctx->ht && hairtunes_flush(ctx->ht, seqno, rtptime))
-			ctx->callback(ctx->owner, RAOP_FLUSH, &ctx->hport);
+		if (ctx->ht && hairtunes_flush(ctx->ht, seqno, rtptime, true, !ctx->flush)) {
+			ctx->raop_cb(ctx->owner, RAOP_FLUSH, &ctx->hport);
+			hairtunes_flush_release(ctx->ht);
+		}
 
 	}  else if (!strcmp(method, "TEARDOWN")) {
 
@@ -528,18 +531,18 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		NFREE(ctx->rtsp.aesiv);
 		NFREE(ctx->rtsp.fmtp);
 
-		ctx->callback(ctx->owner, RAOP_STOP, &ctx->hport);
+		ctx->raop_cb(ctx->owner, RAOP_STOP, &ctx->hport);
 
-	} if (!strcmp(method, "SET_PARAMETER")) {
+	} else if (!strcmp(method, "SET_PARAMETER")) {
 		char *p;
 
-		if ((p = stristr(body, "volume")) != NULL) {
+		if (body && (p = strcasestr(body, "volume")) != NULL) {
 			double volume;
 
 			sscanf(p, "%*[^:]:%lf", &volume);
 			LOG_INFO("[%p]: SET PARAMETER volume %lf", ctx, volume);
 			volume = (volume == -144.0) ? 0 : (1 + volume / 30);
-			ctx->callback(ctx->owner, RAOP_VOLUME, &volume);
+			ctx->raop_cb(ctx->owner, RAOP_VOLUME, &volume);
 		}
 
 		if (((p = kd_lookup(headers, "Content-Type")) != NULL) && !strcasecmp(p, "application/x-dmap-tagged")) {
@@ -558,6 +561,9 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 				free_metadata(&metadata);
 			}
 		}
+	} else {
+		success = false;
+    	LOG_ERROR("[%p]: unknown/unhandled method %s", ctx, method);
 	}
 
 	// don't need to free "buf" because kd_lookup return a pointer, not a strdup
@@ -581,18 +587,26 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 }
 
 /*----------------------------------------------------------------------------*/
-static void hairtunes_cb(void *owner, hairtunes_event_t event)
+static void event_cb(void *owner, hairtunes_event_t event)
 {
 	raop_ctx_t *ctx = (raop_ctx_t*) owner;
 
 	switch(event) {
 		case HAIRTUNES_PLAY:
-			ctx->callback(ctx->owner, RAOP_PLAY, &ctx->hport);
+			ctx->raop_cb(ctx->owner, RAOP_PLAY, &ctx->hport);
 			break;
 		default:
 			LOG_ERROR("[%p]: unknown hairtunes event", ctx, event);
 			break;
 	}
+}
+
+/*----------------------------------------------------------------------------*/
+static void http_cb(void *owner, struct key_data_s *headers, struct key_data_s *response)
+{
+	// just callback owner, don't do much
+	raop_ctx_t *ctx = (raop_ctx_t*) owner;
+	if (ctx->http_cb) ctx->http_cb(ctx->owner, headers, response);
 }
 
 
@@ -603,7 +617,7 @@ bool search_remote_cb(mDNSservice_t *slist, void *cookie, bool *stop) {
 
 	// see if we have found an active remote for our ID
 	for (s = slist; s; s = s->next) {
-		if (stristr(s->name, ctx->active_remote.DACPid)) {
+		if (strcasestr(s->name, ctx->active_remote.DACPid)) {
 			ctx->active_remote.host = s->addr;
 			ctx->active_remote.port = s->port;
 			LOG_INFO("[%p]: found ActiveRemote for %s at %s:%u", ctx, ctx->active_remote.DACPid,

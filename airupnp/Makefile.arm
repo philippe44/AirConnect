@@ -5,7 +5,7 @@ LDFLAGS ?= -s -lpthread -ldl -lm -lrt -L.
 
 OBJ					= bin/arm
 EXECUTABLE 			= ../bin/airupnp-arm
-#EXECUTABLE_STATIC	= ../bin/airupnp-arm-static
+EXECUTABLE_STATIC	= ../bin/airupnp-arm-static
 
 include Makefile
 

@@ -1,93 +1,204 @@
 #!/bin/bash
 #AirConnect Updater - Pull latest Update from https://github.com/philippe44/AirConnect
 #AirConnect by philippe44 - updater script by FaserF https://github.com/FaserF
-#DO NOT MOVE THIS SCRIPT OUTSIDE THE MAIN AIRCONNECT WORKING DIRECTORY!
 
-#Initial Variables
-if test -f "CHANGELOG"; 
-    then
-    currversion=$(head -n 1 CHANGELOG)
-    currversion=${currversion//[-._]}
-    else
-    currversion=0000
-fi
-if test -f "airupnp.service"; 
-    then
-    mode=Updating
-    currdirectory=$PWD
-    echo "Current Installation detected -> Updating"
-    else
-        mode=Installing
-        echo "First Installation detected."
-        read -p "Enter full path where to install: "  currdirectory
-        mkdir $currdirectory
-fi
+#Variables
+newversion=0000
+currentversion=0000
+state=NoLocalInstallationFound
+currentdirectory=$PWD
 tmpfolder=/tmp/AirConnect
-updatefolder=$tmpfolder/update
-backupfolder=$tmpfolder/oldversion
+backupfolder=$tmpfolder/backup
+downloadfolder=$tmpfolder/download
 
-#Delete older tmp folder (old backup and old update)
-rm -r $tmpfolder
 
-#Create Temp Folders
-mkdir $tmpfolder
-mkdir $backupfolder
-mkdir $updatefolder
+function checkLocalInstallation() {
+	if [ -f "CHANGELOG" ] && [ -f "airupnp.service" ]
+	then
+		echo "Current installation detected"
 
-#Checking for new Updates
-echo "----"
-echo "Checking for new Updates"
-echo "----"
-wget https://raw.githubusercontent.com/philippe44/AirConnect/master/CHANGELOG -O $tmpfolder/CHANGELOG
-newversion=$(head -n 1 $tmpfolder/CHANGELOG)
-newversion=${newversion//[-._]}
+		#Remeber current install directory
+		currentdirectory=$PWD
 
-if [ "$newversion" -gt "$currversion" ];
-then
-#Download newest Version
-echo "----"
-echo "Downloading newest version..."
-echo "----"
-git clone https://github.com/philippe44/AirConnect.git $tmpfolder/update 2>&1 >/dev/null
-fi
+		#Set state
+		state=LocalInstallationFound
+	fi
+	if [ -f "$currentdirectory/AirConnect/CHANGELOG" ]  &&  [ -f "$currentdirectory/AirConnect/airupnp.service" ]
+	then
+		echo "Current installation detected in subfolder AirConnect"
+		
+		#Remeber current install directory
+		currentdirectory=$PWD/AirConnect
+		
+		#Set state
+		state=LocalInstallationFound
+	fi
+}
 
-if [ "$newversion" -gt "$currversion" ] && [ $mode = "Updating" ];
- then
-#Copy Update and Backup Current Version
-echo "----"
-echo "Backing up old version..."
-mv $currdirectory/* $tmpfolder/oldversion
-fi
-if [ "$newversion" -gt "$currversion" ];
- then
-echo "----"
-echo "Installing newest version..."
-echo "----"
-rm -r $currdirectory/*
-mv $tmpfolder/update/* $currdirectory/
-fi
-rm -r $updatefolder
 
-versioncheck=$(head -n 1 $currdirectory/CHANGELOG)
-versioncheck=${versioncheck//[-._]}
+function cleanInstall() {
+	echo "First installation..."
 
-if [ "$newversion" -gt "$currversion" ] && [ "$newversion" -eq "$versioncheck" ];
-    then
-    echo "----"
-    echo "$mode done"
-    echo "----"
-    echo "Old Version: $currversion "
-    echo "New Version: $newversion "
-    elif [ "$newversion" -eq "$currversion" ];
-        then
-        echo "No new Update found."
-    elif [ "$newversion" -lt "$currversion" ];
-        then
-        echo "Your local Version is newer than the one on Github??"
+	#Ask for target installation directory
+	read -p "Enter full path where to install: " targetdirectory
+
+	if test -z "targetdirectory"
+	then
+		# install to current path if nothing is entered
+		targetdirectory=$PWD
+	fi
+
+	if [ "targetdirectory" = "/" ]
+	then
+		echo "Error: Can't install at root"
+		exit 1
+	fi
+
+	#Create target directory
+	if [ ! -d "$targetdirectory" ]
+	then
+		mkdir "$targetdirectory"
+	fi
+
+	#Install newest version
+	echo "----"
+	echo "Installing newest version..."
+	echo "----"
+	git clone --depth=1 https://github.com/philippe44/AirConnect.git $targetdirectory 2>&1 >/dev/null 
+}
+
+
+function prepareTmpFolder() {
+	#Delete previous folder if still exist 
+	if [ -d "$tmpfolder" ]
+	then
+	  rm -rf $tmpfolder
+	fi
+
+	#Create new empty tmp folders
+	mkdir $tmpfolder
+	mkdir $tmpfolder/backup
+	mkdir $tmpfolder/download
+}
+
+
+function searchNewVersion() {
+	#Checking for new Updates
+	echo "----"
+	echo "Checking for new updates"
+	echo "----"
+	
+	#Download online changelog
+	download https://raw.githubusercontent.com/philippe44/AirConnect/master/CHANGELOG $tmpfolder/CHANGELOG
+
+	#Calculate online version
+	newversion=$(head -n 1 $tmpfolder/CHANGELOG)
+	newversion=${newversion//[-._]}
+
+	#Delete online changelog
+	rm $tmpfolder/CHANGELOG
+	
+	#Grep current version number
+	currentversion=$(head -n 1 $currentdirectory/CHANGELOG)
+	currentversion=${currentversion//[-._]}
+
+	if [ "$newversion" -gt "$currentversion" ]
+	then
+	    echo "Found new version: $newversion"
+		state=NewVersionFoundOnGithub
+	else
+	    echo "No new update found"
+	fi
+}
+
+
+function backupCurrentVersion() {
+	echo "----"
+	echo "Backing up old version..."
+	mv $currentdirectory/* $tmpfolder/backup
+}
+
+
+function updateCurrentVersion() {
+	#Remove previous version files
+	rm -rf $currentdirectory/*
+
+	#Download newest Version
+	echo "----"
+	echo "Update version..."
+	echo "----"
+	git clone --depth=1 https://github.com/philippe44/AirConnect.git $downloadfolder 2>&1 >/dev/null
+
+	#Install
+	mv $downloadfolder/* $currentdirectory
+}
+
+
+function validateUpdatedVersion() {
+	versioncheck=$(head -n 1 $currentdirectory/CHANGELOG)
+	versioncheck=${versioncheck//[-._]}
+
+	if [ "$versioncheck" -eq "$newversion" ]
+	then
+	    echo "----"
+	    echo "Update done"
+	    echo "----"
+	    echo "New Version: $versioncheck"
+	else
+	    echo "----"
+	    echo "Update failed"
+	    echo "----"
+	    echo "Current Version: $currentversion"	
+	fi
+
+	echo "-----"
+	echo "Old version backup in: $backupfolder"
+}
+
+
+function download() {
+    url=$1
+    filename=$2
+
+    if [ -x "$(which wget)" ] ; then
+        wget -q $url -O $2
+    elif [ -x "$(which curl)" ]; then
+        curl -o $2 -sfL $url
     else
-    echo "----"
-    echo "ERROR WHILE $mode (to) Version $newversion !!!!"
-fi
+        echo "Could not find curl or wget, please install one." >&2
+    fi
+}
 
-echo "-----"
-echo "Old version backup in: $backupfolder"
+
+#
+# Main
+#########################################
+#
+#
+
+#Check if AirConnect is already installed
+checkLocalInstallation
+
+if [ $state = "NoLocalInstallationFound" ]
+then
+	#Install new version
+	cleanInstall
+else
+	#Create needed folder
+	prepareTmpFolder
+	
+	#Check if a new version is available
+	searchNewVersion
+	
+	if [ $state = "NewVersionFoundOnGithub" ]
+	then
+		#Backup Current Installation
+		backupCurrentVersion
+		
+		#Update Current Installation
+		updateCurrentVersion
+		
+		#Validate Version
+		validateUpdatedVersion
+	fi
+fi

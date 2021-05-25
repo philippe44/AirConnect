@@ -1,5 +1,116 @@
+0.2.50.5
+ - mdns fix for blank name field
+ 
+0.2.50.4
+ - fix sslsym.c macros that were still incorrect
+ 
+0.2.50.3
+ - noflush was not effective for aircast
+ 
+0.2.50.2
+ - make sslsym compatible with openSSL 1.1.x
+ 
+0.2.50.1
+ - noflush properly send silent frames at the right speed
+
+0.2.50.0
+ - flush was broken since 0.2.27.0
+ - add --noflush options (and force :f in latencies if set)
+ - increment stream index at each SetURI/LOAD to make it unique
+ 
+0.2.44.1
+ - (aircast) reset "Remove" flag when adding 
+ 
+0.2.44.0
+ - openssl 1.1.x compatibility
+ 
+0.2.43.1
+ - address valgrind complaints
+ 
+0.2.43.0
+ - don't remove unresponsive UPnP devices when playing
+ - don't remove CC devices that still respond to ping
+ 
+0.2.42.1
+ - re-align airupnp & aircast version numbers
+ 
+0.2.42.0
+ - a bit of cleaning wrt below issue
+ - use "binding" as general parameter name for upnp/cast
+ 
+0.2.41.2
+ - %&@!* of Linux does not handle sscanf with %[^:]:%u when the first string is empty
+ 
+0.2.41.1
+ - RTSP port was not bound to range!
+ 
+0.2.41.0
+ - allow chunked encoding and fixed length
+ - DLNA.ORG_PN was missing for mp3
+
+0.2.40.0
+ - add HTTP header callback for better DLNA handling
+ - answer to getcontentFeatures
+ 
+0.2.30.0
+ - add port range
+ 
+0.2.28.5
+ - tweak HTTP logs
+ 
+0.2.28.4
+ - http_parse SDEBUG statement did not print received line
+ 
+0.2.28.3
+ - remove stristr and clean strcasestr case called with NULL
+ 
+0.2.28.2
+ - exclude NULL modelnumber when -o is specified unless they are explicitely autorized
+ 
+0.2.28.1
+ - check that model & modelnumber are not NULL before looking of exclusion
+ 
+0.2.28.0
+ - make max_players a parameter
+
+0.2.27.1
+ - handle range request beyond count better
+
+0.2.27.0
+ - (airupnp) add -u and UPnPMax config options to set the max upnp search
+ 
+0.2.26.1
+ - (airupnp) config update shall not be done when there is not config
+ 
+0.2.26.0
+ - (aircast) add -v <factor> to globally set group media volume
+
+0.2.25.0
+ - (airupnp) search for mediarenderer:2
+ 
+0.2.24.7
+ - garbadge left in airupnp.c
+ 
+0.2.24.6
+ - Can't re-send more bytes than we've received
+ 
+0.2.24.5
+ - (aircast) clear SSL context on shutdown
+ 
+0.2.24.4
+ - race condition where the UPnP/CC device could be stopped by a flush after it started to play due to de-sync of flush/play (RTP) detetcion
+ 
+0.2.24.3
+ - (airupnp) add remote_title
+ 
+0.2.24.2
+ - restore trailing '+' UPnP name changes
+ 
+0.2.24.1
+ - do not copy NULL strings ... (util.c)
+ 
 0.2.24.0
- - Do not send body when method is HEAD
+ - do not send body when method is HEAD
 
 0.2.23.1
  - A records expiration

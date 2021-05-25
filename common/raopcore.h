@@ -23,13 +23,18 @@
 
 #include "pthread.h"
 #include "mdnsd.h"
+#include "hairtunes.h"
 
 typedef enum { RAOP_STREAM, RAOP_PLAY, RAOP_FLUSH, RAOP_PAUSE, RAOP_STOP, RAOP_VOLUME } raop_event_t ;
 typedef void (*raop_cb_t)(void *owner, raop_event_t event, void *param);
+typedef void (*http_cb_t)(void *owner, struct key_data_s *headers, struct key_data_s *response);
 
-struct raop_ctx_s*   raop_create(struct in_addr host, struct mdnsd *svr, char *name,
+struct raop_ctx_s* raop_create(struct in_addr host, struct mdnsd *svr, char *name,
 						  char *model, unsigned char mac[6], char *codec, bool metadata,
-						  bool drift, char *latencies, void *owner, raop_cb_t callback);
+						  bool drift, bool flush, char *latencies, void *owner,
+						  raop_cb_t raop_cb, http_cb_t http_cb,
+						  unsigned short port_base, unsigned short port_range,
+						  int http_length);
 void		  raop_update(struct raop_ctx_s *ctx, char *name, char *model);
 void  		  raop_delete(struct raop_ctx_s *ctx);
 void		  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param);

@@ -3,6 +3,7 @@
 *.lo
 *.o
 *.obj
+RC*
 
 # Precompiled Headers
 *.gch
@@ -102,3 +103,4 @@ _backup/
 *.#*
 *.bin
 *.log
+tests/

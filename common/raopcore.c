@@ -517,6 +517,8 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 
 	}  else if (!strcmp(method, "TEARDOWN")) {
 
+		ctx->raop_cb(ctx->owner, RAOP_STOP, &ctx->hport);
+
 		hairtunes_end(ctx->ht);
 
 		ctx->ht = NULL;
@@ -530,8 +532,6 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		NFREE(ctx->rtsp.aeskey);
 		NFREE(ctx->rtsp.aesiv);
 		NFREE(ctx->rtsp.fmtp);
-
-		ctx->raop_cb(ctx->owner, RAOP_STOP, &ctx->hport);
 
 	} else if (!strcmp(method, "SET_PARAMETER")) {
 		char *p;

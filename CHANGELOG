@@ -1,3 +1,6 @@
+0.2.51.0
+ - invoke stop callback on TEARDOWN first
+ 
 0.2.50.5
  - mdns fix for blank name field
  

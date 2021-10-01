@@ -1,3 +1,6 @@
+0.2.51.1
+ - Fix CVE-2017-12087
+ 
 0.2.51.0
  - invoke stop callback on TEARDOWN first
  

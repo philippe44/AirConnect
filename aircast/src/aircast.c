@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.51.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.2.51.2"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -214,7 +214,7 @@ void raop_cb(void *owner, raop_event_t event, void *param)
 				char *uri, *ContentType;
 
 				(void)!asprintf(&uri, "http://%s:%u/stream-%u", inet_ntoa(glHost), *((short unsigned*) param), count++);
-				if (!strcasecmp(Device->Config.Codec, "mp3")) ContentType = "audio/mp3";
+				if (!strcasecmp(Device->Config.Codec, "mp3")) ContentType = "audio/mpeg";
 				else if (!strcasecmp(Device->Config.Codec, "wav")) ContentType = "audio/wav";
 				else ContentType = "audio/flac";
 				CastLoad(Device->CastCtx, uri, ContentType, &MetaData);

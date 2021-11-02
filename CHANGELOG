@@ -1,3 +1,7 @@
+0.2.51.2
+ - fix HTTP2 upgrade response to "Connection"
+ - audio/mp3 is not a correct mimetype...
+ 
 0.2.51.1
  - Fix CVE-2017-12087
  

@@ -80,7 +80,7 @@ static log_level 	*loglevel = &raop_loglevel;
 #define ICY_LEN_MAX		(255*16+1)
 
 enum { DATA, CONTROL, TIMING };
-static char *mime_types[] = { "audio/mp3", "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav" };
+static char *mime_types[] = { "audio/mpeg", "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav" };
 
 static struct wave_header_s {
 	u8_t 	chunk_id[4];
@@ -1242,16 +1242,6 @@ static void *http_thread_func(void *arg) {
 	return NULL;
 }
 
-
-/*----------------------------------------------------------------------------*/
-static void mirror_header(key_data_t *src, key_data_t *rsp, char *key) {
-	char *data;
-
-	data = kd_lookup(src, key);
-	if (data) kd_add(rsp, key, data);
-}
-
-
 /*----------------------------------------------------------------------------*/
 static bool handle_http(hairtunes_t *ctx, int sock)
 {
@@ -1294,13 +1284,14 @@ static bool handle_http(hairtunes_t *ctx, int sock)
 		kd_vadd(resp, "icy-metaint", "%u", ICY_INTERVAL);
 		ctx->icy.interval = ctx->icy.remain = ICY_INTERVAL;
 	} else ctx->icy.interval = 0;
-	//ctx->icy.interval = 0;
 
-	// let owner modify HTTP response if needed
+	// let owner modify HTTP response if needed
 	if (ctx->http_cb) ctx->http_cb(ctx->owner, headers, resp);
 
 	if (ctx->http_length == -3 && HTTP_11) {
-		mirror_header(headers, resp, "Connection");
+		char *value = kd_lookup(headers, "Connection");
+		if (value && (!strcasecmp(value, "close") || !strcasecmp(value,"keep-alive"))) kd_add(resp, "Connection", value);
+		else kd_add(resp, "Connection", "close");
 		kd_add(resp, "Transfer-Encoding", "chunked");
 		str = http_send(sock, head ? head : "HTTP/1.1 200 OK", resp);
 	} else {

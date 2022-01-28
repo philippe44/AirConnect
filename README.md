@@ -186,6 +186,8 @@ Note: you can use the `-i config.xml` to generate a config file if you do not ha
 
 - Some AirPlay controller send a FLUSH and immediately start sending new audio when skipping track. This causes AirConnect to issue a STOP and almost immediately a PLAY command which seems to be a problem for certain players (Sonos in some cases). A possible workaround is to ignore FLUSH request (see config file or use --noflush on the command line) but this has side effect on pause as silence frames are sent. At best restart is delayed and worse case it might not work with some codec (flac)
 
+- Some older Avahi distribution grab the port mDNS port 5353 for exclusive use, preventing AirConnect to respond to queries. Please set `disallow-other-stacks=no`in `/etc/avahi/avahi-daemon.conf`
+
 ## HTTP & UPnP specificities
 ### HTTP content-length and transfer modes
 Lots of UPnP player have very poor quality HTTP and UPnP stacks, in addition of UPnP itself being a poorly defined/certified standard. One of the main difficulty comes from the fact that AirConnect cannot provide the length of the file being streamed as the source is an infinite real time RTP flow coming from the AirPlay source.

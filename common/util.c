@@ -264,6 +264,13 @@ void QueueFlush(tQueue *queue)
 	}
 }
 
+/*----------------------------------------------------------------------------*/
+void QueueFreeItem(tQueue* queue, void* item)
+{
+	if (queue->cleanup)	(*(queue->cleanup))(item);
+}
+
+
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */
@@ -427,7 +434,8 @@ void get_mac(u8_t mac[]) {
 	}
 }
 #endif
-
+
+
 
 /*----------------------------------------------------------------------------*/
 #if LINUX
@@ -957,7 +965,7 @@ char *strcasestr(const char *haystack, const char *needle)
 	needle_lwr = strlwr(strdup(needle));
 	p = strstr(haystack_lwr, needle_lwr);
 
-	if (p) p = haystack + (p - haystack_lwr);
+	if (p) p = (char*) haystack + (p - haystack_lwr);
 	free(haystack_lwr);
 	free(needle_lwr);
 	return p;
@@ -1539,9 +1547,11 @@ const char *XMLGetLocalName(IXML_Document *doc, int Depth)
 	while (Depth--) {
 		node = ixmlNode_getFirstChild(node);
 		if (!node) return NULL;
-	}
 
-	return ixmlNode_getLocalName(node);
+	}
+
+
+	return ixmlNode_getLocalName(node);
 }
 #endif
 
@@ -1559,9 +1569,12 @@ void free_metadata(struct metadata_s *metadata)
 }
 
 
-/*--------------------------------------------------------------------------*/
-void dup_metadata(struct metadata_s *dst, struct metadata_s *src)
-{
+
+/*--------------------------------------------------------------------------*/
+
+void dup_metadata(struct metadata_s *dst, struct metadata_s *src)
+
+{
 	free_metadata(dst);
 	if (src->artist) dst->artist = strdup(src->artist);
 	if (src->album) dst->album = strdup(src->album);
@@ -1577,7 +1590,8 @@ void free_metadata(struct metadata_s *metadata)
 }
 
 
-/*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
 
 int _fprintf(FILE *file, ...)
 {

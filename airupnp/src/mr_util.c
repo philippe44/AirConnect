@@ -32,7 +32,7 @@ extern log_level	util_loglevel;
 static log_level 	*loglevel = &util_loglevel;
 
 static IXML_Node*	_getAttributeNode(IXML_Node *node, char *SearchAttr);
-int 				_voidHandler(Upnp_EventType EventType, void *_Event, void *Cookie) { return 0; }
+int 				_voidHandler(Upnp_EventType EventType, const void *_Event, void *Cookie) { return 0; }
 
 
 /*----------------------------------------------------------------------------*/
@@ -56,7 +56,8 @@ int CalcGroupVolume(struct sMR *Device) {
 
 
 /*----------------------------------------------------------------------------*/
-struct sMR *GetMaster(struct sMR *Device, char **Name)
+
+struct sMR *GetMaster(struct sMR *Device, char **Name)
 {
 	IXML_Document *ActionNode = NULL, *Response;
 	char *Body;
@@ -66,8 +67,10 @@ int CalcGroupVolume(struct sMR *Device) {
 
 	if (!*Service->ControlURL) return NULL;
 
-	ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
-	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
+
+	ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
+
+	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
 								 NULL, ActionNode, &Response);
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
@@ -132,8 +135,10 @@ int CalcGroupVolume(struct sMR *Device) {
 }
 
 
-/*----------------------------------------------------------------------------*/
-void FlushMRDevices(void)
+
+/*----------------------------------------------------------------------------*/
+
+void FlushMRDevices(void)
 {
 	int i;
 
@@ -181,14 +186,12 @@ void DelMRDevice(struct sMR *p)
 
 
 /*----------------------------------------------------------------------------*/
-struct sMR* CURL2Device(char *CtrlURL)
+struct sMR* CURL2Device(const UpnpString *CtrlURL)
 {
-	int i, j;
-
-	for (i = 0; i < glMaxDevices; i++) {
+	for (int i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running) continue;
-		for (j = 0; j < NB_SRV; j++) {
-			if (!strcmp(glMRDevices[i].Service[j].ControlURL, CtrlURL)) {
+		for (int j = 0; j < NB_SRV; j++) {
+			if (!strcmp(glMRDevices[i].Service[j].ControlURL, UpnpString_get_String(CtrlURL))) {
 				return &glMRDevices[i];
 			}
 		}
@@ -199,14 +202,12 @@ struct sMR* CURL2Device(char *CtrlURL)
 
 
 /*----------------------------------------------------------------------------*/
-struct sMR* SID2Device(char *SID)
+struct sMR* SID2Device(const UpnpString *SID)
 {
-	int i, j;
-
-	for (i = 0; i < glMaxDevices; i++) {
+	for (int i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running) continue;
-		for (j = 0; j < NB_SRV; j++) {
-			if (!strcmp(glMRDevices[i].Service[j].SID, SID)) {
+		for (int j = 0; j < NB_SRV; j++) {
+			if (!strcmp(glMRDevices[i].Service[j].SID, UpnpString_get_String(SID))) {
 				return &glMRDevices[i];
 			}
 		}
@@ -217,12 +218,10 @@ struct sMR* SID2Device(char *SID)
 
 
 /*----------------------------------------------------------------------------*/
-struct sService *EventURL2Service(char *URL, struct sService *s)
+struct sService *EventURL2Service(const UpnpString *URL, struct sService *s)
 {
-	int i;
-
-	for (i = 0; i < NB_SRV; s++, i++) {
-		if (strcmp(s->EventURL, URL)) continue;
+	for (int i = 0; i < NB_SRV; s++, i++) {
+		if (strcmp(s->EventURL, UpnpString_get_String(URL))) continue;
 		return s;
 	}
 
@@ -231,11 +230,9 @@ struct sService *EventURL2Service(char *URL, struct sService *s)
 
 
 /*----------------------------------------------------------------------------*/
-struct sMR* UDN2Device(char *UDN)
+struct sMR* UDN2Device(const char *UDN)
 {
-	int i;
-
-	for (i = 0; i < glMaxDevices; i++) {
+	for (int i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running) continue;
 		if (!strcmp(glMRDevices[i].UDN, UDN)) {
 			return &glMRDevices[i];
@@ -477,7 +474,7 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 /*----------------------------------------------------------------------------*/
 static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
 {
-	IXML_Node *ret;
+	IXML_Node *ret = NULL;
 	IXML_NamedNodeMap *map = ixmlNode_getAttributes(node);
 	int i;
 

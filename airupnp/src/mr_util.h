@@ -30,12 +30,12 @@ int 		CalcGroupVolume(struct sMR *Master);
 bool		CheckAndLock(struct sMR *Device);
 double		GetLocalGroupVolume(struct sMR *Member, int *count);
 
-struct sMR*  SID2Device(Upnp_SID Sid);
-struct sMR*  CURL2Device(char *CtrlURL);
-struct sMR*  PURL2Device(char *URL);
-struct sMR*  UDN2Device(char *SID);
+struct sMR*  SID2Device(const UpnpString *SID);
+struct sMR*  CURL2Device(const UpnpString *CtrlURL);
+struct sMR*  PURL2Device(const UpnpString *URL);
+struct sMR*  UDN2Device(const char *SID);
 
-struct sService* EventURL2Service(char *URL, struct sService *s);
+struct sService* EventURL2Service(const UpnpString *URL, struct sService *s);
 
 void 		 MakeMacUnique(struct sMR *Device);
 in_addr_t 	 ExtractIP(const char *URL);

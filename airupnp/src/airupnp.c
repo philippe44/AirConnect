@@ -396,12 +396,12 @@ void HandleHTTP(void *owner, struct key_data_s *headers, struct key_data_s *resp
 	if (kd_lookup(headers, "getcontentFeatures.dlna.org") && (p = strcasestr(Device->ProtocolInfo, "DLNA.ORG")) != NULL) {
 		kd_add(response, "contentFeatures.dlna.org", p);
 	}
-
 	if ((p = kd_lookup(headers, "transferMode.dlna.org")) != NULL) {
 		kd_add(response, "transferMode.dlna.org", p);
 	}
 }
-
+
+
 
 /*----------------------------------------------------------------------------*/
 static bool _ProcessQueue(struct sMR *Device)
@@ -429,11 +429,11 @@ static bool _ProcessQueue(struct sMR *Device)
 
 
 /*----------------------------------------------------------------------------*/
-static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
+static void ProcessEvent(Upnp_EventType EventType, const void *_Event, void *Cookie)
 {
-	struct Upnp_Event *Event = (struct Upnp_Event*) _Event;
-	struct sMR *Device = SID2Device(Event->Sid);
-	IXML_Document *VarDoc = Event->ChangedVariables;
+	UpnpEvent* Event = (UpnpEvent*)_Event;
+	struct sMR *Device = SID2Device(UpnpEvent_get_SID(Event));
+	IXML_Document *VarDoc = UpnpEvent_get_ChangedVariables(Event);
 	char  *r = NULL;
 	char  *LastChange = NULL;
 
@@ -443,7 +443,7 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 	LastChange = XMLGetFirstDocumentItem(VarDoc, "LastChange", true);
 
 	if ((!Device->Raop && !Device->Master) || !LastChange) {
-		LOG_SDEBUG("no RAOP device (yet) or not change for %s", Event->Sid);
+		LOG_SDEBUG("no RAOP device (yet) or not change for %s", UpnpString_get_String(UpnpEvent_get_SID(Event)));
 		pthread_mutex_unlock(&Device->Mutex);
 		NFREE(LastChange);
 		return;
@@ -474,7 +474,7 @@ static void ProcessEvent(Upnp_EventType EventType, void *_Event, void *Cookie)
 
 
 /*----------------------------------------------------------------------------*/
-int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
+int ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie)
 {
 	static int recurse = 0;
 	struct sMR *p = NULL;
@@ -484,18 +484,17 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 	switch ( EventType ) {
 		case UPNP_CONTROL_ACTION_COMPLETE: 	{
-			struct Upnp_Action_Complete *Action = (struct Upnp_Action_Complete *)Event;
-			char   *r;
-
-			p = CURL2Device(Action->CtrlUrl);
+			char* r;;
+			
+			p = CURL2Device(UpnpActionComplete_get_CtrlUrl(Event));
 
 			if (!CheckAndLock(p)) return 0;
 
-			LOG_SDEBUG("[%p]: ac %i %s (cookie %p)", p, EventType, Action->CtrlUrl, Cookie);
+			LOG_SDEBUG("[%p]: ac %i %s (cookie %p)", p, EventType, UpnpString_get_String(UpnpActionComplete_get_CtrlUrl(Event)));
 
 			// If waited action has been completed, proceed to next one if any
 			if (p->WaitCookie) {
-				const char *Resp = XMLGetLocalName(Action->ActionResult, 1);
+				const char *Resp = XMLGetLocalName(UpnpActionComplete_get_ActionResult(Event), 1);
 
 				LOG_DEBUG("[%p]: Waited action %s", p, Resp ? Resp : "<none>");
 
@@ -524,7 +523,7 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 			if (Cookie < p->StartCookie) break;
 
 			// transport state response
-			if ((r = XMLGetFirstDocumentItem(Action->ActionResult, "CurrentTransportState", true)) != NULL) {
+			if ((r = XMLGetFirstDocumentItem(UpnpActionComplete_get_ActionResult(Event), "CurrentTransportState", true)) != NULL) {
 				if (!strcmp(r, "TRANSITIONING") && p->State != TRANSITIONING) {
 					p->State = TRANSITIONING;
 					LOG_INFO("[%p]: uPNP transition", p);
@@ -548,9 +547,9 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 			LOG_SDEBUG("Action complete : %i (cookie %p)", EventType, Cookie);
 
-			if (Action->ErrCode != UPNP_E_SUCCESS) {
+			if (UpnpActionComplete_get_ErrCode(Event) != UPNP_E_SUCCESS) {
 				p->ErrorCount++;
-				LOG_ERROR("Error in action callback -- %d (cookie %p)",	Action->ErrCode, Cookie);
+				LOG_ERROR("Error in action callback -- %d (cookie %p)", UpnpActionComplete_get_ErrCode(Event), Cookie);
 			} else {
 				p->ErrorCount = 0;
 			}
@@ -572,7 +571,7 @@ int ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie)
 
 
 /*----------------------------------------------------------------------------*/
-int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
+int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 {
 	// this variable is not thread_safe and not supposed to be
 	static int recurse = 0;
@@ -588,22 +587,20 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 			// probably not needed now as the search happens often enough and alive comes from many other devices
 			break;
 		case UPNP_DISCOVERY_SEARCH_RESULT: {
-			struct Upnp_Discovery *Event = (struct Upnp_Discovery *) _Event;
 			tUpdate *Update = malloc(sizeof(tUpdate));
 
 			Update->Type = DISCOVERY;
-			Update->Data  = strdup(Event->Location);
+			Update->Data = strdup(UpnpString_get_String(UpnpDiscovery_get_Location(_Event)));
 			QueueInsert(&glUpdateQueue, Update);
 			pthread_cond_signal(&glUpdateCond);
 
 			break;
 		}
 		case UPNP_DISCOVERY_ADVERTISEMENT_BYEBYE: {
-			struct Upnp_Discovery *Event = (struct Upnp_Discovery *) _Event;
 			tUpdate *Update = malloc(sizeof(tUpdate));
 
 			Update->Type = BYE_BYE;
-			Update->Data	 = strdup(Event->DeviceId);
+			Update->Data = strdup(UpnpString_get_String(UpnpDiscovery_get_DeviceID(_Event)));
 			QueueInsert(&glUpdateQueue, Update);
 			pthread_cond_signal(&glUpdateCond);
 
@@ -632,13 +629,12 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 			break;
 		case UPNP_EVENT_SUBSCRIPTION_EXPIRED:
 		case UPNP_EVENT_AUTORENEWAL_FAILED: {
-			struct Upnp_Event_Subscribe *Event = (struct Upnp_Event_Subscribe *)_Event;
 			struct sService *s;
-			struct sMR *Device = SID2Device(Event->Sid);
+			struct sMR *Device = SID2Device(UpnpEventSubscribe_get_SID(_Event));
 
 			if (!CheckAndLock(Device)) break;
 
-			s = EventURL2Service(Event->PublisherUrl, Device->Service);
+			s = EventURL2Service(UpnpEventSubscribe_get_PublisherUrl(_Event), Device->Service);
 			if (s != NULL) {
 				UpnpSubscribeAsync(glControlPointHandle, s->EventURL, s->TimeOut,
 								   MasterHandler, (void*) strdup(Device->UDN));
@@ -651,7 +647,6 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 		}
 		case UPNP_EVENT_RENEWAL_COMPLETE:
 		case UPNP_EVENT_SUBSCRIBE_COMPLETE: {
-			struct Upnp_Event_Subscribe *Event = (struct Upnp_Event_Subscribe *)_Event;
 			struct sMR *Device = UDN2Device((char*) Cookie);
 			struct sService *s;
 
@@ -659,12 +654,12 @@ int MasterHandler(Upnp_EventType EventType, void *_Event, void *Cookie)
 
 			if (!CheckAndLock(Device)) break;
 
-			s = EventURL2Service(Event->PublisherUrl, Device->Service);
+			s = EventURL2Service(UpnpEventSubscribe_get_PublisherUrl(_Event), Device->Service);
 			if (s != NULL) {
-				if (Event->ErrCode == UPNP_E_SUCCESS) {
+				if (UpnpEventSubscribe_get_ErrCode(_Event) == UPNP_E_SUCCESS) {
 					s->Failed = 0;
-					strcpy(s->SID, Event->Sid);
-					s->TimeOut = Event->TimeOut;
+					strcpy(s->SID, UpnpString_get_String(UpnpEventSubscribe_get_SID(_Event)));
+					s->TimeOut = UpnpEventSubscribe_get_TimeOut(_Event);
 					LOG_INFO("[%p]: subscribe success", Device);
 				} else if (s->Failed++ < 3) {
 					LOG_INFO("[%p]: subscribe fail, re-trying %u", Device, s->Failed);
@@ -714,7 +709,7 @@ static void *UpdateThread(void *args)
 		pthread_cond_wait(&glUpdateCond, &glUpdateMutex);
 		pthread_mutex_unlock(&glUpdateMutex);
 
-		for (; glMainRunning && (Update = QueueExtract(&glUpdateQueue)) != NULL; FreeUpdate(Update)) {
+		for (; glMainRunning && (Update = QueueExtract(&glUpdateQueue)) != NULL; QueueFreeItem(&glUpdateQueue, Update)) {
 			struct sMR *Device;
 			int i;
 			u32_t now = gettime_ms() / 1000;
@@ -820,7 +815,7 @@ static void *UpdateThread(void *args)
 
 				// this can take a very long time, too bad for the queue...
 				if ((rc = UpnpDownloadXmlDoc(Update->Data, &DescDoc)) != UPNP_E_SUCCESS) {
-					LOG_INFO("Error obtaining description %s -- error = %d\n", Update->Data, rc);
+					LOG_DEBUG("Error obtaining description %s -- error = %d\n", Update->Data, rc);
 					goto cleanup;
 				}
 
@@ -1112,8 +1107,9 @@ static bool Start(bool cold)
 		strcpy(IP, inet_ntoa(host));
 	}
 
-	UpnpSetLogLevel(UPNP_ALL);
-	rc = UpnpInit(IP, glPort);
+	UpnpSetLogLevel(UPNP_CRITICAL);
+	//rc = UpnpInit(IP, glPort);
+	rc = UpnpInit2(NULL, glPort);
 
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("UPnP init failed: %d", rc);
@@ -1140,7 +1136,7 @@ static bool Start(bool cold)
 
 		// mutex should *always* be valid
 		glMRDevices = calloc(glMaxDevices, sizeof(struct sMR));
-		for (i = 0; i < glMaxDevices; i++)	pthread_mutex_init(&glMRDevices[i].Mutex, 0);
+		for (i = 0; i < glMaxDevices; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
 		/* start the main thread */
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
@@ -1153,7 +1149,6 @@ static bool Start(bool cold)
 		pthread_create(&glUpdateThread, NULL, &UpdateThread, NULL);
 
 		rc = UpnpRegisterClient(MasterHandler, NULL, &glControlPointHandle);
-
 		if (rc != UPNP_E_SUCCESS) {
 			LOG_ERROR("Error registering ControlPoint: %d", rc);
 			goto Error;
@@ -1456,7 +1451,6 @@ int main(int argc, char *argv[])
 	}
 
 	if (!Start(true)) {
-
 		LOG_ERROR("Cannot start", NULL);
 		exit(1);
 	}

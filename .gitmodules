@@ -1,0 +1,27 @@
+[submodule "common/jansson"]
+	path = common/jansson
+	url = https://github.com/philippe44/jansson
+[submodule "common/flac"]
+	path = common/flac
+	url = https://github.com/philippe44/flac
+[submodule "common/ogg"]
+	path = common/ogg
+	url = https://github.com/philippe44/ogg
+[submodule "common/pthreads4w"]
+	path = common/pthreads4w
+	url = https://github.com/philippe44/pthreads4w
+[submodule "airupnp/pupnp"]
+	path = airupnp/pupnp
+	url = https://github.com/philippe44/pupnp
+[submodule "common/shine"]
+	path = common/shine
+	url = https://github.com/philippe44/shine
+[submodule "common/tinysvcmdns"]
+	path = common/tinysvcmdns
+	url = https://github.com/philippe44/tinysvcmdns
+[submodule "common/mdns-sd"]
+	path = common/mdns-sd
+	url = https://github.com/philippe44/mdns-sd
+[submodule "common/dmap-parser"]
+	path = common/dmap-parser
+	url = https://github.com/philippe44/dmap-parser

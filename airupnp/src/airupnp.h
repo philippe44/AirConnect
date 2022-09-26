@@ -116,7 +116,7 @@ extern char					glBinding[128];
 extern unsigned short		glPortBase, glPortRange;
 
 int 			MasterHandler(Upnp_EventType EventType, void *Event, void *Cookie);
-int 			ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie);
+int 			ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie);
 
 
 #endif

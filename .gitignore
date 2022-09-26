@@ -86,7 +86,8 @@ __history
 /package*.*
 _backup/
 *.pcm
-*.*proj
+*.cbproj
+*.groupproj
 *.zip
 *.z
 *.local
@@ -103,4 +104,13 @@ _backup/
 *.#*
 *.bin
 *.log
+*.bak
+*.pdb
+*.user
 tests/
+bin/bcc/
+bin/msvc
+.vs/
+__recovery/
+bin
+*.sln

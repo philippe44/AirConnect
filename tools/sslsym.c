@@ -100,7 +100,8 @@ ret fn(P(n,__VA_ARGS__)) {				 	\
 #define SYMLOAD(h, fn) SYM(fn) = dlsym(h, STR(fn))
 #define SHIMSET(fn) if (!SYM(fn)) SYM(fn) = shim_##fn
 
-/*
+
+/*
  MNNFFPPS: major minor fix patch status
  0x101ffpps = 1.1. fix->ff patch->pp status->s
 */
@@ -147,7 +148,8 @@ static char *LIBCRYPTO[] 	= {
 #endif
 
 #ifndef SSLv23_client_method
-#define _SSLv23_client_method SSLv23_client_method
+
+#define _SSLv23_client_method SSLv23_client_method
 #endif
 #ifndef SSL_library_init
 #define _SSL_library_init SSL_library_init
@@ -200,7 +202,7 @@ SYMDECL(ERR_remove_state, void, 1, unsigned long, pid);
 #if WIN
 static void *dlopen(const char *filename, int flag) {
 	SetLastError(0);
-	return LoadLibrary((LPCTSTR)filename);
+	return LoadLibraryA(filename);
 }
 
 static void dlclose(void *handle) {
@@ -208,7 +210,6 @@ static void dlclose(void *handle) {
 }
 
 static void *dlsym(void *handle, const char *symbol) {
-	void *a;
 	SetLastError(0);
 	return (void *)GetProcAddress(handle, symbol);
 }

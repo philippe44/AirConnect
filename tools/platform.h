@@ -127,13 +127,16 @@ typedef __int64 s64_t;
 int gettimeofday(struct timeval *tv, struct timezone *tz);
 
 #define usleep(x) Sleep((x)/1000)
-#define sleep(x) Sleep((x)*1000)
+
+#define sleep(x) Sleep((x)*1000)
 #define last_error() WSAGetLastError()
 #define ERROR_WOULDBLOCK WSAEWOULDBLOCK
 #define open _open
 #define read _read
 #define poll WSAPoll
+#ifdef __BORLANDC__
 #define snprintf _snprintf
+#endif
 #define fresize(f, s) chsize(fileno(f), s)
 #define strcasecmp stricmp
 #define _random(x) random(x)
@@ -151,10 +154,13 @@ int gettimeofday(struct timeval *tv, struct timezone *tz);
 typedef struct ntp_s {
 	u32_t seconds;
 	u32_t fraction;
-} ntp_t;
 
-u64_t timeval_to_ntp(struct timeval tv, struct ntp_s *ntp);
-u64_t get_ntp(struct ntp_s *ntp);
+} ntp_t;
+
+
+u64_t timeval_to_ntp(struct timeval tv, struct ntp_s *ntp);
+
+u64_t get_ntp(struct ntp_s *ntp);
 u32_t gettime_ms(void);
 u64_t gettime_ms64(void);
 

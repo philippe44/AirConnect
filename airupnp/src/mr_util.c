@@ -56,7 +56,8 @@ int CalcGroupVolume(struct sMR *Device) {
 
 
 /*----------------------------------------------------------------------------*/
-struct sMR *GetMaster(struct sMR *Device, char **Name)
+
+struct sMR *GetMaster(struct sMR *Device, char **Name)
 {
 	IXML_Document *ActionNode = NULL, *Response;
 	char *Body;
@@ -66,8 +67,10 @@ int CalcGroupVolume(struct sMR *Device) {
 
 	if (!*Service->ControlURL) return NULL;
 
-	ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
-	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
+
+	ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
+
+	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,
 								 NULL, ActionNode, &Response);
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
@@ -132,8 +135,10 @@ int CalcGroupVolume(struct sMR *Device) {
 }
 
 
-/*----------------------------------------------------------------------------*/
-void FlushMRDevices(void)
+
+/*----------------------------------------------------------------------------*/
+
+void FlushMRDevices(void)
 {
 	int i;
 
@@ -235,7 +240,8 @@ struct sMR* UDN2Device(char *UDN)
 {
 	int i;
 
-	for (i = 0; i < glMaxDevices; i++) {
+
+	for (i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running) continue;
 		if (!strcmp(glMRDevices[i].UDN, UDN)) {
 			return &glMRDevices[i];
@@ -477,7 +483,7 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 /*----------------------------------------------------------------------------*/
 static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
 {
-	IXML_Node *ret;
+	IXML_Node *ret = NULL;
 	IXML_NamedNodeMap *map = ixmlNode_getAttributes(node);
 	int i;
 

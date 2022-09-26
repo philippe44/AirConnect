@@ -85,7 +85,8 @@ void 		clear_list(list_t **list, void (*free_func)(void *));
 void 		free_metadata(struct metadata_s *metadata);
 void 		dup_metadata(struct metadata_s *dst, struct metadata_s *src);
 
-int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait);
+
+int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait);
 
 #ifdef _USE_XML_
 const char*	XMLGetLocalName(IXML_Document *doc, int Depth);
@@ -120,15 +121,22 @@ in_addr_t 	get_localhost(char **name);
 void 		get_mac(u8_t mac[]);
 void 		winsock_init(void);
 void 		winsock_close(void);
-int 		shutdown_socket(int sd);
+
+int 		shutdown_socket(int sd);
 int 		bind_socket(short unsigned *port, int mode);
-int 		conn_socket(unsigned short port);#if !WINint SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size);#endif
+int 		conn_socket(unsigned short port);
+#if !WIN
+int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size);
+#endif
+
 typedef struct key_data_s {
-	char *key;
+
+	char *key;
 	char *data;
 } key_data_t;
 
-bool 		http_parse(int sock, char *method, char *resource, char *proto, key_data_t *rkd, char **body, int *len);
+
+bool 		http_parse(int sock, char *method, char *resource, char *proto, key_data_t *rkd, char **body, int *len);
 char*		http_send(int sock, char *method, key_data_t *rkd);
 int 		read_line(int fd, char *line, int maxlen, int timeout);
 int 		send_response(int sock, char *response);
@@ -142,5 +150,6 @@ void 		kd_free(key_data_t *kd);
 u64_t 		gettime_ms64(void);
 
 int 		_fprintf(FILE *file, ...);
-#endif
+
+#endif
 

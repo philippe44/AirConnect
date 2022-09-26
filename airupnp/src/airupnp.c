@@ -396,12 +396,12 @@ void HandleHTTP(void *owner, struct key_data_s *headers, struct key_data_s *resp
 	if (kd_lookup(headers, "getcontentFeatures.dlna.org") && (p = strcasestr(Device->ProtocolInfo, "DLNA.ORG")) != NULL) {
 		kd_add(response, "contentFeatures.dlna.org", p);
 	}
-
 	if ((p = kd_lookup(headers, "transferMode.dlna.org")) != NULL) {
 		kd_add(response, "transferMode.dlna.org", p);
 	}
 }
-
+
+
 
 /*----------------------------------------------------------------------------*/
 static bool _ProcessQueue(struct sMR *Device)
@@ -1109,6 +1109,7 @@ static bool Start(bool cold)
 	if (!*IP) {
 		struct in_addr host;
 		host.s_addr = get_localhost(NULL);
+		get_interface(&host.s_addr);
 		strcpy(IP, inet_ntoa(host));
 	}
 

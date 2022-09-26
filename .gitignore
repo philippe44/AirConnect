@@ -103,4 +103,11 @@ _backup/
 *.#*
 *.bin
 *.log
+*.bak
+*.pdb
+*.user
 tests/
+bin/bcc/
+bin/msvc
+.vs/
+__recovery/

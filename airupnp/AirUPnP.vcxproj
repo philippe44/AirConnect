@@ -36,7 +36,6 @@
     <ClCompile Include="src\mr_util.c" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="..\..\pupnp\build\upnp\Release\libupnps.lib" />
     <Library Include="..\common\flac\targets\win32\x86\FLAC.lib" />
     <Library Include="..\common\flac\targets\win32\x86\utf8.lib" />
     <Library Include="..\common\jansson\targets\win32\x86\jansson.lib" />
@@ -45,6 +44,7 @@
     <Library Include="..\common\shine\targets\win32\x86\shine.lib" />
     <Library Include="..\common\tinysvcmdns\targets\win32\x86\tinysvcmdns.lib" />
     <Library Include="pupnp\targets\win32\x86\ixmlsd.lib" />
+    <Library Include="pupnp\targets\win32\x86\libupnps.lib" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -93,7 +93,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories></AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
       <AdditionalDependencies>ws2_32.lib;wsock32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt;libcmtd</IgnoreSpecificDefaultLibraries>
     </Link>

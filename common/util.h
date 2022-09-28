@@ -28,7 +28,7 @@
 
 #include "platform.h"
 #include "pthread.h"
-#ifdef _USE_XML_
+#ifdef USE_XML
 #include "ixml.h"
 #endif
 
@@ -89,7 +89,7 @@ void 		dup_metadata(struct metadata_s *dst, struct metadata_s *src);
 
 int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait);
 
-#ifdef _USE_XML_
+#ifdef USE_XML
 const char*	XMLGetLocalName(IXML_Document *doc, int Depth);
 IXML_Node*	XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 IXML_Node*	XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);

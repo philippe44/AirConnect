@@ -30,10 +30,15 @@
     <ClCompile Include="..\tools\sslsym.c">
       <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
-    <ClCompile Include="src\airupnp.c" />
-    <ClCompile Include="src\avt_util.c" />
-    <ClCompile Include="src\config_upnp.c" />
-    <ClCompile Include="src\mr_util.c" />
+    <ClCompile Include="nanopb\pb_common.c" />
+    <ClCompile Include="nanopb\pb_decode.c" />
+    <ClCompile Include="nanopb\pb_encode.c" />
+    <ClCompile Include="src\aircast.c" />
+    <ClCompile Include="src\castcore.c" />
+    <ClCompile Include="src\castmessage.pb.c" />
+    <ClCompile Include="src\cast_parse.c" />
+    <ClCompile Include="src\cast_util.c" />
+    <ClCompile Include="src\config_cast.c" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\common\flac\targets\win32\x86\FLAC.lib" />
@@ -42,8 +47,8 @@
     <Library Include="..\common\pthreads4w\targets\win32\x86\libpthreadVC3d.lib" />
     <Library Include="..\common\shine\targets\win32\x86\shine.lib" />
     <Library Include="..\common\tinysvcmdns\targets\win32\x86\tinysvcmdns.lib" />
-    <Library Include="..\common\pupnp\targets\win32\x86\ixmlsd.lib" />
-    <Library Include="..\common\pupnp\targets\win32\x86\libupnps.lib" />
+    <Library Include="..\common\pupnp\targets\win32\x86\ixmls.lib" />
+    <Library Include="jansson\targets\win32\x86\jansson.lib" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -83,9 +88,9 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4129;4018;4244;4101;4267;4102;4068;4142</DisableSpecificWarnings>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>__PTW32_STATIC_LIB;UPNP_STATIC_LIB;FLAC__NO_DLL;USE_XML;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>USE_XML;UPNP_STATIC_LIB;PB_NO_STATIC_ASSERT;PB_FIELD_16BIT;__PTW32_STATIC_LIB;FLAC__NO_DLL;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BaseCommon)\openssl\inc;$(BaseCommon);$(BaseCommon)\pupnp\upnp\inc;$(BaseCommon)\pupnp\ixml\inc;$(BaseCommon)\pupnp\targets\win32\x86\inc;$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\inc;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BaseCommon)\pupnp\upnp\inc;$(BaseCommon)\pupnp\targets\win32\x86\inc;$(BaseCommon)\pupnp\ixml\inc;nanopb;$(BaseCommon)\openssl\inc;$(BaseCommon);$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\inc;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;jansson\targets\win32\x86\inc;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ProgramDataBaseFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pd</ProgramDataBaseFileName>
     </ClCompile>

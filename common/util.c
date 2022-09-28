@@ -1369,7 +1369,7 @@ char *kd_dump(key_data_t *kd)
 /* 																			  */
 /*----------------------------------------------------------------------------*/
 
-#ifdef _USE_XML_
+#ifdef USE_XML
 /*----------------------------------------------------------------------------*/
 IXML_Node *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...)
 {

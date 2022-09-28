@@ -36,7 +36,7 @@
 #include "config_cast.h"
 #include "sslsym.h"
 
-#define VERSION "v0.2.51.2"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v0.3.00.0"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5
@@ -98,7 +98,8 @@ static char					glConfigName[_STR_LEN_] = "./config.xml";
 static struct mdnsd*		glmDNSServer = NULL;
 
 static char usage[] =
-			VERSION "\n"
+
+			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
 		   "  -b <ip>\t\tnetwork address to bind to\n"
@@ -158,7 +159,8 @@ static char license[] =
 		   "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n\n"
 	;
 
-/*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
 /* prototypes */
 /*----------------------------------------------------------------------------*/
 static void *MRThread(void *args);
@@ -504,7 +506,8 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		if (Model && !strcasestr(Model, "Group")) Group = false;
 		else Group = true;
 		NFREE(Model);
-
+
+
 		Name = GetmDNSAttribute(s->attr, s->attr_count, "fn");
 		if (!Name) Name = strdup(s->hostname);
 		
@@ -524,18 +527,27 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		NFREE(Name);
 	}
 
-	// look for devices to be removed
-	for (j = 0; j < glMaxDevices; j++) {
-		Device = glMRDevices + j;
-		if (Device->Running && Device->Remove && !CastIsConnected(Device->CastCtx)) {
-			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
-			raop_delete(Device->Raop);
+
+	// look for devices to be removed
+
+	for (j = 0; j < glMaxDevices; j++) {
+
+		Device = glMRDevices + j;
+
+		if (Device->Running && Device->Remove && !CastIsConnected(Device->CastCtx)) {
+
+			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
+
+			raop_delete(Device->Raop);
 			RemoveCastDevice(Device);
-		}
+
+		}
 	}
 
-	if (glAutoSaveConfigFile || glDiscovery) {
-		LOG_DEBUG("Updating configuration %s", glConfigName);
+
+	if (glAutoSaveConfigFile || glDiscovery) {
+
+		LOG_DEBUG("Updating configuration %s", glConfigName);
 		SaveConfig(glConfigName, glConfigID, false);
 	}
 
@@ -730,8 +742,10 @@ static bool Start(bool cold)
 		glMRDevices = calloc(glMaxDevices, sizeof(struct sMR));
 		for (i = 0; i < glMaxDevices; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
-		InitUtils();
-		InitSSL();
+
+		InitUtils();
+
+		InitSSL();
 
 		// start the main thread
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
@@ -997,11 +1011,15 @@ int main(int argc, char *argv[])
 	}
 
 	if (!Start(true)) {
-		LOG_ERROR("Cannot start", NULL);
-		exit(1);
-	}
 
-	while (strcmp(resp, "exit")) {
+		LOG_ERROR("Cannot start", NULL);
+
+		exit(1);
+
+	}
+
+
+	while (strcmp(resp, "exit")) {
 
 #if LINUX || FREEBSD || SUNOS
 		if (!glDaemonize && glInteractive)

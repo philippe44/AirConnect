@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #include "platform.h"
 #include "hairtunes.h"
@@ -814,7 +815,7 @@ static void *rtp_thread_func(void *arg) {
 					 so we'll run out of frames, need to add one
 					*/
 					if (ctx->timing.gap_sum > GAP_THRES && ctx->timing.gap_count++ > GAP_COUNT) {
-						LOG_INFO("[%p]: Sending packets too fast %Ld [W:%hu R:%hu]", ctx, ctx->timing.gap_sum, ctx->ab_write, ctx->ab_read);
+						LOG_INFO("[%p]: Sending packets too fast " PRId64 " [W:% hu R : % hu]", ctx, ctx->timing.gap_sum, ctx->ab_write, ctx->ab_read);
 						ctx->ab_read--;
 						ctx->audio_buffer[BUFIDX(ctx->ab_read)].ready = 1;
 						ctx->timing.gap_sum -= GAP_THRES;
@@ -831,7 +832,7 @@ static void *rtp_thread_func(void *arg) {
 						} else ctx->skip++;
 						ctx->timing.gap_sum += GAP_THRES;
 						ctx->timing.gap_adjust += GAP_THRES;
-						LOG_INFO("[%p]: Sending packets too slow %Ld (skip: %d)  [W:%hu R:%hu]", ctx, ctx->timing.gap_sum, ctx->skip, ctx->ab_write, ctx->ab_read);
+						LOG_INFO("[%p]: Sending packets too slow " PRId64 " (skip: % d)[W:% hu R : % hu]", ctx, ctx->timing.gap_sum, ctx->skip, ctx->ab_write, ctx->ab_read);
 					}
 
 					if (llabs(ctx->timing.gap_sum) < 8) ctx->timing.gap_count = 0;
@@ -842,7 +843,7 @@ static void *rtp_thread_func(void *arg) {
 				// now we are synced on NTP (mutex not needed)
 				ctx->synchro.status |= NTP_SYNC;
 
-				LOG_DEBUG("[%p]: Timing references local:%Lu, remote:%Lx (delta:%Ld, sum:%Ld, adjust:%Ld, gaps:%d)",
+				LOG_DEBUG("[%p]: Timing references local:%Lu, remote:%Lx (delta: " PRId64 ", sum: % Ld, adjust : % Ld, gaps : % d)",
 						  ctx, ctx->timing.local, ctx->timing.remote, delta, ctx->timing.gap_sum, ctx->timing.gap_adjust, ctx->timing.gap_count);
 
 				break;

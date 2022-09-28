@@ -25,7 +25,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "upnp.h"
 #include "platform.h"
 #include "pthread.h"
 #include "raopcore.h"

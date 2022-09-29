@@ -26,7 +26,7 @@ typedef enum { HAIRTUNES_PLAY } hairtunes_event_t;
 typedef	void (*event_cb_t)(void *owner, hairtunes_event_t event);
 typedef void (*http_cb_t)(void *owner, struct key_data_s *headers, struct key_data_s *response);
 
-hairtunes_resp_t 	hairtunes_init(struct in_addr host, encode_t codec,
+hairtunes_resp_t 	hairtunes_init(struct in_addr host, struct in_addr peer, encode_t codec,
 							bool sync, bool drift, bool range, char *latencies,
 							char *aeskey, char *aesiv, char *fmtpstr,
 							short unsigned pCtrlPort, short unsigned pTimingPort,

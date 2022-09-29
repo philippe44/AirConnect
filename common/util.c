@@ -693,7 +693,7 @@ in_addr_t get_localhost(char **name)
 		i += sizeof *pifReq;
 		/* See if this is the sort of interface we want to deal with. */
 		memset(ifReq.ifr_name, 0, sizeof(ifReq.ifr_name));
-		strncpy(ifReq.ifr_name, pifReq->ifr_name,
+		memcpy(ifReq.ifr_name, pifReq->ifr_name,
 			sizeof(ifReq.ifr_name) - 1);
 		/* Skip loopback, point-to-point and down interfaces,
 		 * except don't skip down interfaces
@@ -764,7 +764,7 @@ int shutdown_socket(int sd)
 
 
 /*----------------------------------------------------------------------------*/
-int bind_socket(unsigned short *port, int mode)
+int bind_socket(struct in_addr host, unsigned short* port, int mode)
 {
 	int sock;
 	socklen_t len = sizeof(struct sockaddr);
@@ -778,7 +778,7 @@ int bind_socket(unsigned short *port, int mode)
 	/*  Populate socket address structure  */
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family      = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_addr		 = host;
 	addr.sin_port        = htons(*port);
 #ifdef SIN_LEN
 	si.sin_len = sizeof(si);

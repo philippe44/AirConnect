@@ -23,10 +23,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#if WIN
-#include <process.h>
-#endif
-
 #include "platform.h"
 #include "airupnp.h"
 #include "upnpdebug.h"
@@ -617,8 +613,8 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 			// if there is a cookie, it's a targeted Sonos search
 			if (!Cookie) {
 				static int Version;
-				char SearchTopic[sizeof(MEDIA_RENDERER) + 2];
-				sprintf(SearchTopic, "%s:%i", MEDIA_RENDERER, (Version++ % glMRConfig.UPnPMax) + 1);
+				char SearchTopic[sizeof(MEDIA_RENDERER)+2];
+				snprintf(SearchTopic, sizeof(SearchTopic), "%s:%i", MEDIA_RENDERER, (Version++ % glMRConfig.UPnPMax) + 1);
 				UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, SearchTopic, NULL);
 			}
 
@@ -1093,7 +1089,7 @@ bool isExcluded(char *Model, char *ModelNumber)
 static bool Start(bool cold)
 {
 	char hostname[_STR_LEN_];
-	int i, rc;
+	int rc;
 	char IP[16] = "";
 
 	glHost.s_addr = INADDR_ANY;
@@ -1136,7 +1132,7 @@ static bool Start(bool cold)
 
 		// mutex should *always* be valid
 		glMRDevices = calloc(glMaxDevices, sizeof(struct sMR));
-		for (i = 0; i < glMaxDevices; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
+		for (int i = 0; i < glMaxDevices; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
 		/* start the main thread */
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
@@ -1158,9 +1154,9 @@ static bool Start(bool cold)
 		if ((glmDNSServer = mdnsd_start(glHost)) == NULL) goto Error;
 		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
-		for (i = 0; i < glMRConfig.UPnPMax; i++) {
-			char SearchTopic[sizeof(MEDIA_RENDERER) + 2];
-			sprintf(SearchTopic, "%s:%i", MEDIA_RENDERER, i+1);
+		for (int i = 0; i < glMRConfig.UPnPMax; i++) {
+			char SearchTopic[sizeof(MEDIA_RENDERER)+2];
+			snprintf(SearchTopic, sizeof(SearchTopic), "%s:%i", MEDIA_RENDERER, i + 1);
 			UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, SearchTopic, NULL);
 		}
 

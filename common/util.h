@@ -124,7 +124,7 @@ void 		winsock_init(void);
 void 		winsock_close(void);
 
 int 		shutdown_socket(int sd);
-int 		bind_socket(short unsigned *port, int mode);
+int 		bind_socket(struct in_addr host, short unsigned *port, int mode);
 int 		conn_socket(unsigned short port);
 #if !WIN
 int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size);

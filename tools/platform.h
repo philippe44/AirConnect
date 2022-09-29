@@ -70,7 +70,6 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <errno.h>
-#include <memcheck.h>
 #include <limits.h>
 
 #define min(a,b) (((a) < (b)) ? (a) : (b))

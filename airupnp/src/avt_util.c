@@ -78,7 +78,8 @@ void AVTActionFlush(tQueue *Queue)
 }
 
 /*----------------------------------------------------------------------------*/
-bool AVTSetURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char *ProtoInfo)
+
+bool AVTSetURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char *ProtoInfo)
 {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
@@ -373,9 +374,12 @@ char *GetProtocolInfo(struct sMR *Device)
 }
 
 
-/*----------------------------------------------------------------------------*/
-char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct sMRConfig *Config)
-{
+
+/*----------------------------------------------------------------------------*/
+
+char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct sMRConfig *Config)
+
+{
 	char *s;
 
 	IXML_Document *doc = ixmlDocument_createDocument();
@@ -446,8 +450,10 @@ char *GetProtocolInfo(struct sMR *Device)
 }
 
 
-/* typical DIDL header
-"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
+
+/* typical DIDL header
+
+"<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">"
 	"<item id=\"{2148F1D5-1BE6-47C3-81AF-615A960E3704}.0.4\" restricted=\"0\" parentID=\"4\">"
 		"<dc:title>Make You Feel My Love</dc:title>"
 		"<dc:creator>Adele</dc:creator>"

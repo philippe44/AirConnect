@@ -86,9 +86,11 @@ static void 	http_cb(void *owner, struct key_data_s *headers, struct key_data_s 
 static void* 	search_remote(void *args);
 
 extern char private_key[];
-enum { RSA_MODE_KEY, RSA_MODE_AUTH };
 
-static void on_dmap_string(void *ctx, const char *code, const char *name, const char *buf, size_t len);
+enum { RSA_MODE_KEY, RSA_MODE_AUTH };
+
+
+static void on_dmap_string(void *ctx, const char *code, const char *name, const char *buf, size_t len);
 
 /*----------------------------------------------------------------------------*/
 struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *name,
@@ -141,7 +143,7 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 
 	do {
 		ctx->port = port_base + ((port.offset + port.count++) % port_range);
-		ctx->sock = bind_socket(&ctx->port, SOCK_STREAM);
+		ctx->sock = bind_socket(ctx->host, &ctx->port, SOCK_STREAM);
 	} while (ctx->sock < 0 && port.count < port_range);
 
 	// then listen for RTSP incoming connections
@@ -157,14 +159,17 @@ struct raop_ctx_s *raop_create(struct in_addr host, struct mdnsd *svr, char *nam
 	id = malloc(strlen(name) + 12 + 1 + 1);
 
 	memcpy(ctx->mac, mac, 6);
-	for (i = 0; i < 6; i++) sprintf(id + i*2, "%02X", mac[i]);
-	// mDNS instance name length cannot be more than 63
-	sprintf(id + 12, "@%s", name);
-	// Windows snprintf does not add NULL if string is larger than n ...
-	if (strlen(id) > 63) id[63] = '\0';
 
-	ctx->svr = svr;
-	ctx->svc = mdnsd_register_svc(svr, id, "_raop._tcp.local", ctx->port, NULL, (const char**) txt);
+	for (i = 0; i < 6; i++) sprintf(id + i*2, "%02X", mac[i]);
+
+	// mDNS instance name length cannot be more than 63
+	sprintf(id + 12, "@%s", name);
+
+	// Windows snprintf does not add NULL if string is larger than n ...
+	if (strlen(id) > 63) id[63] = '\0';
+
+	ctx->svr = svr;
+	ctx->svc = mdnsd_register_svc(svr, id, "_raop._tcp.local", ctx->port, NULL, (const char**) txt);
 
 	free(txt[0]);
 	free(id);
@@ -206,17 +211,17 @@ void raop_update(struct raop_ctx_s *ctx, char *name, char *model) {
 /*----------------------------------------------------------------------------*/
 void raop_delete(struct raop_ctx_s *ctx) {
 	int sock;
-	struct sockaddr addr;
-	socklen_t nlen = sizeof(struct sockaddr);
+	struct sockaddr_in addr;
+	socklen_t nlen = sizeof(addr);
 
 	if (!ctx) return;
 
 	ctx->running = false;
 
-	// wake-up thread by connecting socket, needed for freeBSD
+	// wake-up thread by connecting socket
 	sock = socket(AF_INET, SOCK_STREAM, 0);
-	getsockname(ctx->sock, (struct sockaddr *) &addr, &nlen);
-	connect(sock, (struct sockaddr*) &addr, sizeof(addr));
+	getsockname(ctx->sock, (struct sockaddr*)&addr, &nlen);
+	connect(sock, &addr, sizeof(addr));
 	closesocket(sock);
 
 	pthread_join(ctx->thread, NULL);
@@ -278,9 +283,12 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 
 	// no command to send to remote or no remote found yet
 	if (!command || !ctx->active_remote.port) {
-		NFREE(command);
-		return;
-	}
+
+		NFREE(command);
+
+		return;
+
+	}
 
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -459,7 +467,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		if ((p = strcasestr(buf, "timing_port")) != NULL) sscanf(p, "%*[^=]=%hu", &tport);
 		if ((p = strcasestr(buf, "control_port")) != NULL) sscanf(p, "%*[^=]=%hu", &cport);
 
-		ht = hairtunes_init(ctx->peer, ctx->encode, false, ctx->drift, true, ctx->latencies,
+		ht = hairtunes_init(ctx->host, ctx->peer, ctx->encode, false, ctx->drift, true, ctx->latencies,
 							ctx->rtsp.aeskey, ctx->rtsp.aesiv, ctx->rtsp.fmtp,
 							cport, tport, ctx, event_cb, http_cb, ctx->ports.base,
 							ctx->ports.range, ctx->http_length);
@@ -467,7 +475,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		ctx->hport = ht.hport;
 		ctx->ht = ht.ctx;
 
-		if (cport * tport * ht.cport * ht.tport * ht.aport * ht.hport && ht.ctx) {
+		if ((cport * tport * ht.cport * ht.tport * ht.aport * ht.hport) != 0 && ht.ctx) {
 			char *transport;
 			(void) !asprintf(&transport, "RTP/AVP/UDP;unicast;mode=record;control_port=%u;timing_port=%u;server_port=%u", ht.cport, ht.tport, ht.aport);
 			LOG_DEBUG("[%p]: http=(%hu) audio=(%hu:%hu), timing=(%hu:%hu), control=(%hu:%hu)", ctx, ht.hport, 0, ht.aport, tport, ht.tport, cport, ht.cport);
@@ -479,7 +487,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 			LOG_INFO("[%p]: cannot start session, missing ports", ctx);
 		}
 
-	} else if (!strcmp(method, "RECORD")) {
+	} else if (strcmp(method, "RECORD") == 0) {
 		unsigned short seqno = 0;
 		unsigned rtptime = 0;
 		char *p;
@@ -562,8 +570,10 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 			}
 		}
 	} else {
-		success = false;
-    	LOG_ERROR("[%p]: unknown/unhandled method %s", ctx, method);
+
+		success = false;
+
+    	LOG_ERROR("[%p]: unknown/unhandled method %s", ctx, method);
 	}
 
 	// don't need to free "buf" because kd_lookup return a pointer, not a strdup

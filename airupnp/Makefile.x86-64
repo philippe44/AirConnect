@@ -1,9 +1,12 @@
-CFLAGS  ?= -Wall -fPIC -ggdb -O2 -m64 $(OPTS) -I/usr/include/i386-linux-gnu $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -s -m64 -lpthread -ldl -lm -lrt -L. 
+CFLAGS  = -Wall -Wno-format-truncation -fPIC -ggdb -O2 -m64 $(OPTS) -I/usr/include/i386-linux-gnu $(INCLUDE) $(DEFINES)
+LDFLAGS = -s -m64 -lpthread -ldl -lm -lrt -L. 
 
-OBJ					= bin/x86-64
-EXECUTABLE 			= ../bin/airupnp-x86-64
-EXECUTABLE_STATIC	= ../bin/airupnp-x86-64-static
+HOST = linux
+PLATFORM = x64
+
+OBJ					= bin/$(PLATFORM)
+EXECUTABLE 			= ../bin/airupnp-$(PLATFORM)
+EXECUTABLE_STATIC	= ../bin/airupnp-$(PLATFORM)-static
 
 include Makefile
 

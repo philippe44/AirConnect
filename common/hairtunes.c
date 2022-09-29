@@ -133,7 +133,7 @@ typedef struct hairtunes_s {
 	bool decrypt, range;
 	int frame_size;
 	int in_frames, out_frames;
-	struct in_addr host;
+	struct in_addr host, peer;
 	struct sockaddr_in rtp_host;
 	struct {
 		unsigned short rport, lport;
@@ -314,7 +314,7 @@ static alac_file* alac_init(int fmtp[32]) {
 }
 
 /*---------------------------------------------------------------------------*/
-hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
+hairtunes_resp_t hairtunes_init(struct in_addr host, struct in_addr peer, encode_t codec,
 								bool sync, bool drift, bool range, char *latencies,
 								char *aeskey, char *aesiv, char *fmtpstr,
 								short unsigned pCtrlPort, short unsigned pTimingPort,
@@ -344,6 +344,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	}
 	ctx->http_length = http_length;
 	ctx->host = host;
+	ctx->peer = peer;
 	ctx->rtp_host.sin_family = AF_INET;
 	ctx->rtp_host.sin_addr.s_addr = INADDR_ANY;
 	pthread_mutex_init(&ctx->ab_mutex, 0);
@@ -397,7 +398,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	for (i = 0; rc && i < 3; i++) {
 		do {
 			ctx->rtp_sockets[i].lport = port_base + ((port.offset + port.count++) % port_range);
-			ctx->rtp_sockets[i].sock = bind_socket(&ctx->rtp_sockets[i].lport, SOCK_DGRAM);
+			ctx->rtp_sockets[i].sock = bind_socket(ctx->host, &ctx->rtp_sockets[i].lport, SOCK_DGRAM);
 		} while (ctx->rtp_sockets[i].sock < 0 && port.count < port_range);
 
 		rc &= ctx->rtp_sockets[i].sock > 0;
@@ -408,7 +409,7 @@ hairtunes_resp_t hairtunes_init(struct in_addr host, encode_t codec,
 	// create http port and start listening
 	do {
 		resp.hport = port_base + ((port.offset + port.count++) % port_range);
-		ctx->http_listener = bind_socket(&resp.hport, SOCK_STREAM);
+		ctx->http_listener = bind_socket(ctx->host, &resp.hport, SOCK_STREAM);
 	} while (ctx->http_listener < 0 && port.count < port_range);
 
 	i = 128*1024;
@@ -873,9 +874,9 @@ static bool rtp_request_timing(hairtunes_t *ctx) {
 	*(u32_t*)(req+24) = 0;
 	*(u32_t*)(req+28) = htonl(now); // this is not a real NTP, but a 32 ms counter in the low part of the NTP
 
-	if (ctx->host.s_addr != INADDR_ANY) {
+	if (ctx->peer.s_addr != INADDR_ANY) {
 		host.sin_family = AF_INET;
-		host.sin_addr =	ctx->host;
+		host.sin_addr =	ctx->peer;
 	} else host = ctx->rtp_host;
 
 	// no address from sender, need to wait for 1st packet to be received

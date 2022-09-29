@@ -1,8 +1,11 @@
 CFLAGS  ?= -Wall -fPIC -ggdb -O2 -m64 $(OPTS) -I/usr/include/i386-linux-gnu $(INCLUDE) $(DEFINES)
 LDFLAGS ?= -s -m64 -lpthread -ldl -lm -lrt -L. 
 
-OBJ					= bin/x86-64
-EXECUTABLE 			= ../bin/aircast-x86-64
+HOST = linux
+PLATFORM = x84
+
+OBJ					= bin/$(PLATFORM)
+EXECUTABLE 			= ../bin/aircast-$(PLATFORM)
 
 include Makefile
 

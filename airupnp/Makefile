@@ -1,17 +1,20 @@
-BASE		= ../..
+BASE		= ..
 
-TOOLS		= ../tools
-COMMON		= ../common
+TOOLS		= $(BASE)/tools
+COMMON		= $(BASE)/common
 SRC			= ./src
-MDNSSD		= $(BASE)/mdnssd
-TINYSVCMDNS	= $(BASE)/tinysvcmdns
-VALGRIND	= $(BASE)/valgrind
-UPNP 		= $(BASE)/libupnp/1.6.19
-JANSSON		= $(BASE)/jansson
-SHINE		= $(BASE)/shine/src/lib
-DMAP_PARSER	= $(BASE)/dmap-parser
+MDNSSD		= $(COMMON)/mdns-sd
+TINYSVCMDNS	= $(COMMON)/tinysvcmdns
+#VALGRIND	= $(BASE)/valgrind
+UPNP 		= $(COMMON)/pupnp
+SHINE		= $(COMMON)/shine
+FLAC		= $(COMMON)/flac
+OGG			= $(COMMON)/ogg
+DMAP_PARSER	= $(COMMON)/dmap-parser
+OPENSSL		= $(COMMON)/openssl
 
-DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DNDEBUG -D_GNU_SOURCE -D_USE_XML_
+#DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DNDEBUG -D_GNU_SOURCE -D_USE_XML_
+DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUSE_XML
 
 CFLAGS 		+= -fdata-sections -ffunction-sections 
 
@@ -24,16 +27,16 @@ endif
 vpath %.c $(TOOLS):$(COMMON):$(SRC):$(SQUEEZETINY):$(MDNSSD):$(TINYSVCMDNS):$(DMAP_PARSER)
 
 INCLUDE = -I. \
-		  -I$(SHINE) \
+		  -I$(OPENSSL)/targets/linux/$(PLATFORM)/include \
+		  -I$(SHINE)/src\/lib \
 		  -I$(DMAP_PARSER) \
-		  -I$(VALGRIND)/memcheck -I$(VALGRIND)/include \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC) -I$(SRC)/inc \
-		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/build/inc -I$(UPNP)/threadutil/inc \
+		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/linux/$(PLATFORM)/inc	\
 		  -I$(MDNSSD) \
 		  -I$(JANSSON)/src \
-		  -I$(BASE)/flac/include\
+		  -I$(FLAC)/include\
 		  -I$(TINYSVCMDNS)
 		  		  
 DEPS	= $(SRC)/airupnp.h
@@ -41,15 +44,18 @@ DEPS	= $(SRC)/airupnp.h
 SOURCES = avt_util.c airupnp.c mr_util.c config_upnp.c  \
 		  alac.c base64.c hairtunes.c raopcore.c util.c log_util.c \
 		  dmap_parser.c \
-		  mdnssd-min.c \
-		  mdns.c mdnsd.c \
+		  mdnssd-min.c
 
 SOURCES_LIBS = sslsym.c
 		
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
-LIBRARY 		= $(OBJ)/libixml.a $(OBJ)/libFLAC.a  $(OBJ)/libupnp.a  $(OBJ)/libthreadutil.a $(OBJ)/libshine.a
+LIBRARY 		= $(UPNP)/targets/linux/$(PLATFORM)/libixml.a $(UPNP)/targets/linux/$(PLATFORM)/libupnp.a \
+				  $(FLAC)/targets/linux/$(PLATFORM)/libFLAC.a  $(OGG)/targets/linux/$(PLATFORM)/libogg.a \
+				  $(SHINE)/targets/linux/$(PLATFORM)/libshine.a \
+				  $(TINYSVCMDNS)/targets/linux/$(PLATFORM)/tinysvcmdns.a
+				  
 LIBRARY_STATIC 	= $(LIBRARY) -lcrypto
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)

@@ -1,5 +1,9 @@
 BASE		= ..
 
+OBJ					= bin/$(PLATFORM)
+EXECUTABLE 			= $(BASE)/bin/airupnp-$(PLATFORM)
+EXECUTABLE_STATIC	= $(BASE)/bin/airupnp-$(PLATFORM)-static
+
 TOOLS		= $(BASE)/tools
 COMMON		= $(BASE)/common
 SRC			= ./src
@@ -28,12 +32,12 @@ vpath %.c $(TOOLS):$(COMMON):$(SRC):$(SQUEEZETINY):$(MDNSSD):$(TINYSVCMDNS):$(DM
 
 INCLUDE = -I. \
 		  -I$(OPENSSL)/targets/linux/$(PLATFORM)/include \
-		  -I$(SHINE)/src\/lib \
+		  -I$(SHINE)/src/lib \
 		  -I$(DMAP_PARSER) \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC) -I$(SRC)/inc \
-		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/linux/$(PLATFORM)/inc	\
+		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/inc -I$(UPNP)/targets/linux/$(PLATFORM)/inc	\
 		  -I$(MDNSSD) \
 		  -I$(JANSSON)/src \
 		  -I$(FLAC)/include\

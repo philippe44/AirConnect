@@ -1,11 +1,10 @@
-CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
-LDFLAGS ?= -s -lpthread -ldl -lm -lrt -lz -L. 
+CFLAGS  = -Wall -Wno-format-truncation -fPIC -ggdb -O2 -m32 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
+LDFLAGS = -m32 -s -lpthread -ldl -lm -lrt -L. 
 # -l:libssl.a -l:libcrypto.a to force link with static version
 # for LD debug -s
 
-OBJ			= bin/x86
-EXECUTABLE 		= ../bin/airupnp-x86
-EXECUTABLE_STATIC	= ../bin/airupnp-x86-static
+HOST = linux
+PLATFORM = x86
 
 include Makefile
 

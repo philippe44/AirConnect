@@ -38,8 +38,10 @@
 #include <openssl/bio.h>
 #include "sslshim.h"
 
+#ifndef LINKALL
 static void *SSLhandle = NULL;
 static void *CRYPThandle = NULL;
+#endif
 
 #define P0() void
 #define P1(t1, p1) t1 p1

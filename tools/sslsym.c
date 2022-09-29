@@ -288,13 +288,16 @@ bool load_ssl_symbols(void) {
 	return true;
 }
 
-#else
-bool load_ssl_symbols(void) {
-	return true;
-}
-#endif
-
 void free_ssl_symbols(void) {
 	if (SSLhandle) dlclose(SSLhandle);
 	if (CRYPThandle) dlclose(CRYPThandle);
 }
+
+#else
+bool load_ssl_symbols(void) {
+	return true;
+}
+
+void free_ssl_symbols(void) {
+}
+#endif

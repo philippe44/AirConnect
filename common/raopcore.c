@@ -221,7 +221,7 @@ void raop_delete(struct raop_ctx_s *ctx) {
 	// wake-up thread by connecting socket
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	getsockname(ctx->sock, (struct sockaddr*)&addr, &nlen);
-	connect(sock, &addr, sizeof(addr));
+	connect(sock, (struct sockaddr*) & addr, sizeof(addr));
 	closesocket(sock);
 
 	pthread_join(ctx->thread, NULL);

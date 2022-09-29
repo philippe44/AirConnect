@@ -30,5 +30,5 @@
 	url = https://github.com/philippe44/pupnp
 [submodule "common/openssl"]
 	path = common/openssl
-	url = https://github.com/philippe44/openssl
+	url = https://github.com/openssl
 	branch = OpenSSL_1_1_1-stable

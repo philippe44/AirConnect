@@ -89,7 +89,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>USE_XML;UPNP_STATIC_LIB;PB_NO_STATIC_ASSERT;PB_FIELD_16BIT;__PTW32_STATIC_LIB;FLAC__NO_DLL;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BaseCommon)\pupnp\upnp\inc;$(BaseCommon)\pupnp\targets\win32\x86\inc;$(BaseCommon)\pupnp\ixml\inc;nanopb;$(BaseCommon)\openssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\inc;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;jansson\targets\win32\x86\inc;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BaseCommon)\pupnp\upnp\inc;$(BaseCommon)\pupnp\targets\win32\include;$(BaseCommon)\pupnp\ixml\inc;nanopb;$(BaseCommon)\openssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;jansson\targets\win32\x86\include;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ProgramDataBaseFileName>$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pdb</ProgramDataBaseFileName>
     </ClCompile>

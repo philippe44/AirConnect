@@ -1,11 +1,10 @@
-CC	 	= armv6j-cross-linux-gnueabihf-gcc
-CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -s -lpthread -ldl -lm -lrt -L. 
+CC = arm-linux-gnueabi-gcc
+CFLAGS  = -Wall -Wno-format-truncation -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
+LDFLAGS = -s -lpthread -ldl -lm -lrt -L. 
 # for LD debug -s
 
-OBJ					= bin/arm
-EXECUTABLE 			= ../bin/airupnp-arm
-EXECUTABLE_STATIC	= ../bin/airupnp-arm-static
+HOST = linux
+PLATFORM = armhf
 
 include Makefile
 

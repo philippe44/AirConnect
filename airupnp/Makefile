@@ -35,7 +35,7 @@ INCLUDE = -I. \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC) -I$(SRC)/inc \
-		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/inc -I$(UPNP)/targets/linux/$(PLATFORM)/inc	\
+		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/inc -I$(UPNP)/targets/linux/include	\
 		  -I$(MDNSSD) \
 		  -I$(FLAC)/include\
 		  -I$(TINYSVCMDNS)

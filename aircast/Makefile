@@ -37,12 +37,12 @@ INCLUDE = -I. \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC) -I$(SRC)/inc \
-		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/inc -I$(UPNP)/targets/linux/$(PLATFORM)/inc	\
+		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/include -I$(UPNP)/targets/linux/$(PLATFORM)/include	\
 		  -I$(MDNSSD) \
 		  -I$(FLAC)/include\
 		  -I$(TINYSVCMDNS) \
 		  -I$(NANOPB) \
-		  -I$(JANSSON)/targets/linux/inc
+		  -I$(JANSSON)/targets/linux/include
 		  		  
 DEPS	= $(SRC)/aircast.h
 				  

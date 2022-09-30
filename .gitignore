@@ -112,6 +112,5 @@ bin/bcc/
 bin/msvc
 .vs/
 __recovery/
-bin
 *.sln
 build/

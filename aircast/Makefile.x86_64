@@ -1,0 +1,7 @@
+CFLAGS =
+LDFLAGS = -s
+
+HOST = linux
+PLATFORM = x86_64
+
+include Makefile

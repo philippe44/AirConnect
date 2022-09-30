@@ -1,7 +1,7 @@
-BASE		= ..
+BASE = ..
 
-OBJ					= build/$(PLATFORM)
-EXECUTABLE 			= $(BASE)/bin/aircast-$(PLATFORM)
+OBJ			= build/$(PLATFORM)
+EXECUTABLE	= $(BASE)/bin/aircast-$(PLATFORM)
 EXECUTABLE_STATIC	= $(BASE)/bin/aircast-$(PLATFORM)-static
 
 TOOLS		= $(BASE)/tools
@@ -20,7 +20,8 @@ NANOPB		= ./nanopb
 JANSSON		= ./jansson
 
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUSE_XML
-CFLAGS 		+= -fdata-sections -ffunction-sections 
+CFLAGS  	+= -Wall -Wno-format-truncation -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
+LDFLAGS 	+= -lpthread -ldl -lm -lrt -L. 
 
 ifeq ($(OS),Darwin)
 LDFLAGS 	+= -Wl,-dead_strip
@@ -37,7 +38,7 @@ INCLUDE = -I. \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC) -I$(SRC)/inc \
-		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/include -I$(UPNP)/targets/linux/$(PLATFORM)/include	\
+		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/linux/$(PLATFORM)/include -I$(UPNP)/targets/include \
 		  -I$(MDNSSD) \
 		  -I$(FLAC)/include\
 		  -I$(TINYSVCMDNS) \
@@ -63,7 +64,7 @@ LIBRARY 		= $(UPNP)/targets/linux/$(PLATFORM)/libixml.a $(UPNP)/targets/linux/$(
 				  $(TINYSVCMDNS)/targets/linux/$(PLATFORM)/tinysvcmdns.a \
 				  $(JANSSON)/targets/linux/$(PLATFORM)/libjansson.a
 				  
-LIBRARY_STATIC 	= $(LIBRARY) -lssl -lcrypto
+LIBRARY_STATIC 	= $(LIBRARY) $(COMMON)/openssl/targets/linux/$(PLATFORM)/libssl.a $(LIBRARY) $(COMMON)/openssl/targets/linux/$(PLATFORM)/libcrypto.a
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 

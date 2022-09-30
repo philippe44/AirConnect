@@ -1,7 +1,7 @@
 BASE		= ..
 
-OBJ					= bin/$(PLATFORM)
-EXECUTABLE 			= $(BASE)/bin/airupnp-$(PLATFORM)
+OBJ			= build/$(PLATFORM)
+EXECUTABLE 		= $(BASE)/bin/airupnp-$(PLATFORM)
 EXECUTABLE_STATIC	= $(BASE)/bin/airupnp-$(PLATFORM)-static
 
 TOOLS		= $(BASE)/tools
@@ -13,12 +13,13 @@ TINYSVCMDNS	= $(COMMON)/tinysvcmdns
 UPNP 		= $(COMMON)/pupnp
 SHINE		= $(COMMON)/shine
 FLAC		= $(COMMON)/flac
-OGG			= $(COMMON)/ogg
+OGG		= $(COMMON)/ogg
 DMAP_PARSER	= $(COMMON)/dmap-parser
 OPENSSL		= $(COMMON)/openssl
 
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUSE_XML
-CFLAGS 		+= -fdata-sections -ffunction-sections 
+CFLAGS  	+= -Wall -Wno-format-truncation -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
+LDFLAGS 	+= -lpthread -ldl -lm -lrt -L. 
 
 ifeq ($(OS),Darwin)
 LDFLAGS 	+= -Wl,-dead_strip
@@ -35,7 +36,7 @@ INCLUDE = -I. \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC) -I$(SRC)/inc \
-		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/inc -I$(UPNP)/targets/linux/include	\
+		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/inc -I$(UPNP)/targets/linux/$(PLATFORM)/include -I$(UPNP)/targets/linux/include \
 		  -I$(MDNSSD) \
 		  -I$(FLAC)/include\
 		  -I$(TINYSVCMDNS)
@@ -53,7 +54,7 @@ OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SO
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
 LIBRARY 		= $(UPNP)/targets/linux/$(PLATFORM)/libixml.a $(UPNP)/targets/linux/$(PLATFORM)/libupnp.a \
-				  $(FLAC)/targets/linux/$(PLATFORM)/libFLAC.a  $(OGG)/targets/linux/$(PLATFORM)/libogg.a \
+				  $(FLAC)/targets/linux/$(PLATFORM)/libFLAC.a $(OGG)/targets/linux/$(PLATFORM)/libogg.a \
 				  $(SHINE)/targets/linux/$(PLATFORM)/libshine.a \
 				  $(TINYSVCMDNS)/targets/linux/$(PLATFORM)/tinysvcmdns.a
 				  

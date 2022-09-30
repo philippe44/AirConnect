@@ -1,8 +1,0 @@
-CFLAGS  = -Wall -Wno-format-truncation -fPIC -ggdb -O2 -m64 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS = -s -m64 -lpthread -ldl -lm -lrt -L. 
-
-HOST = linux
-PLATFORM = x64
-
-include Makefile
-

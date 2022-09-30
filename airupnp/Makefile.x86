@@ -1,7 +1,6 @@
 CC = i686-linux-gnu-gcc
-CFLAGS  = -Wall -Wno-format-truncation -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections
-LDFLAGS = -s -lpthread -ldl -lm -lrt -L.
-# -l:libssl.a -l:libcrypto.a to force link with static version
+CFLAGS =
+LDFLAGS = -s
 # for LD debug -s
 
 HOST = linux

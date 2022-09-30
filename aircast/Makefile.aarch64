@@ -1,12 +1,10 @@
-CC 	= aarch64-cross-linux-gnueabi-gcc
-CFLAGS  ?= -Wall -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -s -lpthread -ldl -lm -lrt -L. 
-#LDFLAGS ?= -lpthread -ldl -lm -lrt -L. 
+CC = aarch64-linux-gnu-gcc
+CFLAGS =
+LDFLAGS = -s
 # for LD debug -s
 
-OBJ			= bin/aarch64
-EXECUTABLE 		= ../bin/aircast-aarch64
-EXECUTABLE_STATIC	= ../bin/aircast-aarch64-static
+HOST = linux
+PLATFORM = aarch64
 
 include Makefile
 

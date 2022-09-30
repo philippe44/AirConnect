@@ -68,8 +68,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IntDir>bin\$(Platform)\$(Configuration)\</IntDir>
-    <OutDir>bin\</OutDir>
+    <IntDir>$(SolutionDir)\$(ProjectName)\build\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Static|Win32'">
+    <TargetName>$(ProjectName)-win-static</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'!='Static'">
+    <TargetName>$(ProjectName)-win</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

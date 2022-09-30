@@ -1104,7 +1104,7 @@ static bool Start(bool cold)
 	}
 
 	UpnpSetLogLevel(UPNP_CRITICAL);
-	//rc = UpnpInit(IP, glPort);
+	//TODO
 	rc = UpnpInit2(NULL, glPort);
 
 	if (rc != UPNP_E_SUCCESS) {

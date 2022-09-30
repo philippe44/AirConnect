@@ -1,19 +1,25 @@
-BASE		= ../..
+BASE		= ..
 
-TOOLS		= ../tools
-COMMON		= ../common
+OBJ					= build/$(PLATFORM)
+EXECUTABLE 			= $(BASE)/bin/aircast-$(PLATFORM)
+EXECUTABLE_STATIC	= $(BASE)/bin/aircast-$(PLATFORM)-static
+
+TOOLS		= $(BASE)/tools
+COMMON		= $(BASE)/common
 SRC			= ./src
-JANSSON		= $(BASE)/jansson
-NANOPB		= $(BASE)/nanopb
-MDNSSD		= $(BASE)/mdnssd
-TINYSVCMDNS	= $(BASE)/tinysvcmdns
-VALGRIND	= $(BASE)/valgrind
-UPNP 		= $(BASE)/libupnp/1.6.19
-SHINE		= $(BASE)/shine/src/lib
-DMAP_PARSER	= $(BASE)/dmap-parser
+MDNSSD		= $(COMMON)/mdns-sd
+TINYSVCMDNS	= $(COMMON)/tinysvcmdns
+#VALGRIND	= $(BASE)/valgrind
+UPNP 		= $(COMMON)/pupnp
+SHINE		= $(COMMON)/shine
+FLAC		= $(COMMON)/flac
+OGG			= $(COMMON)/ogg
+DMAP_PARSER	= $(COMMON)/dmap-parser
+OPENSSL		= $(COMMON)/openssl
+NANOPB		= ./nanopb
+JANSSON		= ./jansson
 
-DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DNDEBUG -D_GNU_SOURCE -D_USE_XML_
-
+DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUSE_XML
 CFLAGS 		+= -fdata-sections -ffunction-sections 
 
 ifeq ($(OS),Darwin)
@@ -22,38 +28,41 @@ else ifneq ($(OS), SunOS)
 LDFLAGS 	+= -Wl,--gc-sections
 endif
 
-vpath %.c $(TOOLS):$(COMMON):$(SRC):$(SQUEEZETINY):$(JANSSON)/src:$(NANOPB):$(MDNSSD):$(TINYSVCMDNS):$(DMAP_PARSER)
+vpath %.c $(TOOLS):$(COMMON):$(SRC):$(SQUEEZETINY):$(NANOPB):$(MDNSSD):$(TINYSVCMDNS):$(DMAP_PARSER)
 
 INCLUDE = -I. \
-		  -I$(SHINE) \
+		  -I$(OPENSSL)/targets/linux/$(PLATFORM)/include \
+		  -I$(SHINE)/src/lib \
 		  -I$(DMAP_PARSER) \
-		  -I$(VALGRIND)/memcheck -I$(VALGRIND)/include \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC) -I$(SRC)/inc \
-		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/build/inc -I$(UPNP)/threadutil/inc \
-		  -I$(JANSSON)/src \
-		  -I$(NANOPB) \
+		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/inc -I$(UPNP)/targets/linux/$(PLATFORM)/inc	\
 		  -I$(MDNSSD) \
-		  -I$(BASE)/flac/include\
-		  -I$(TINYSVCMDNS)
+		  -I$(FLAC)/include\
+		  -I$(TINYSVCMDNS) \
+		  -I$(NANOPB) \
+		  -I$(JANSSON)/targets/linux/inc
 		  		  
 DEPS	= $(SRC)/aircast.h
 				  
 SOURCES = castcore.c castmessage.pb.c aircast.c cast_util.c cast_parse.c config_cast.c  \
 		  alac.c base64.c hairtunes.c raopcore.c util.c log_util.c \
-		  pb_common.c pb_decode.c pb_encode.c dump.c error.c hashtable.c strconv.c \
-		  hashtable_seed.c load.c memory.c pack_unpack.c strbuffer.c utf.c value.c \
+		  pb_common.c pb_decode.c pb_encode.c \
 		  dmap_parser.c \
-	  	  mdnssd-min.c \
-		  mdns.c mdnsd.c \
+	  	  mdnssd-min.c
 		
 SOURCES_LIBS = sslsym.c
 		
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
-LIBRARY 		= $(OBJ)/libixml.a $(OBJ)/libFLAC.a $(OBJ)/libshine.a
+LIBRARY 		= $(UPNP)/targets/linux/$(PLATFORM)/libixml.a $(UPNP)/targets/linux/$(PLATFORM)/libupnp.a \
+				  $(FLAC)/targets/linux/$(PLATFORM)/libFLAC.a  $(OGG)/targets/linux/$(PLATFORM)/libogg.a \
+				  $(SHINE)/targets/linux/$(PLATFORM)/libshine.a \
+				  $(TINYSVCMDNS)/targets/linux/$(PLATFORM)/tinysvcmdns.a \
+				  $(JANSSON)/targets/linux/$(PLATFORM)/libjansson.a
+				  
 LIBRARY_STATIC 	= $(LIBRARY) -lssl -lcrypto
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)

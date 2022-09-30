@@ -1,11 +1,7 @@
-CFLAGS  ?= -Wall -fPIC -ggdb -O2 -m64 $(OPTS) -I/usr/include/i386-linux-gnu $(INCLUDE) $(DEFINES)
-LDFLAGS ?= -s -m64 -lpthread -ldl -lm -lrt -L. 
+CFLAGS  = -Wall -Wno-format-truncation -fPIC -ggdb -O2 -m64 $(OPTS) $(INCLUDE) $(DEFINES)
+LDFLAGS = -s -m64 -lpthread -ldl -lm -lrt -L. 
 
 HOST = linux
-PLATFORM = x84
-
-OBJ					= bin/$(PLATFORM)
-EXECUTABLE 			= ../bin/aircast-$(PLATFORM)
+PLATFORM = x64
 
 include Makefile
-

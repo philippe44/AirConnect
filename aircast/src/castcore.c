@@ -115,10 +115,6 @@ void InitSSL(void)
 {
 	const SSL_METHOD *method;
 
-	// initialize SSL stuff
-	// SSL_load_error_strings();
-	SSL_library_init();
-
 	// build the SSL objects...
 	method = SSLv23_client_method();
 
@@ -677,7 +673,7 @@ static void *CastPingThread(void *args)
 	}
 
 	// clear SSL error allocated memorry
-	ERR_remove_state(0);
+	ERR_remove_thread_state(NULL);
 
 	return NULL;
 }
@@ -826,7 +822,7 @@ static void *CastSocketThread(void *args)
 	}
 
 	// clear SSL error allocated memorry
-	ERR_remove_state(0);
+	ERR_remove_thread_state(NULL);
 
 	return NULL;
 }

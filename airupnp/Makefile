@@ -17,9 +17,7 @@ OGG			= $(COMMON)/ogg
 DMAP_PARSER	= $(COMMON)/dmap-parser
 OPENSSL		= $(COMMON)/openssl
 
-#DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DHAVE_STDINT_H -DNDEBUG -D_GNU_SOURCE -D_USE_XML_
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUSE_XML
-
 CFLAGS 		+= -fdata-sections -ffunction-sections 
 
 ifeq ($(OS),Darwin)
@@ -39,7 +37,6 @@ INCLUDE = -I. \
 		  -I$(SRC) -I$(SRC)/inc \
 		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/inc -I$(UPNP)/targets/linux/$(PLATFORM)/inc	\
 		  -I$(MDNSSD) \
-		  -I$(JANSSON)/src \
 		  -I$(FLAC)/include\
 		  -I$(TINYSVCMDNS)
 		  		  
@@ -60,7 +57,8 @@ LIBRARY 		= $(UPNP)/targets/linux/$(PLATFORM)/libixml.a $(UPNP)/targets/linux/$(
 				  $(SHINE)/targets/linux/$(PLATFORM)/libshine.a \
 				  $(TINYSVCMDNS)/targets/linux/$(PLATFORM)/tinysvcmdns.a
 				  
-LIBRARY_STATIC 	= $(LIBRARY) -lcrypto
+#LIBRARY_STATIC 	= $(LIBRARY) -lcrypto
+LIBRARY_STATIC 	= $(LIBRARY) $(COMMON)/openssl/targets/linux/$(PLATFORM)/libssl.a $(LIBRARY) $(COMMON)/openssl/targets/linux/$(PLATFORM)/libcrypto.a
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 

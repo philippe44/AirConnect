@@ -742,9 +742,7 @@ static bool Start(bool cold)
 		glMRDevices = calloc(glMaxDevices, sizeof(struct sMR));
 		for (i = 0; i < glMaxDevices; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
-
 		InitUtils();
-
 		InitSSL();
 
 		// start the main thread

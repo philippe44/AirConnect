@@ -9,13 +9,9 @@
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
+    <ProjectConfiguration Include="Static|Win32">
+      <Configuration>Static</Configuration>
+      <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
@@ -53,16 +49,13 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{0e8d87a4-0262-46bb-b355-4dbe44491af0}</ProjectGuid>
+    <ProjectGuid>{B9B39729-0AF8-473D-BAC9-7E130808975A}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <BaseDir>..</BaseDir>
     <BaseCommon>$(BaseDir)\common</BaseCommon>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <UseDebugLibraries>true</UseDebugLibraries>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup>
@@ -80,8 +73,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IntDir>bin\$(Platform)\$(Configuration)\</IntDir>
-    <OutDir>bin\</OutDir>
+    <IntDir>$(SolutionDir)\$(ProjectName)\build\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Static|Win32'">
+    <TargetName>$(ProjectName)-win-static</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'!='Static'">
+    <TargetName>$(ProjectName)-win</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -90,9 +89,9 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>USE_XML;UPNP_STATIC_LIB;PB_NO_STATIC_ASSERT;PB_FIELD_16BIT;__PTW32_STATIC_LIB;FLAC__NO_DLL;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BaseCommon)\pupnp\upnp\inc;$(BaseCommon)\pupnp\targets\win32\x86\inc;$(BaseCommon)\pupnp\ixml\inc;nanopb;$(BaseCommon)\openssl\inc;$(BaseCommon);$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\inc;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;jansson\targets\win32\x86\inc;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BaseCommon)\pupnp\upnp\inc;$(BaseCommon)\pupnp\targets\win32\x86\inc;$(BaseCommon)\pupnp\ixml\inc;nanopb;$(BaseCommon)\openssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\inc;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;jansson\targets\win32\x86\inc;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <ProgramDataBaseFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pd</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -101,6 +100,16 @@
       </AdditionalLibraryDirectories>
       <AdditionalDependencies>ws2_32.lib;wsock32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt;libcmtd</IgnoreSpecificDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Static|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>LINKALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ProgramDataBaseFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pd</ProgramDataBaseFileName>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(BaseCommon)\openssl\targets\win32\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libssl_static.lib;libcrypto_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

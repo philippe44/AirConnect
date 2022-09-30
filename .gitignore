@@ -114,3 +114,4 @@ bin/msvc
 __recovery/
 bin
 *.sln
+build/

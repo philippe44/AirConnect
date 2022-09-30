@@ -18,6 +18,7 @@
  *
  */
 
+#include <assert.h>
 #include "platform.h"
 #include "sslsym.h"
 
@@ -63,16 +64,18 @@ static void *CRYPThandle = NULL;
 
 #define STR(x) #x
 
-#define SYM(fn) dlsym_##fn
-#define SSYM(fn) SYM(fn)
-#define SHIM(fn) shim_##fn
-#define SSHIM(fn) SHIM(fn)
-
 #ifndef LINKALL
+
+#define SYM(fn) dlsym_##fn
+#define SHIM(fn) shim_##fn
+
+#define SHIMNULL(fn, ret, n, ...) 	  	   	\
+static ret (*SHIM(fn))(P(n,__VA_ARGS__))
 
 #define SYMDECL(fn, ret, n, ...) 			\
 static ret (*SYM(fn))(P(n,__VA_ARGS__));	\
 ret fn(P(n,__VA_ARGS__)) {					\
+	assert(SYM(fn));						\
 	return (*SYM(fn))(V(n,__VA_ARGS__));	\
 }
 
@@ -85,42 +88,14 @@ ret fn(P(n,__VA_ARGS__)) {						\
 		return SHIM(fn)(V(n,__VA_ARGS__));	\
 }
 
-#define SHIMNULL(fn, ret, n, ...) 	  	   	\
-static ret (*SHIM(fn))(P(n,__VA_ARGS__))
-
-#else
-
-#define SYMDECL(fn, ret, n, ...)
-#define SHIMNULL(fn, ret, n, ...)
-#define SHIMDECL(fn, ret, n, ...)			\
-ret fn(P(n,__VA_ARGS__)) {				 	\
-	return (SHIM(fn))(V(n,__VA_ARGS__));	\
-}
-
-#endif
-
-#define SYMLOAD(h, fn) SYM(fn) = dlsym(h, STR(fn))
+#define SYMLOAD(h, fn) SYM(fn) = dlsym(h, STR(fn));
+#define SYMLOADA(h, fn, name) SYM(fn) = dlsym(h, name);
 #define SHIMSET(fn) if (!SYM(fn)) SYM(fn) = shim_##fn
-
 
 /*
  MNNFFPPS: major minor fix patch status
  0x101ffpps = 1.1. fix->ff patch->pp status->s
 */
-
-// create shim functions
-#if OPENSSL_VERSION_NUMBER < 0x10100000
-static int shim_RSA_set0_key(RSA *r, BIGNUM *n, BIGNUM *e, BIGNUM *d) {
-	r->n = n; r->e = e;	r->d = d;
-	return 1;
-}
-SHIMDECL(RSA_set0_key, int, 4, RSA*, r, BIGNUM*, n, BIGNUM*, e, BIGNUM*, d);
-#else
-SYMDECL(RSA_set0_key, int, 4, RSA*, r, BIGNUM*, n, BIGNUM*, e, BIGNUM*, d);
-SHIMNULL(RSA_set0_key, int, 4, RSA*, r, BIGNUM*, n, BIGNUM*, e, BIGNUM*, d);
-#endif
-
-#ifndef LINKALL
 
 #if WIN
 static char *LIBSSL[] = {
@@ -149,22 +124,63 @@ static char *LIBCRYPTO[] 	= {
 			"libcrypto.so.1.0.0", NULL };
 #endif
 
-#ifndef SSLv23_client_method
+#if WIN
+static void* dlopen(const char* filename, int flag) {
+	SetLastError(0);
+	return LoadLibraryA(filename);
+}
 
-#define _SSLv23_client_method SSLv23_client_method
+static void dlclose(void* handle) {
+	FreeLibrary(handle);
+}
+
+static void* dlsym(void* handle, const char* symbol) {
+	SetLastError(0);
+	return (void*)GetProcAddress(handle, symbol);
+}
 #endif
-#ifndef SSL_library_init
-#define _SSL_library_init SSL_library_init
-#endif
-SYMDECL(_SSLv23_client_method, const SSL_METHOD*, 0);
+
+static void* dlopen_try(char** filenames, int flag) {
+	void* handle;
+	for (handle = NULL; !handle && *filenames; filenames++) handle = dlopen(*filenames, flag);
+	return handle;
+}
+
 SYMDECL(_SSL_library_init, int, 0);
-SYMDECL(TLS_client_method, const SSL_METHOD*, 0);
+SYMDECL(SSL_CTX_ctrl, long, 4, SSL_CTX*, ctx, int, cmd, long, larg, void*, parg);
+SYMDECL(_SSLv23_client_method, const SSL_METHOD*, 0);
+SYMDECL(ERR_remove_state, void, 1, unsigned long, pid);
+
+static unsigned long shim_OPENSSL_init_ssl(uint64_t opts, const OPENSSL_INIT_SETTINGS* settings) {
+	if (SYM(_SSL_library_init)) return SYM(_SSL_library_init());
+	else return 1;
+}
+
+static unsigned long shim_SSL_CTX_set_options(SSL_CTX* ctx, unsigned long op) {
+	assert(SYM(SSL_CTX_ctrl));
+	return SYM(SSL_CTX_ctrl)(ctx, 32, op, NULL);
+}
+
+static const SSL_METHOD* shim_TLS_client_method(void) {
+	assert(SYM(_SSLv23_client_method));
+	return SYM(_SSLv23_client_method)();
+}
+
+static void shim_ERR_remove_thread_state(void* tid) {
+	assert(SYM(ERR_remove_state));
+	return SYM(ERR_remove_state)(0);
+}
+
+SHIMDECL(OPENSSL_init_ssl, int, 2, uint64_t, opts, const OPENSSL_INIT_SETTINGS*, settings);
+SHIMDECL(SSL_CTX_set_options, unsigned long, 2, SSL_CTX*, ctx, unsigned long, op);
+SHIMDECL(TLS_client_method, const SSL_METHOD*, 0);
+SHIMDECL(ERR_remove_thread_state, void, 1, void*, tid);
+
 SYMDECL(SSL_read, int, 3, SSL*, s, void*, buf, int, len);
 SYMDECL(SSL_write, int, 3, SSL*, s, const void*, buf, int, len);
 SYMDECL(OpenSSL_version_num, unsigned long, 0);
 SYMDECL(SSL_CTX_set_cipher_list, int, 2, SSL_CTX *, ctx, const char*, str);
 SYMDECL(SSL_CTX_new, SSL_CTX*, 1, const SSL_METHOD *, meth);
-SYMDECL(SSL_CTX_ctrl, long, 4, SSL_CTX *, ctx, int, cmd, long, larg, void*, parg);
 SYMDECL(SSL_new, SSL*, 1, SSL_CTX*, s);
 SYMDECL(SSL_connect, int, 1, SSL*, s);
 SYMDECL(SSL_shutdown, int, 1, SSL*, s);
@@ -199,33 +215,6 @@ SYMDECL(AES_cbc_encrypt, void, 6, const unsigned char*, in, unsigned char*, out,
 SYMDECL(RAND_seed, void, 2, const void*, buf, int, num);
 SYMDECL(RSA_free, void, 1, RSA*, r);
 SYMDECL(ERR_clear_error, void, 0);
-SYMDECL(ERR_remove_state, void, 1, unsigned long, pid);
-
-#if WIN
-static void *dlopen(const char *filename, int flag) {
-	SetLastError(0);
-	return LoadLibraryA(filename);
-}
-
-static void dlclose(void *handle) {
-	FreeLibrary(handle);
-}
-
-static void *dlsym(void *handle, const char *symbol) {
-	SetLastError(0);
-	return (void *)GetProcAddress(handle, symbol);
-}
-#endif
-
-static void *dlopen_try(char **filenames, int flag) {
-	void *handle;
-	for (handle = NULL; !handle && *filenames; filenames++) handle = dlopen(*filenames, flag);
-	return handle;
-}
-
-static int lambda(void) {
-	return true;
-}
 
 bool load_ssl_symbols(void) {
 	CRYPThandle = dlopen_try(LIBCRYPTO, RTLD_NOW);
@@ -240,6 +229,7 @@ bool load_ssl_symbols(void) {
 	SYMLOAD(SSLhandle, SSL_CTX_ctrl);
 	SYMLOAD(SSLhandle, SSL_CTX_set_cipher_list);
 	SYMLOAD(SSLhandle, SSL_CTX_free);
+	SYMLOAD(SSLhandle, SSL_CTX_set_options);
 	SYMLOAD(SSLhandle, SSL_ctrl);
 	SYMLOAD(SSLhandle, SSL_free);
 	SYMLOAD(SSLhandle, SSL_new);
@@ -254,8 +244,10 @@ bool load_ssl_symbols(void) {
 	SYMLOAD(SSLhandle, SSL_pending);
 	SYMLOAD(SSLhandle, TLS_client_method);
 	SYMLOAD(SSLhandle, OpenSSL_version_num);
-	SYMLOAD(SSLhandle, _SSLv23_client_method);
-	SYMLOAD(SSLhandle, _SSL_library_init);
+	SYMLOAD(SSLhandle, OPENSSL_init_ssl);
+	
+	SYMLOADA(SSLhandle, _SSL_library_init, "SSL_library_init");
+	SYMLOADA(SSLhandle, _SSLv23_client_method, "SSLv23_client_method");
 
 	SYMLOAD(CRYPThandle, RAND_seed);
 	SYMLOAD(CRYPThandle, RAND_bytes);
@@ -272,7 +264,6 @@ bool load_ssl_symbols(void) {
 	SYMLOAD(CRYPThandle, RSA_public_decrypt);
 	SYMLOAD(CRYPThandle, RSA_private_decrypt);
 	SYMLOAD(CRYPThandle, RSA_free);
-	SYMLOAD(CRYPThandle, RSA_set0_key);
 	SYMLOAD(CRYPThandle, BN_bin2bn);
 	SYMLOAD(CRYPThandle, AES_set_decrypt_key);
 	SYMLOAD(CRYPThandle, AES_cbc_encrypt);
@@ -280,12 +271,7 @@ bool load_ssl_symbols(void) {
 	SYMLOAD(CRYPThandle, BIO_free);
 	SYMLOAD(CRYPThandle, PEM_read_bio_RSAPrivateKey);
 
-	// managed deprecated functions
-	if (!SSYM(_SSLv23_client_method)) SSYM(_SSLv23_client_method) = SYM(TLS_client_method);
-	if (!SSYM(_SSL_library_init)) SSYM(_SSL_library_init) = lambda;
-
-	// manage mandatory new functions
-	SHIMSET(RSA_set0_key);
+	OPENSSL_init_ssl(0, NULL);
 
 	return true;
 }

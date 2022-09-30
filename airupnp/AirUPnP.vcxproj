@@ -74,9 +74,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Static|Win32'">
     <TargetName>$(ProjectName)-win-static</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'!='Static'">
-    <TargetName>$(ProjectName)-win</TargetName>
-  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>

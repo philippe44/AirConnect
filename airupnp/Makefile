@@ -30,15 +30,15 @@ endif
 vpath %.c $(TOOLS):$(COMMON):$(SRC):$(SQUEEZETINY):$(MDNSSD):$(TINYSVCMDNS):$(DMAP_PARSER)
 
 INCLUDE = -I. \
-		  -I$(OPENSSL)/targets/linux/$(PLATFORM)/include \
-		  -I$(SHINE)/src/lib \
+		  -I$(OPENSSL)/targets/$(HOST)/$(PLATFORM)/include \
+		  -I$(SHINE)/targets/include \
 		  -I$(DMAP_PARSER) \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC) -I$(SRC)/inc \
-		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/targets/inc -I$(UPNP)/targets/linux/$(PLATFORM)/include -I$(UPNP)/targets/linux/include \
+		  -I$(UPNP)/targets/$(HOST)/$(PLATFORM)/include \
 		  -I$(MDNSSD) \
-		  -I$(FLAC)/include\
+		  -I$(FLAC)/targets/include\
 		  -I$(TINYSVCMDNS)
 		  		  
 DEPS	= $(SRC)/airupnp.h
@@ -53,13 +53,13 @@ SOURCES_LIBS = sslsym.c
 OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
-LIBRARY 		= $(UPNP)/targets/linux/$(PLATFORM)/libixml.a $(UPNP)/targets/linux/$(PLATFORM)/libupnp.a \
-				  $(FLAC)/targets/linux/$(PLATFORM)/libFLAC.a $(OGG)/targets/linux/$(PLATFORM)/libogg.a \
-				  $(SHINE)/targets/linux/$(PLATFORM)/libshine.a \
-				  $(TINYSVCMDNS)/targets/linux/$(PLATFORM)/tinysvcmdns.a
+LIBRARY 		= $(UPNP)/targets/$(HOST)/$(PLATFORM)/libixml.a $(UPNP)/targets/$(HOST)/$(PLATFORM)/libupnp.a \
+				  $(FLAC)/targets/$(HOST)/$(PLATFORM)/libFLAC-static.a $(OGG)/targets/$(HOST)/$(PLATFORM)/libogg.a \
+				  $(SHINE)/targets/$(HOST)/$(PLATFORM)/libshine.a \
+				  $(TINYSVCMDNS)/targets/$(HOST)/$(PLATFORM)/tinysvcmdns.a
 				  
 #LIBRARY_STATIC 	= $(LIBRARY) -lcrypto
-LIBRARY_STATIC 	= $(LIBRARY) $(COMMON)/openssl/targets/linux/$(PLATFORM)/libssl.a $(LIBRARY) $(COMMON)/openssl/targets/linux/$(PLATFORM)/libcrypto.a
+LIBRARY_STATIC 	= $(LIBRARY) $(COMMON)/openssl/targets/$(HOST)/$(PLATFORM)/libssl.a $(LIBRARY) $(COMMON)/openssl/targets/$(HOST)/$(PLATFORM)/libcrypto.a
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
 

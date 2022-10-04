@@ -243,15 +243,12 @@ Many have asked for a way to do video/audio synchronisation so that UPnP (Sonos)
 
 ## Compiling from source
 
-If you want to recompile, you'll need:
+AirConnect is now properly using submodules sor you can just pull recursively
+```
+git pull https://github.com/philippe44/airconnect --recursive
+```
+It's a humongous pull, so be patient. Under Linux, you just need to go to the aircast or airconnect sub-directory and run `../build.sh [<platform>] [clean]`. For Windows, there are VS projects/solution.
 
-- https://github.com/nanopb/nanopb
-- https://github.com/akheron/jansson
-- https://github.com/philippe44/mDNS-SD (use fork v2)
-- https://github.com/philippe44/TinySVCmDNS
-- https://github.com/philippe44/alac
-- https://github.com/mrjimenez/pupnp (I'm using 1.6.19)
-- https://xiph.org/flac/
-- http://www.sourceware.org/pthreads-win32/
-- https://github.com/toots/shine
-- https://github.com/mattstevens/dmap-parser
+I've pre-built a lot of libraries so not every sub-module needs to be rebuild. Each module contains a `target`directory with all headers and libraries already built. Now if you want to rebuild them (which I strongly advice against), each of them contains its own `build.sh` you can use, but you're on your own. 
+
+Note also that this is a cross-build (for Linux) so calling the builder with no parameter will try all compilers you have on your Linux box, amongst x86, x86_64, arm, aarch64, sparc64, mips and powerpc. When using parameter \<platform>\, you can use any string and the script will use any compiler that contains that string.

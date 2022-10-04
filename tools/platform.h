@@ -102,7 +102,6 @@ int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size);
 char *strlwr(char *str);
 #define _random(x) random()
 #define closesocket(s) close(s)
-#define S_ADDR(X) X.s_addr
 
 #endif
 
@@ -114,49 +113,24 @@ char *strlwr(char *str);
 #include <iphlpapi.h>
 #include <sys/timeb.h>
 
-#define inline __inline
-
-int gettimeofday(struct timeval *tv, struct timezone *tz);
-
 #define usleep(x) Sleep((x)/1000)
-
 #define sleep(x) Sleep((x)*1000)
-#define last_error() WSAGetLastError()
-#define ERROR_WOULDBLOCK WSAEWOULDBLOCK
+
 #define open _open
 #define read _read
 #define poll WSAPoll
-#ifdef __BORLANDC__
-#define snprintf _snprintf
-#endif
 #define fresize(f, s) chsize(fileno(f), s)
 #define strcasecmp stricmp
-#define _random(x) random(x)
-#define VALGRIND_MAKE_MEM_DEFINED(x,y)
-#define S_ADDR(X) X.S_un.S_addr
 
-#define in_addr_t uint32_t
-#define socklen_t int
-#define ssize_t int
+typedef uint32_t in_addr_t;
+typedef SSIZE_T	ssize_t;
 
 #define RTLD_NOW 0
 
 #endif
 
-typedef struct ntp_s {
-	uint32_t seconds;
-	uint32_t fraction;
-
-} ntp_t;
-
-
-uint64_t timeval_to_ntp(struct timeval tv, struct ntp_s *ntp);
-
-uint64_t get_ntp(struct ntp_s *ntp);
 uint32_t gettime_ms(void);
 uint64_t gettime_ms64(void);
-
-#define SL_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 
 #define _STR_LEN_	256
 

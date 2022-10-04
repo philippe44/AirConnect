@@ -99,7 +99,7 @@ char*		XMLGetFirstElementItem(IXML_Element *element, const char *item);
 bool 		XMLMatchDocumentItem(IXML_Document *doc, const char *item, const char *s, bool match);
 #endif
 
-uint32_t 		gettime_ms(void);
+uint32_t	gettime_ms(void);
 
 #if WIN
 char*		strcasestr(const char *haystack, const char *needle);
@@ -112,7 +112,7 @@ char*		strlwr(char *str);
 char* 		itoa(int value, char* str, int radix);
 #endif
 char* 		strextract(char *s1, char *beg, char *end);
-uint32_t 		hash32(char *str);
+uint32_t	hash32(char *str);
 char*		ltrim(char *s);
 char*		rtrim(char *s);
 char*		trim(char *s);

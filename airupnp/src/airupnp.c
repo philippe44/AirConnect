@@ -1104,7 +1104,6 @@ static bool Start(bool cold)
 	}
 
 	UpnpSetLogLevel(UPNP_CRITICAL);
-	//TODO
 	rc = UpnpInit2(NULL, glPort);
 
 	if (rc != UPNP_E_SUCCESS) {
@@ -1114,7 +1113,7 @@ static bool Start(bool cold)
 
 	UpnpSetMaxContentLength(60000);
 
-	S_ADDR(glHost) = inet_addr(IP);
+	glHost.s_addr = inet_addr(IP);
 	gethostname(glHostName, _STR_LEN_);
 	glPort = UpnpGetServerPort();
 

@@ -294,7 +294,7 @@ void  raop_notify(struct raop_ctx_s *ctx, raop_event_t event, void *param) {
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = S_ADDR(ctx->active_remote.host);
+	addr.sin_addr = ctx->active_remote.host;
 	addr.sin_port = htons(ctx->active_remote.port);
 
 	if (!connect(sock, (struct sockaddr*) &addr, sizeof(addr))) {
@@ -394,7 +394,7 @@ static bool handle_rtsp(raop_ctx_t *ctx, int sock)
 		base64_pad(buf, &buf_pad);
 
 		p = data + min(base64_decode(buf_pad, data), 32-10);
-		p = (char*) memcpy(p, &S_ADDR(ctx->host), 4) + 4;
+		p = (char*) memcpy(p, &ctx->host, 4) + 4;
 		p = (char*) memcpy(p, ctx->mac, 6) + 6;
 		memset(p, 0, 32 - (p - data));
 		p = rsa_apply((unsigned char*) data, 32, &n, RSA_MODE_AUTH);

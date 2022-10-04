@@ -292,7 +292,7 @@ in_addr_t ExtractIP(const char *URL)
 	p1 = strchr(ip, ':');
 	if (p1) *p1 = '\0';
 
-	return inet_addr(ip);;
+	return inet_addr(ip);
 }
 
 /*----------------------------------------------------------------------------*/

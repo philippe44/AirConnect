@@ -560,37 +560,29 @@ bool get_interface(struct in_addr *addr)
 	close(fd);
 	return valid;
 }
-#endif
-
-
-#if WIN
-bool get_interface(struct in_addr *addr)
+#elif WIN
+bool get_interface(struct in_addr* addr)
 {
-	INTERFACE_INFO ifList[20];
-	unsigned bytes;
-	int i, nb;
-	bool valid = false;
-	int fd;
+	struct sockaddr_in* host = NULL;
+	ULONG size = sizeof(IP_ADAPTER_ADDRESSES) * 32;
+	IP_ADAPTER_ADDRESSES* adapters = (IP_ADAPTER_ADDRESSES*)malloc(size);
+	int ret = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_GATEWAYS | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST, 0, adapters, &size);
 
-	memset(addr, 0, sizeof(struct in_addr));
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	for (PIP_ADAPTER_ADDRESSES adapter = adapters; adapter && !host; adapter = adapter->Next) {
+		if (adapter->TunnelType == TUNNEL_TYPE_TEREDO) continue;
+		if (adapter->OperStatus != IfOperStatusUp) continue;
 
-	if (WSAIoctl(fd, SIO_GET_INTERFACE_LIST, 0, 0, (void*) &ifList, sizeof(ifList), (void*) &bytes, 0, 0) == SOCKET_ERROR) return false;
-
-	nb = bytes / sizeof(INTERFACE_INFO);
-	for (i = 0; i < nb; i++) {
-		if ((ifList[i].iiFlags & IFF_UP) &&
-			!(ifList[i].iiFlags & IFF_POINTTOPOINT) &&
-			!(ifList[i].iiFlags & IFF_LOOPBACK) &&
-			(ifList[i].iiFlags & IFF_MULTICAST)) {
-				*addr = ((struct sockaddr_in *) &(ifList[i].iiAddress))->sin_addr;
-				valid = true;
-			break;
+		for (IP_ADAPTER_UNICAST_ADDRESS* unicast = adapter->FirstUnicastAddress; unicast;
+			unicast = unicast->Next) {
+			if (adapter->FirstGatewayAddress && unicast->Address.lpSockaddr->sa_family == AF_INET) {
+				*addr = ((struct sockaddr_in*)unicast->Address.lpSockaddr)->sin_addr;
+				return true;
+			}
 		}
 	}
 
-	close(fd);
-	return valid;
+	addr->S_un.S_addr = INADDR_ANY;
+	return false;
 }
 #endif
 

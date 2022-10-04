@@ -909,7 +909,7 @@ static void *MainThread(void *args)
 		// try to detect IP change when auto-detect
 		if (strstr(glBinding, "?")) {
 			struct in_addr Host;
-			Host.s_addr = get_localhost(NULL);
+			get_interface(&Host);
 			if (Host.s_addr != INADDR_ANY && Host.s_addr != glHost.s_addr) {
 				LOG_INFO("IP change detected %s", inet_ntoa(glHost));
 				Stop(false);
@@ -1099,7 +1099,7 @@ static bool Start(bool cold)
 
 	if (!*IP) {
 		struct in_addr host;
-		host.s_addr = get_localhost(NULL);
+		get_interface(&host);
 		strcpy(IP, inet_ntoa(host));
 	}
 

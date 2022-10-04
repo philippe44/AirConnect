@@ -1,7 +1,14 @@
+ifeq ($(CC),cc)
+CC=$(lastword $(subst /, ,$(shell readlink -f `which cc`)))
+endif
+
+PLATFORM ?= $(firstword $(subst -, ,$(CC)))
+HOST ?= $(word 2, $(subst -, ,$(CC)))
+
 BASE		= ..
 
 OBJ			= build/$(PLATFORM)
-EXECUTABLE 		= $(BASE)/bin/airupnp-$(PLATFORM)
+EXECUTABLE 	= $(BASE)/bin/airupnp-$(PLATFORM)
 EXECUTABLE_STATIC	= $(BASE)/bin/airupnp-$(PLATFORM)-static
 
 TOOLS		= $(BASE)/tools
@@ -13,13 +20,13 @@ TINYSVCMDNS	= $(COMMON)/tinysvcmdns
 UPNP 		= $(COMMON)/pupnp
 SHINE		= $(COMMON)/shine
 FLAC		= $(COMMON)/flac
-OGG		= $(COMMON)/ogg
+OGG			= $(COMMON)/ogg
 DMAP_PARSER	= $(COMMON)/dmap-parser
 OPENSSL		= $(COMMON)/openssl
 
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUSE_XML
 CFLAGS  	+= -Wall -Wno-format-truncation -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
-LDFLAGS 	+= -lpthread -ldl -lm -lrt -L. 
+LDFLAGS 	+= -s -lpthread -ldl -lm -lrt -L. 
 
 ifeq ($(OS),Darwin)
 LDFLAGS 	+= -Wl,-dead_strip
@@ -62,7 +69,7 @@ LIBRARY 		= $(UPNP)/targets/$(HOST)/$(PLATFORM)/libixml.a $(UPNP)/targets/$(HOST
 LIBRARY_STATIC 	= $(LIBRARY) $(COMMON)/openssl/targets/$(HOST)/$(PLATFORM)/libssl.a $(LIBRARY) $(COMMON)/openssl/targets/$(HOST)/$(PLATFORM)/libcrypto.a
 
 all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
-
+		
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
 	

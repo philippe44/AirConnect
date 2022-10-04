@@ -1,3 +1,10 @@
+ifeq ($(CC),cc)
+CC=$(lastword $(subst /, ,$(shell readlink -f `which cc`)))
+endif
+
+PLATFORM ?= $(firstword $(subst -, ,$(CC)))
+HOST ?= $(word 2, $(subst -, ,$(CC)))
+
 BASE = ..
 
 OBJ			= build/$(PLATFORM)
@@ -21,7 +28,7 @@ JANSSON		= ./jansson
 
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUSE_XML
 CFLAGS  	+= -Wall -Wno-format-truncation -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
-LDFLAGS 	+= -lpthread -ldl -lm -lrt -L. 
+LDFLAGS 	+= -s -lpthread -ldl -lm -lrt -L. 
 
 ifeq ($(OS),Darwin)
 LDFLAGS 	+= -Wl,-dead_strip
@@ -38,12 +45,12 @@ INCLUDE = -I. \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC) -I$(SRC)/inc \
-		   -I$(UPNP)/targets/$(HOST)/$(PLATFORM)/include \
+		  -I$(UPNP)/targets/$(HOST)/$(PLATFORM)/include \
 		  -I$(MDNSSD) \
 		  -I$(FLAC)/targets/include\
 		  -I$(TINYSVCMDNS) \
 		  -I$(NANOPB) \
-		  -I$(JANSSON)/targets/$(HOST)/include
+		  -I$(JANSSON)/targets/$(HOST)/$(PLATFORM)/include
 		  		  
 DEPS	= $(SRC)/aircast.h
 				  

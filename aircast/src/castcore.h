@@ -61,10 +61,10 @@ typedef struct sCastCtx {
 	int				mediaSessionId;
 	enum { CAST_WAIT, CAST_WAIT_MEDIA } State;
 	struct in_addr	ip;
-	uint16_t			port;
+	uint16_t		port;
 	tQueue			eventQueue, reqQueue;
 	double 			MediaVolume;
-	uint32_t			lastPong;
+	uint32_t		lastPong;
 	bool			group;
 	bool			stopReceiver;
 } tCastCtx;

@@ -1,7 +1,7 @@
 /*
  * Chromecast protocol handler
  *
- *  (c) Philippe 2016-2017, philippe_44@outlook.com
+ *  (c) Philippe, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,19 +79,16 @@ static void set_block(sockfd s) {
 
 /*----------------------------------------------------------------------------*/
 static int connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t addrlen, int timeout) {
+	int conn = connect(sock, addr, addrlen);
+#if !WIN
+	if (conn < 0 && errno != EINPROGRESS) return 1;
+#else
+	if (conn < 0 && WSAGetLastError() != WSAEWOULDBLOCK) return 1;
+#endif
+
 	fd_set w, e;
 	struct timeval tval;
-
-	if (connect(sock, addr, addrlen) < 0) {
-#if !WIN
-		if (last_error() != EINPROGRESS) {
-#else
-		if (last_error() != WSAEWOULDBLOCK) {
-#endif
-			return -1;
-		}
-	}
-
+	
 	FD_ZERO(&w);
 	FD_SET(sock, &w);
 	e = w;
@@ -342,7 +339,7 @@ bool CastConnect(struct sCastCtx *Ctx)
 	set_nosigpipe(Ctx->sock);
 
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = Ctx->ip;
+	addr.sin_addr.s_addr = Ctx->ip.s_addr;
 	addr.sin_port = htons(Ctx->port);
 
 	err = connect_timeout(Ctx->sock, (struct sockaddr *) &addr, sizeof(addr), 2*1000);

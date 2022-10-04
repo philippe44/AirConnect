@@ -1,7 +1,7 @@
 /*
  *  AirCast: Chromecast to AirPlay
  *
- *  (c) Philippe 2016-2017, philippe_44@outlook.com
+ *  (c) Philippe, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@
 /* globals */
 /*----------------------------------------------------------------------------*/
 struct sMR	*glMRDevices;
-uint16_t		glPortBase, glPortRange;
+uint16_t	glPortBase, glPortRange;
 int32_t		glLogLimit = -1;
 int			glMaxDevices = 32;
 char		glBinding[16] = "?";

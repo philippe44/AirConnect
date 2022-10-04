@@ -1,7 +1,7 @@
 /*
  *  Chromecast control utils
  *
- *  (c) Philippe 2016-2017, philippe_44@outlook.com
+ *  (c) Philippe, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -177,7 +177,8 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadat
 
 	pthread_mutex_unlock(&Ctx->Mutex);
 
-	return true;
+
+	return true;
 }
 
 
@@ -338,7 +339,8 @@ void CastSetDeviceVolume(struct sCastCtx *Ctx, double Volume, bool Queue)
 	pthread_mutex_unlock(&Ctx->Mutex);
 }
 
-/*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
 int CastSeek(char *ControlURL, unsigned Interval)
 {
 	int rc = 0;
@@ -350,4 +352,4 @@ int CastSeek(char *ControlURL, unsigned Interval)
 
 
 
-
+

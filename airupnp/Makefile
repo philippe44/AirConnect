@@ -25,7 +25,7 @@ DMAP_PARSER	= $(COMMON)/dmap-parser
 OPENSSL		= $(COMMON)/openssl
 
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUSE_XML
-CFLAGS  	+= -Wall -Wno-format-truncation -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
+CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -fPIC -ggdb -O2 $(OPTS) $(INCLUDE) $(DEFINES) -fdata-sections -ffunction-sections 
 LDFLAGS 	+= -s -lpthread -ldl -lm -lrt -L. 
 
 ifeq ($(OS),Darwin)

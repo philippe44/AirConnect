@@ -1,7 +1,7 @@
 /*                                                         		// slave becoming master again
  *  AirUPnP - AirPlay to uPNP gateway
  *
- *	(c) Philippe 2015-2017, philippe_44@outlook.com
+ *	(c) Philippe, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -284,14 +284,9 @@ void MakeMacUnique(struct sMR *Device)
 /*----------------------------------------------------------------------------*/
 in_addr_t ExtractIP(const char *URL)
 {
-	char *p1, ip[32];
+	char ip[32] = "";
 
-	sscanf(URL, "http://%31s", ip);
-
-	ip[31] = '\0';
-	p1 = strchr(ip, ':');
-	if (p1) *p1 = '\0';
-
+	sscanf(URL, "http://%[^:]", ip);
 	return inet_addr(ip);
 }
 

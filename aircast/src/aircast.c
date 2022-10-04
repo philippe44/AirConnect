@@ -45,8 +45,8 @@
 /* globals */
 /*----------------------------------------------------------------------------*/
 struct sMR	*glMRDevices;
-u16_t		glPortBase, glPortRange;
-s32_t		glLogLimit = -1;
+uint16_t		glPortBase, glPortRange;
+int32_t		glLogLimit = -1;
 int			glMaxDevices = 32;
 char		glBinding[16] = "?";
 
@@ -164,7 +164,7 @@ static char license[] =
 /* prototypes */
 /*----------------------------------------------------------------------------*/
 static void *MRThread(void *args);
-static bool  AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool Group, struct in_addr ip, u16_t port);
+static bool  AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool Group, struct in_addr ip, uint16_t port);
 static void  RemoveCastDevice(struct sMR *Device);
 static bool	 Start(bool cold);
 static bool	 Stop(bool exit);
@@ -579,7 +579,7 @@ static void *MainThread(void *args)
 
 			if (size > glLogLimit*1024*1024) {
 				uint32_t Sum, BufSize = 16384;
-				u8_t *buf = malloc(BufSize);
+				uint8_t *buf = malloc(BufSize);
 
 				FILE *rlog = fopen(glLogFile, "rb");
 				FILE *wlog = fopen(glLogFile, "r+b");
@@ -634,7 +634,7 @@ void MakeMacUnique(struct sMR *Device)
 
 
 /*----------------------------------------------------------------------------*/
-static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group, struct in_addr ip, u16_t port)
+static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group, struct in_addr ip, uint16_t port)
 {
 	unsigned long mac_size = 6;
 

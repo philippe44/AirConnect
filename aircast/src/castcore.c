@@ -135,19 +135,19 @@ void swap32(uint32_t *n)
 {
 #if SL_LITTLE_ENDIAN
 	uint32_t buf = *n;
-	*n = 	(((u8_t) (buf >> 24))) +
-		(((u8_t) (buf >> 16)) << 8) +
-		(((u8_t) (buf >> 8)) << 16) +
-		(((u8_t) (buf)) << 24);
+	*n = 	(((uint8_t) (buf >> 24))) +
+		(((uint8_t) (buf >> 16)) << 8) +
+		(((uint8_t) (buf >> 8)) << 16) +
+		(((uint8_t) (buf)) << 24);
 #else
 #endif
 }
 
 
 /*----------------------------------------------------------------------------*/
-bool read_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, u16_t bytes)
+bool read_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, uint16_t bytes)
 {
-	u16_t read = 0;
+	uint16_t read = 0;
 	sockfd sock = SSL_get_fd(ssl);
 
 	if (sock == -1) return false;
@@ -171,7 +171,7 @@ bool read_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, u16_t bytes)
 #endif
 		ERR_clear_error();
 		pthread_mutex_lock(Mutex);
-		nb = SSL_read(ssl, (u8_t*) buffer + read, bytes - read);
+		nb = SSL_read(ssl, (uint8_t*) buffer + read, bytes - read);
 		pthread_mutex_unlock(Mutex);
 		if (nb <= 0) {
 			LOG_WARN("[s-%p]: SSL error code %d (err:%d)", ssl, SSL_get_error(ssl, nb), ERR_get_error());
@@ -185,7 +185,7 @@ bool read_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, u16_t bytes)
 
 
 /*----------------------------------------------------------------------------*/
-bool write_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, u16_t bytes)
+bool write_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, uint16_t bytes)
 {
 	bool ret;
 
@@ -202,8 +202,8 @@ bool SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, 
 {
 	CastMessage message = CastMessage_init_default;
 	pb_ostream_t stream;
-	u8_t *buffer;
-	u16_t buffer_len = 4096;
+	uint8_t *buffer;
+	uint16_t buffer_len = 4096;
 	bool status;
 	uint32_t len;
 	va_list args;
@@ -236,7 +236,7 @@ bool SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, 
 
 
 /*----------------------------------------------------------------------------*/
-bool DecodeCastMessage(u8_t *buffer, u16_t len, CastMessage *msg)
+bool DecodeCastMessage(uint8_t *buffer, uint16_t len, CastMessage *msg)
 {
 	bool status;
 	CastMessage message = CastMessage_init_zero;
@@ -253,7 +253,7 @@ bool GetNextMessage(pthread_mutex_t *Mutex, SSL *ssl, CastMessage *message)
 {
 	bool status;
 	uint32_t len;
-	u8_t *buf;
+	uint8_t *buf;
 
 	// the SSL might just have been closed by another thread
 	if (!ssl || !read_bytes(Mutex, ssl, &len, 4)) return false;
@@ -423,7 +423,7 @@ void SetMediaVolume(tCastCtx *Ctx, double Volume)
 
 /*----------------------------------------------------------------------------*/
 
-void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, u16_t port, double MediaVolume)
+void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, uint16_t port, double MediaVolume)
 {
 	tCastCtx *Ctx = malloc(sizeof(tCastCtx));
 	pthread_mutexattr_t mutexAttr;
@@ -458,7 +458,7 @@ void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_add
 
 
 /*----------------------------------------------------------------------------*/
-bool UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, u16_t port)
+bool UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, uint16_t port)
 {
 	if (Ctx->port != port || Ctx->ip.s_addr != ip.s_addr) {
 		LOG_INFO("[%p]: changed ip:port %s:%d", Ctx, inet_ntoa(ip), port);

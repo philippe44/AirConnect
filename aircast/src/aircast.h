@@ -55,7 +55,7 @@ typedef struct sMRConfig
 	bool		Metadata;
 	bool		Flush;
 	double		MediaVolume;
-	u8_t		mac[6];
+	uint8_t		mac[6];
 	char		Latency[_STR_LEN_];
 	bool		Drift;
 	char		ArtWork[4*_STR_LEN_];
@@ -82,12 +82,12 @@ struct sMR {
 	struct sGroupMember {
 		struct sGroupMember	*Next;
 		struct in_addr		Host;
-		u16_t				Port;
+		uint16_t				Port;
    } *GroupMaster;
    bool Remove;
 };
 
-extern s32_t				glLogLimit;
+extern int32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern struct sMR			*glMRDevices;
 extern int					glMaxDevices;

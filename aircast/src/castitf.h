@@ -34,8 +34,8 @@ void EndSSL(void);
 struct sCastCtx;
 
 json_t*	GetTimedEvent(void *p, uint32_t msWait);
-void*	CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, u16_t port, double MediaVolume);
-bool 	UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, u16_t port);
+void*	CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, uint16_t port, double MediaVolume);
+bool 	UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, uint16_t port);
 void 	DeleteCastDevice(struct sCastCtx *Ctx);
 bool	CastIsConnected(struct sCastCtx *Ctx);
 bool 	CastIsMediaSession(struct sCastCtx *Ctx);

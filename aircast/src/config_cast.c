@@ -73,7 +73,7 @@ void SaveConfig(char *name, void *ref, bool full)
 	XMLUpdateNode(doc, root, false, "main_log", level2debug(main_loglevel));
 	XMLUpdateNode(doc, root, false, "cast_log", level2debug(cast_loglevel));
 	XMLUpdateNode(doc, root, false, "util_log", level2debug(util_loglevel));
-	XMLUpdateNode(doc, root, false, "log_limit", "%d", (s32_t) glLogLimit);
+	XMLUpdateNode(doc, root, false, "log_limit", "%d", (int32_t) glLogLimit);
 	XMLUpdateNode(doc, root, false, "max_players", "%d", (int) glMaxDevices);
 	XMLUpdateNode(doc, root, false, "ports", "%hu:%hu", glPortBase, glPortRange);
 	XMLUpdateNode(doc, root, false, "binding", glBinding);

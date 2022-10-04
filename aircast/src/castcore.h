@@ -64,7 +64,7 @@ typedef struct sCastCtx {
 	u16_t			port;
 	tQueue			eventQueue, reqQueue;
 	double 			MediaVolume;
-	u32_t			lastPong;
+	uint32_t			lastPong;
 	bool			group;
 	bool			stopReceiver;
 } tCastCtx;

@@ -63,12 +63,12 @@ typedef struct raop_ctx_s {
 	struct {
 		char				DACPid[32], id[32];
 		struct in_addr		host;
-		u16_t				port;
+		uint16_t				port;
 		struct mDNShandle_s *handle;
 	} active_remote;
 	void *owner;
 	struct {
-		u16_t base, range;
+		uint16_t base, range;
 	} ports;
 	int http_length;
 } raop_ctx_t;

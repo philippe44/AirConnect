@@ -1,7 +1,7 @@
 /*
  * AirUPnP - AirPlay to uPNP gateway
  *
- *	(c) Philippe 2015-2019, philippe_44@outlook.com
+ *	(c) Philippe, philippe_44@outlook.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,11 +57,11 @@ of code repeating and break/continue
 /*----------------------------------------------------------------------------*/
 /* globals																	  */
 /*----------------------------------------------------------------------------*/
-s32_t  				glLogLimit = -1;
+int32_t  			glLogLimit = -1;
 UpnpClient_Handle 	glControlPointHandle;
 struct sMR			*glMRDevices;
 int					glMaxDevices = MAX_DEVICES;
-u16_t				glPortBase, glPortRange;
+uint16_t			glPortBase, glPortRange;
 char				glBinding[128] = "?";
 
 log_level	main_loglevel = lINFO;
@@ -109,7 +109,7 @@ static const struct cSearchedSRV_s
 {
  char 	name[RESOURCE_LENGTH];
  int	idx;
- u32_t  TimeOut;
+ uint32_t  TimeOut;
 } cSearchedSRV[NB_SRV] = {	{AV_TRANSPORT, AVT_SRV_IDX, 0},
 						{RENDERING_CTRL, REND_SRV_IDX, 30},
 						{CONNECTION_MGR, CNX_MGR_IDX, 0},
@@ -141,7 +141,7 @@ static pthread_t 		glMainThread, glUpdateThread;
 static tQueue			glUpdateQueue;
 static bool				glInteractive = true;
 static char				*glLogFile;
-static u32_t			glPort;
+static uint32_t			glPort;
 static void				*glConfigID = NULL;
 static char				glConfigName[_STR_LEN_] = "./config.xml";
 
@@ -338,7 +338,7 @@ void HandleRAOP(void *owner, raop_event_t event, void *param)
 			// Volume sent by raop is normalized 0..1
 			double RaopVolume = *(double*) param;
 			int GroupVolume, i;
-			u32_t now = gettime_ms();
+			uint32_t now = gettime_ms();
 
 			// discard echo commands
 			if (now < Device->VolumeStampRx + 1000) break;
@@ -450,7 +450,7 @@ static void ProcessEvent(Upnp_EventType EventType, const void *_Event, void *Coo
 	if (r) {
 		struct sMR *Master = Device->Master ? Device->Master : Device;
 		double Volume = atoi(r), GroupVolume;
-		u32_t now = gettime_ms();
+		uint32_t now = gettime_ms();
 
 		if (Volume != (int) Device->Volume && now > Master->VolumeStampTx + 1000) {
 			Device->Volume = Volume;
@@ -708,7 +708,7 @@ static void *UpdateThread(void *args)
 		for (; glMainRunning && (Update = QueueExtract(&glUpdateQueue)) != NULL; QueueFreeItem(&glUpdateQueue, Update)) {
 			struct sMR *Device;
 			int i;
-			u32_t now = gettime_ms() / 1000;
+			uint32_t now = gettime_ms() / 1000;
 
 			// UPnP end of search timer
 			if (Update->Type == SEARCH_TIMEOUT) {
@@ -883,11 +883,11 @@ static void *MainThread(void *args)
 		if (!glMainRunning) break;
 
 		if (glLogFile && glLogLimit != - 1) {
-			u32_t size = ftell(stderr);
+			uint32_t size = ftell(stderr);
 
 			if (size > glLogLimit*1024*1024) {
-				u32_t Sum, BufSize = 16384;
-				u8_t *buf = malloc(BufSize);
+				uint32_t Sum, BufSize = 16384;
+				uint8_t *buf = malloc(BufSize);
 
 				FILE *rlog = fopen(glLogFile, "rb");
 				FILE *wlog = fopen(glLogFile, "r+b");
@@ -929,7 +929,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	int i;
 	unsigned long mac_size = 6;
 	in_addr_t ip;
-	u32_t now = gettime_ms();
+	uint32_t now = gettime_ms();
 
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
@@ -1020,7 +1020,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	ip = ExtractIP(location);
 	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", mac_size)) {
 		if (SendARP(ip, INADDR_ANY, Device->Config.mac, &mac_size)) {
-			u32_t hash = hash32(UDN);
+			uint32_t hash = hash32(UDN);
 
 			LOG_ERROR("[%p]: cannot get mac %s, creating fake %x", Device, Device->Config.Name, hash);
 			memcpy(Device->Config.mac + 2, &hash, 4);
@@ -1500,7 +1500,7 @@ int main(int argc, char *argv[])
 		}
 
 		if (!strcmp(resp, "dump") || !strcmp(resp, "dumpall"))	{
-			u32_t now = gettime_ms() / 1000;
+			uint32_t now = gettime_ms() / 1000;
 			bool all = !strcmp(resp, "dumpall");
 
 			for (i = 0; i < glMaxDevices; i++) {

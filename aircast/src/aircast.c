@@ -230,7 +230,7 @@ void raop_cb(void *owner, raop_event_t event, void *param)
 			break;
 		}
 		case RAOP_VOLUME: {
-			u32_t now = gettime_ms();
+			uint32_t now = gettime_ms();
 
 			if (now > Device->VolumeStampRx + 1000) {
 				Device->Volume = *((double*) param);
@@ -281,7 +281,7 @@ static void *MRThread(void *args)
 		if (data) {
 			json_t *val = json_object_get(data, "type");
 			const char *type = json_string_value(val);
-			u32_t now = gettime_ms();
+			uint32_t now = gettime_ms();
 
 			// a mediaSessionId has been acquired
 			if (type && !strcasecmp(type, "MEDIA_STATUS")) {
@@ -575,10 +575,10 @@ static void *MainThread(void *args)
 		if (!glMainRunning) break;
 
 		if (glLogFile && glLogLimit != - 1) {
-			u32_t size = ftell(stderr);
+			uint32_t size = ftell(stderr);
 
 			if (size > glLogLimit*1024*1024) {
-				u32_t Sum, BufSize = 16384;
+				uint32_t Sum, BufSize = 16384;
 				u8_t *buf = malloc(BufSize);
 
 				FILE *rlog = fopen(glLogFile, "rb");
@@ -623,7 +623,7 @@ void MakeMacUnique(struct sMR *Device)
 	for (i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
 		if (!memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
-			u32_t hash = hash32(Device->UDN);
+			uint32_t hash = hash32(Device->UDN);
 
 			LOG_INFO("[%p]: duplicated mac ... updating", Device);
 			memset(&Device->Config.mac[0], 0xcc, 2);
@@ -670,7 +670,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 
 	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", mac_size)) {
 		if (group || SendARP(ip.s_addr, INADDR_ANY, Device->Config.mac, &mac_size)) {
-			u32_t hash = hash32(UDN);
+			uint32_t hash = hash32(UDN);
 
 			LOG_ERROR("[%p]: creating MAC %x", Device, Device->Config.Name, hash);
 			memcpy(Device->Config.mac + 2, &hash, 4);

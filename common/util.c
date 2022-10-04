@@ -91,7 +91,7 @@ void EndUtils(void) {
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-void WakeableSleep(u32_t ms) {
+void WakeableSleep(uint32_t ms) {
 	pthread_mutex_lock(&wakeMutex);
 	if (ms) pthread_cond_reltimedwait(&wakeCond, &wakeMutex, ms);
 	else pthread_cond_wait(&wakeCond, &wakeMutex);
@@ -113,10 +113,10 @@ void WakeAll(void) {
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_t msWait)
+int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, uint32_t msWait)
 {
 	struct timespec ts;
-	u32_t	nsec;
+	uint32_t	nsec;
 #if OSX || SUNOS
 	struct timeval tv;
 #endif
@@ -146,7 +146,7 @@ int pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, u32_
 
 // mutex wait with timeout
 #if LINUX || FREEBSD
-int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
+int _mutex_timedlock(pthread_mutex_t *m, uint32_t ms_wait)
 {
 	int rc = -1;
 	struct timespec ts;
@@ -162,7 +162,7 @@ int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
 #endif
 
 #if OSX
-int _mutex_timedlock(pthread_mutex_t *m, u32_t ms_wait)
+int _mutex_timedlock(pthread_mutex_t *m, uint32_t ms_wait)
 {
 	int rc;
 	s32_t wait = (s32_t) ms_wait;
@@ -366,7 +366,7 @@ void clear_list(list_t **list, void (*free_func)(void *)) {
 // mac address
 #if LINUX
 // search first 4 interfaces returned by IFCONF
-void get_mac(u8_t mac[]) {
+void get_mac(uint8_t mac[]) {
 	struct ifconf ifc;
 	struct ifreq *ifr, *ifend;
 	struct ifreq ifreq;
@@ -399,7 +399,7 @@ void get_mac(u8_t mac[]) {
 	close(s);
 }
 #elif OSX || FREEBSD
-void get_mac(u8_t mac[]) {
+void get_mac(uint8_t mac[]) {
 	struct ifaddrs *addrs, *ptr;
 	const struct sockaddr_dl *dlAddr;
 	const unsigned char *base;
@@ -422,7 +422,7 @@ void get_mac(u8_t mac[]) {
 }
 #elif WIN
 #pragma comment(lib, "IPHLPAPI.lib")
-void get_mac(u8_t mac[]) {
+void get_mac(uint8_t mac[]) {
 	IP_ADAPTER_INFO AdapterInfo[16];
 	DWORD dwBufLen = sizeof(AdapterInfo);
 	DWORD dwStatus = GetAdaptersInfo(AdapterInfo, &dwBufLen);
@@ -439,7 +439,7 @@ void get_mac(u8_t mac[]) {
 
 /*----------------------------------------------------------------------------*/
 #if LINUX
-int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size) {
+int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size) {
 	int                 s;
 	struct arpreq       areq;
 	struct sockaddr_in *sin;
@@ -468,7 +468,7 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size) {
 	return 0;
 }
 #elif OSX
-int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size)
+int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size)
 {
 	int mib[6];
 	size_t needed;
@@ -518,7 +518,7 @@ int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size)
 	return (found_entry);
 }
 #elif !WIN
-int SendARP(in_addr_t src, in_addr_t dst, u8_t mac[], unsigned long *size)
+int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size)
 {
 	LOG_ERROR("No SendARP build for this platform", NULL);
 	return 1;
@@ -852,8 +852,8 @@ char *dlerror(void) {
 
 /*----------------------------------------------------------------------------*/
 #if LINUX || FREEBSD
-void touch_memory(u8_t *buf, size_t size) {
-	u8_t *ptr;
+void touch_memory(uint8_t *buf, size_t size) {
+	uint8_t *ptr;
 	for (ptr = buf; ptr < buf + size; ptr += sysconf(_SC_PAGESIZE)) {
 		*ptr = 0;
 	}
@@ -863,7 +863,7 @@ void touch_memory(u8_t *buf, size_t size) {
 
 /*----------------------------------------------------------------------------*/
 #if LINUX || FREEBSD || OSX
-char *GetTempPath(u16_t size, char *path)
+char *GetTempPath(uint16_t size, char *path)
 {
 	strncpy(path, P_tmpdir, size);
 	if (!strlen(path)) strncpy(path, "/var/tmp", size);
@@ -897,7 +897,7 @@ char *next_param(char *src, char c) {
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-u32_t gettime_ms(void) {
+uint32_t gettime_ms(void) {
 #if WIN
 	return GetTickCount();
 #else
@@ -915,11 +915,11 @@ u32_t gettime_ms(void) {
 
 
 /*----------------------------------------------------------------------------*/
-u64_t gettime_ms64(void) {
+uint64_t gettime_ms64(void) {
 #if WIN
 	FILETIME ft;
 	GetSystemTimeAsFileTime(&ft);
-	return (((u64_t) ft.dwHighDateTime) << 32 | ft.dwLowDateTime) / 10000;
+	return (((uint64_t) ft.dwHighDateTime) << 32 | ft.dwLowDateTime) / 10000;
 #else
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -1073,10 +1073,10 @@ char* itoa(int value, char* str, int radix) {
 #endif
 
 /*---------------------------------------------------------------------------*/
-u32_t hash32(char *str)
+uint32_t hash32(char *str)
 {
-	u32_t hash = 5381;
-	s32_t c;
+	uint32_t hash = 5381;
+	int32_t c;
 
 	if (!str) return 0;
 

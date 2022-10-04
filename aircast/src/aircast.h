@@ -62,7 +62,7 @@ typedef struct sMRConfig
 } tMRConfig;
 
 struct sMR {
-	u32_t Magic;
+	uint32_t Magic;
 	bool  Running;
 	tMRConfig Config;
 	struct raop_ctx_s *Raop;
@@ -71,13 +71,13 @@ struct sMR {
 	char Name		[_STR_LEN_];
 	enum eMRstate 	State;
 	bool			ExpectStop;
-	u32_t			Elapsed;
+	uint32_t			Elapsed;
 	unsigned		TrackPoll;
 	void			*CastCtx;
 	pthread_mutex_t Mutex;
 	pthread_t 		Thread;
 	double			Volume;
-	u32_t			VolumeStampRx, VolumeStampTx;
+	uint32_t			VolumeStampRx, VolumeStampTx;
 	bool			Group;
 	struct sGroupMember {
 		struct sGroupMember	*Next;

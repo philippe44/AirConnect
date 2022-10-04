@@ -235,7 +235,7 @@ bool AVTStop(struct sMR *Device)
 
 
 /*----------------------------------------------------------------------------*/
-int CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie)
+int CtrlSetVolume(struct sMR *Device, uint8_t Volume, void *Cookie)
 {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[REND_SRV_IDX];
@@ -437,9 +437,9 @@ char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct
 		XMLAddAttribute(doc, node, "bitsPerSample", "%hhu", MetaData->sample_size);
 		XMLAddAttribute(doc, node, "nrAudioChannels", "%hhu", MetaData->channels);
 		if (MetaData->duration)
-			XMLAddAttribute(doc, node, "size", "%u", (u32_t) ((MetaData->sample_rate *
+			XMLAddAttribute(doc, node, "size", "%u", (uint32_t) ((MetaData->sample_rate *
 							MetaData->sample_size / 8 * MetaData->channels *
-							(u64_t) MetaData->duration) / 1000));
+							(uint64_t) MetaData->duration) / 1000));
 	}
 
 	s = ixmlNodetoString((IXML_Node*) doc);

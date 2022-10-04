@@ -33,7 +33,7 @@ void EndSSL(void);
 
 struct sCastCtx;
 
-json_t*	GetTimedEvent(void *p, u32_t msWait);
+json_t*	GetTimedEvent(void *p, uint32_t msWait);
 void*	CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, u16_t port, double MediaVolume);
 bool 	UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, u16_t port);
 void 	DeleteCastDevice(struct sCastCtx *Ctx);

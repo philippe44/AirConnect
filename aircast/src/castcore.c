@@ -131,10 +131,10 @@ void EndSSL(void)
 
 
 /*----------------------------------------------------------------------------*/
-void swap32(u32_t *n)
+void swap32(uint32_t *n)
 {
 #if SL_LITTLE_ENDIAN
-	u32_t buf = *n;
+	uint32_t buf = *n;
 	*n = 	(((u8_t) (buf >> 24))) +
 		(((u8_t) (buf >> 16)) << 8) +
 		(((u8_t) (buf >> 8)) << 16) +
@@ -205,7 +205,7 @@ bool SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, 
 	u8_t *buffer;
 	u16_t buffer_len = 4096;
 	bool status;
-	u32_t len;
+	uint32_t len;
 	va_list args;
 
 	if (!Ctx->ssl) return false;
@@ -252,7 +252,7 @@ bool DecodeCastMessage(u8_t *buffer, u16_t len, CastMessage *msg)
 bool GetNextMessage(pthread_mutex_t *Mutex, SSL *ssl, CastMessage *message)
 {
 	bool status;
-	u32_t len;
+	uint32_t len;
 	u8_t *buf;
 
 	// the SSL might just have been closed by another thread
@@ -269,7 +269,7 @@ bool GetNextMessage(pthread_mutex_t *Mutex, SSL *ssl, CastMessage *message)
 
 
 /*----------------------------------------------------------------------------*/
-json_t *GetTimedEvent(void *p, u32_t msWait)
+json_t *GetTimedEvent(void *p, uint32_t msWait)
 {
 	json_t *data;
 	tCastCtx *Ctx = (tCastCtx*) p;
@@ -643,12 +643,12 @@ void ProcessQueue(tCastCtx *Ctx) {
 static void *CastPingThread(void *args)
 {
 	tCastCtx *Ctx = (tCastCtx*) args;
-	u32_t last = gettime_ms();
+	uint32_t last = gettime_ms();
 
 	Ctx->running = true;
 
 	while (Ctx->running) {
-		u32_t now = gettime_ms();
+		uint32_t now = gettime_ms();
 
 		if (now - last > 3000 && Ctx->Status != CAST_DISCONNECTED) {
 			pthread_mutex_lock(&Ctx->Mutex);

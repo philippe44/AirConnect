@@ -271,7 +271,7 @@ void MakeMacUnique(struct sMR *Device)
 	for (i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
 		if (!memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
-			u32_t hash = hash32(Device->UDN);
+			uint32_t hash = hash32(Device->UDN);
 
 			LOG_INFO("[%p]: duplicated mac ... updating", Device);
 			memset(&Device->Config.mac[0], 0xcc, 2);
@@ -428,7 +428,7 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 	IXML_Element *LastChange;
 	IXML_NodeList *List;
 	char *buf, *ret = NULL;
-	u32_t i;
+	uint32_t i;
 
 	LastChange = ixmlDocument_getElementById(doc, "LastChange");
 	if (!LastChange) return NULL;

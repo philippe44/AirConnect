@@ -49,11 +49,12 @@ struct sService {
 	char EventURL	[RESOURCE_LENGTH];
 	char ControlURL	[RESOURCE_LENGTH];
 	Upnp_SID		SID;
-	s32_t			TimeOut;
-	u32_t			Failed;
+	int32_t			TimeOut;
+	uint32_t			Failed;
 };
 
-typedef struct sMRConfig
+
+typedef struct sMRConfig
 {
 	int			HTTPLength;
 	bool		Enabled;
@@ -67,7 +68,7 @@ struct sService {
 	bool		Metadata;
 	char		Latency[_STR_LEN_];
 	bool		Drift;
-	u8_t		mac[6];
+	uint8_t		mac[6];
 	char		ArtWork[4*_STR_LEN_];
 	struct {
 		char pcm[_STR_LEN_];
@@ -78,7 +79,7 @@ struct sService {
 } tMRConfig;
 
 struct sMR {
-	u32_t Magic;
+	uint32_t Magic;
 	bool  Running;
 	tMRConfig Config;
 	char UDN			[RESOURCE_LENGTH];
@@ -89,9 +90,9 @@ struct sMR {
 	struct raop_ctx_s *Raop;
 	metadata_t		MetaData;
 	raop_event_t	RaopState;
-	u32_t			Elapsed;
-	u32_t			LastSeen;
-	u8_t			*seqN;
+	uint32_t			Elapsed;
+	uint32_t			LastSeen;
+	uint8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
 	tQueue			ActionQueue;
 	unsigned		TrackPoll, StatePoll;
@@ -101,14 +102,14 @@ struct sMR {
 	pthread_mutex_t Mutex;
 	pthread_t 		Thread;
 	double			Volume;		// to avoid int volume being stuck at 0
-	u32_t			VolumeStampRx, VolumeStampTx;
-	u16_t			ErrorCount;
+	uint32_t			VolumeStampRx, VolumeStampTx;
+	uint16_t			ErrorCount;
 	bool			TimeOut;
 	char 			*ProtocolInfo;
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;
-extern s32_t				glLogLimit;
+extern int32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern struct sMR			*glMRDevices;
 extern int					glMaxDevices;

@@ -31,7 +31,7 @@ typedef struct sAction {
 	struct sMR *Device;
 	void   *ActionNode;
 	union {
-		u8_t Volume;
+		uint8_t Volume;
 	} Param;
 } tAction;
 
@@ -45,7 +45,7 @@ bool 	AVTSeek(struct sMR *Device, unsigned Interval);
 bool 	AVTBasic(struct sMR *Device, char *Action);
 bool 	AVTStop(struct sMR *Device);
 void	AVTActionFlush(tQueue *Queue);
-int 	CtrlSetVolume(struct sMR *Device, u8_t Volume, void *Cookie);
+int 	CtrlSetVolume(struct sMR *Device, uint8_t Volume, void *Cookie);
 int 	CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie);
 int 	CtrlGetVolume(struct sMR *Device);
 int 	CtrlGetGroupVolume(struct sMR *Device);

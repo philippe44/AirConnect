@@ -252,3 +252,15 @@ It's a humongous pull, so be patient. Under Linux, you just need to go to the ai
 I've pre-built a lot of libraries so not every sub-module needs to be rebuild. Each module contains a `target`directory with all headers and libraries already built. Now if you want to rebuild them (which I strongly advice against), each of them contains its own `build.sh` you can use, but you're on your own. 
 
 Note also that this is a cross-build (for Linux) so calling the builder with no parameter will try all compilers you have on your Linux box, amongst x86, x86_64, arm, aarch64, sparc64, mips and powerpc. When using parameter \<platform>\, you can use any string and the script will use any compiler that contains that string.
+
+To enable cross-compilation, you can use the following compilers already available on Debian distributions
+```
+ sudo apt-get install gcc-i686-linux-gnu binutils-i686-linux-gnu
+ sudo apt-get install gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+ sudo apt-getmake gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi
+ sudo apt-get install gcc-sparc64-linux-gnu binutils-sparc64-linux-gnu
+ sudo apt-get install gcc-mips-linux-gnu binutils-mips-linux-gnu
+ sudo apt-get install gcc-powerpc-linux-gnu binutils-powerpc-linux-gnu
+ ``` 
+ **IMPORTANT:** On x86_64, do not try to use multilib, it is incompatible with at least arm and aarch64 and will be removed upon addition of any of these, thus removing support for x86 builds (at least up to Ubuntu 22.04 and this has been a problem for years and the devs don't seem to care). Hence the solution is to explicitly add the i686 compiler. The tradeoff is that you lose possibility to use '-m32' to produce 32 bits from default compiler. 
+ 

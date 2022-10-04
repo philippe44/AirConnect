@@ -243,7 +243,7 @@ Many have asked for a way to do video/audio synchronisation so that UPnP (Sonos)
 
 ## Compiling from source
 
-AirConnect is now properly using submodules sor you can just pull recursively
+AirConnect is now properly using submodules so you can just pull recursively
 ```
 git pull https://github.com/philippe44/airconnect --recursive
 ```

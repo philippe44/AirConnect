@@ -25,17 +25,19 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "platform.h"
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <time.h>
+#include <sys/time.h>
+#endif
+
 #include "log_util.h"
-
-
-extern log_level 	util_loglevel;
-//static log_level 	*loglevel = &util_loglevel;
 
 // logging functions
 const char *logtime(void) {
 	static char buf[100];
-#if WIN
+#ifdef _WIN32
 	SYSTEMTIME lt;
 	GetLocalTime(&lt);
 	sprintf(buf, "[%02d:%02d:%02d.%03d]", lt.wHour, lt.wMinute, lt.wSecond, lt.wMilliseconds);
@@ -81,5 +83,3 @@ char *level2debug(log_level level)
 	default: return "warn";
 	}
 }
-
-

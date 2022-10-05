@@ -26,10 +26,6 @@
 #include <dlfcn.h>
 #endif
 
-#ifdef __BORLANDC__
-#pragma warn -8081
-#endif
-
 #include "openssl/ssl.h"
 #include "openssl/err.h"
 #include <openssl/rand.h>
@@ -37,7 +33,7 @@
 #include <openssl/engine.h>
 #include <openssl/aes.h>
 #include <openssl/bio.h>
-#include "sslshim.h"
+#include <openssl/evp.h>
 
 #ifndef LINKALL
 static void *SSLhandle = NULL;
@@ -79,13 +75,29 @@ ret fn(P(n,__VA_ARGS__)) {					\
 	return (*SYM(fn))(V(n,__VA_ARGS__));	\
 }
 
+#define SYMDECLV(fn, ret, n, ...) 			\
+static ret (*SYM(fn))(P(n,__VA_ARGS__));	\
+ret fn(P(n,__VA_ARGS__)) {					\
+	assert(SYM(fn));						\
+	(*SYM(fn))(V(n,__VA_ARGS__));			\
+}
+
 #define SHIMDECL(fn, ret, n, ...) 	  	   		\
 static ret (*SYM(fn))(P(n,__VA_ARGS__));		\
 ret fn(P(n,__VA_ARGS__)) {						\
 	if (SYM(fn)) 								\
 		return (*SYM(fn))(V(n,__VA_ARGS__));	\
 	else        								\
-		return SHIM(fn)(V(n,__VA_ARGS__));	\
+		return SHIM(fn)(V(n,__VA_ARGS__));		\
+}
+
+#define SHIMDECLV(fn, ret, n, ...) 	  	   	\
+static ret (*SYM(fn))(P(n,__VA_ARGS__));	\
+ret fn(P(n,__VA_ARGS__)) {					\
+	if (SYM(fn)) 							\
+		(*SYM(fn))(V(n,__VA_ARGS__));		\
+	else        							\
+		SHIM(fn)(V(n,__VA_ARGS__));			\
 }
 
 #define SYMLOAD(h, fn) SYM(fn) = dlsym(h, STR(fn));
@@ -99,10 +111,12 @@ ret fn(P(n,__VA_ARGS__)) {						\
 
 #if WIN
 static char *LIBSSL[] = {
+			"libssl-1_1.dll",
 			"libssl.dll",
 			"ssleay32.dll", NULL };
 static char *LIBCRYPTO[] = {
-			"libcrypto.dll",
+			"libcrypto-1_1.dll",
+			"libssl.dll",
 			"libeay32.dll", NULL };
 #elif OSX
 static char *LIBSSL[] = {
@@ -149,7 +163,7 @@ static void* dlopen_try(char** filenames, int flag) {
 SYMDECL(_SSL_library_init, int, 0);
 SYMDECL(SSL_CTX_ctrl, long, 4, SSL_CTX*, ctx, int, cmd, long, larg, void*, parg);
 SYMDECL(_SSLv23_client_method, const SSL_METHOD*, 0);
-SYMDECL(ERR_remove_state, void, 1, unsigned long, pid);
+SYMDECLV(ERR_remove_state, void, 1, unsigned long, pid);
 
 static unsigned long shim_OPENSSL_init_ssl(uint64_t opts, const OPENSSL_INIT_SETTINGS* settings) {
 	if (SYM(_SSL_library_init)) return SYM(_SSL_library_init());
@@ -168,13 +182,13 @@ static const SSL_METHOD* shim_TLS_client_method(void) {
 
 static void shim_ERR_remove_thread_state(void* tid) {
 	assert(SYM(ERR_remove_state));
-	return SYM(ERR_remove_state)(0);
+	SYM(ERR_remove_state)(0);
 }
 
 SHIMDECL(OPENSSL_init_ssl, int, 2, uint64_t, opts, const OPENSSL_INIT_SETTINGS*, settings);
 SHIMDECL(SSL_CTX_set_options, unsigned long, 2, SSL_CTX*, ctx, unsigned long, op);
 SHIMDECL(TLS_client_method, const SSL_METHOD*, 0);
-SHIMDECL(ERR_remove_thread_state, void, 1, void*, tid);
+SHIMDECLV(ERR_remove_thread_state, void, 1, void*, tid);
 
 SYMDECL(SSL_read, int, 3, SSL*, s, void*, buf, int, len);
 SYMDECL(SSL_write, int, 3, SSL*, s, const void*, buf, int, len);
@@ -191,8 +205,8 @@ SYMDECL(SSL_get_error, int, 2, const SSL*, s, int, ret_code);
 SYMDECL(SSL_ctrl, long, 4, SSL*, ssl, int, cmd, long, larg, void*, parg);
 SYMDECL(SSL_pending, int, 1, const SSL*, s);
 
-SYMDECL(SSL_free, void, 1, SSL*, s);
-SYMDECL(SSL_CTX_free, void, 1, SSL_CTX *, ctx);
+SYMDECLV(SSL_free, void, 1, SSL*, s);
+SYMDECLV(SSL_CTX_free, void, 1, SSL_CTX *, ctx);
 
 SYMDECL(ERR_get_error, unsigned long, 0);
 SYMDECL(SHA512_Init, int, 1, SHA512_CTX*, c);
@@ -211,10 +225,26 @@ SYMDECL(BIO_new_mem_buf, BIO*, 2, const void*, buf, int, len);
 SYMDECL(BIO_free, int, 1, BIO*, a);
 SYMDECL(PEM_read_bio_RSAPrivateKey, RSA *, 4, BIO*, bp, RSA**, x, pem_password_cb*, cb, void*, u);
 
-SYMDECL(AES_cbc_encrypt, void, 6, const unsigned char*, in, unsigned char*, out, size_t, length, const AES_KEY*, key, unsigned char*, ivec, const int, enc);
-SYMDECL(RAND_seed, void, 2, const void*, buf, int, num);
-SYMDECL(RSA_free, void, 1, RSA*, r);
-SYMDECL(ERR_clear_error, void, 0);
+SYMDECLV(AES_cbc_encrypt, void, 6, const unsigned char*, in, unsigned char*, out, size_t, length, const AES_KEY*, key, unsigned char*, ivec, const int, enc);
+SYMDECLV(RAND_seed, void, 2, const void*, buf, int, num);
+SYMDECLV(RSA_free, void, 1, RSA*, r);
+SYMDECLV(ERR_clear_error, void, 0);
+
+SYMDECL(RSA_set0_key, int, 4, RSA*, r, BIGNUM*, n, BIGNUM*, e, BIGNUM*, d);
+SYMDECL(EVP_MD_CTX_new, EVP_MD_CTX*, 0);
+SYMDECLV(EVP_MD_CTX_free, void, 1, EVP_MD_CTX*, ctx);
+SYMDECL(EVP_DigestSign, int, 5, EVP_MD_CTX*, ctx, unsigned char*, sigret, size_t*, siglen, const unsigned char*, tbs, size_t, tbslen);
+SYMDECL(EVP_DigestSignInit, int, 5, EVP_MD_CTX*, ctx, EVP_PKEY_CTX**, pctx, const EVP_MD*, type, ENGINE*, e, EVP_PKEY*, pkey);
+SYMDECLV(EVP_PKEY_free, void, 1, EVP_PKEY*, ctx);
+SYMDECL(EVP_PKEY_CTX_new, EVP_PKEY_CTX*, 2, EVP_PKEY*, pkey, ENGINE*, e);
+SYMDECLV(EVP_PKEY_CTX_free, void, 1, EVP_PKEY_CTX*, ctx);
+SYMDECL(EVP_PKEY_new_raw_private_key, EVP_PKEY*, 4, int, type, ENGINE*, e, const unsigned char*, priv, size_t, len);
+SYMDECL(EVP_PKEY_new_raw_public_key, EVP_PKEY*, 4, int, type, ENGINE*, e, const unsigned char*, pub, size_t, len);
+SYMDECL(EVP_PKEY_get_raw_private_key, int, 3, const EVP_PKEY*, pkey, unsigned char*, priv, size_t*, len);
+SYMDECL(EVP_PKEY_get_raw_public_key, int, 3, const EVP_PKEY*, pkey, unsigned char*, pub, size_t*, len);
+SYMDECL(EVP_PKEY_derive_init, int, 1, EVP_PKEY_CTX *,ctx);
+SYMDECL(EVP_PKEY_derive_set_peer, int, 2, EVP_PKEY_CTX*, ctx, EVP_PKEY*, peer);
+SYMDECL(EVP_PKEY_derive, int, 3, EVP_PKEY_CTX*, ctx, unsigned char*, key, size_t*, keylen);
 
 bool load_ssl_symbols(void) {
 	CRYPThandle = dlopen_try(LIBCRYPTO, RTLD_NOW);
@@ -270,6 +300,22 @@ bool load_ssl_symbols(void) {
 	SYMLOAD(CRYPThandle, BIO_new_mem_buf);
 	SYMLOAD(CRYPThandle, BIO_free);
 	SYMLOAD(CRYPThandle, PEM_read_bio_RSAPrivateKey);
+
+	SYMLOAD(CRYPThandle, RSA_set0_key);
+	SYMLOAD(CRYPThandle, EVP_MD_CTX_new);
+	SYMLOAD(CRYPThandle, EVP_MD_CTX_free);
+	SYMLOAD(CRYPThandle, EVP_DigestSign);
+	SYMLOAD(CRYPThandle, EVP_DigestSignInit);
+	SYMLOAD(CRYPThandle, EVP_PKEY_free);
+	SYMLOAD(CRYPThandle, EVP_PKEY_CTX_new);
+	SYMLOAD(CRYPThandle, EVP_PKEY_CTX_free);
+	SYMLOAD(CRYPThandle, EVP_PKEY_new_raw_private_key);
+	SYMLOAD(CRYPThandle, EVP_PKEY_new_raw_public_key);
+	SYMLOAD(CRYPThandle, EVP_PKEY_get_raw_private_key);
+	SYMLOAD(CRYPThandle, EVP_PKEY_get_raw_public_key);
+	SYMLOAD(CRYPThandle, EVP_PKEY_derive_init);
+	SYMLOAD(CRYPThandle, EVP_PKEY_derive_set_peer);
+	SYMLOAD(CRYPThandle, EVP_PKEY_derive);
 
 	OPENSSL_init_ssl(0, NULL);
 

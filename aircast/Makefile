@@ -13,14 +13,14 @@ EXECUTABLE_STATIC	= $(BASE)/bin/aircast-$(PLATFORM)-static
 
 TOOLS		= $(BASE)/tools
 COMMON		= $(BASE)/common
-SRC			= ./src
+SRC		= ./src
 MDNSSD		= $(COMMON)/mdns-sd
 TINYSVCMDNS	= $(COMMON)/tinysvcmdns
 #VALGRIND	= $(BASE)/valgrind
 UPNP 		= $(COMMON)/pupnp
 SHINE		= $(COMMON)/shine
 FLAC		= $(COMMON)/flac
-OGG			= $(COMMON)/ogg
+OGG		= $(COMMON)/ogg
 DMAP_PARSER	= $(COMMON)/dmap-parser
 OPENSSL		= $(COMMON)/openssl
 NANOPB		= ./nanopb
@@ -55,7 +55,7 @@ INCLUDE = -I. \
 DEPS	= $(SRC)/aircast.h
 				  
 SOURCES = castcore.c castmessage.pb.c aircast.c cast_util.c cast_parse.c config_cast.c  \
-		  alac.c base64.c hairtunes.c raopcore.c util.c log_util.c \
+		  alac.c base64.c hairtunes.c raopcore.c util.c log_util.c platform.c \
 		  pb_common.c pb_decode.c pb_encode.c \
 		  dmap_parser.c \
 	  	  mdnssd-min.c

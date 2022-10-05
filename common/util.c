@@ -1010,39 +1010,7 @@ char* strextract(char *s1, char *beg, char *end)
 	return res;
 }
 
-
-#if WIN
-/*----------------------------------------------------------------------------*/
-int asprintf(char **strp, const char *fmt, ...)
-{
-	va_list args;
-	int len, ret = 0;
-
-	va_start(args, fmt);
-	len = vsnprintf(NULL, 0, fmt, args);
-	*strp = malloc(len + 1);
-
-	if (*strp) ret = vsprintf(*strp, fmt, args);
-
-	va_end(args);
-
-	return ret;
-}
-
-/*----------------------------------------------------------------------------*/
-int vasprintf(char **strp, const char *fmt, va_list args)
-{
-	int len, ret = 0;
-
-	len = vsnprintf(NULL, 0, fmt, args);
-	*strp = malloc(len + 1);
-
-	if (*strp) ret = vsprintf(*strp, fmt, args);
-
-	return ret;
-}
-
-#else
+#if !WIN
  /*---------------------------------------------------------------------------*/
 char* itoa(int value, char* str, int radix) {
 	static char dig[] =

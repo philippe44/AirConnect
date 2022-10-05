@@ -13,14 +13,14 @@ EXECUTABLE_STATIC	= $(BASE)/bin/airupnp-$(PLATFORM)-static
 
 TOOLS		= $(BASE)/tools
 COMMON		= $(BASE)/common
-SRC			= ./src
+SRC		= ./src
 MDNSSD		= $(COMMON)/mdns-sd
 TINYSVCMDNS	= $(COMMON)/tinysvcmdns
 #VALGRIND	= $(BASE)/valgrind
 UPNP 		= $(COMMON)/pupnp
 SHINE		= $(COMMON)/shine
 FLAC		= $(COMMON)/flac
-OGG			= $(COMMON)/ogg
+OGG		= $(COMMON)/ogg
 DMAP_PARSER	= $(COMMON)/dmap-parser
 OPENSSL		= $(COMMON)/openssl
 
@@ -51,9 +51,9 @@ INCLUDE = -I. \
 DEPS	= $(SRC)/airupnp.h
 				  
 SOURCES = avt_util.c airupnp.c mr_util.c config_upnp.c  \
-		  alac.c base64.c hairtunes.c raopcore.c util.c log_util.c \
-		  dmap_parser.c \
-		  mdnssd-min.c
+	  alac.c base64.c hairtunes.c raopcore.c util.c log_util.c platform.c \
+	  dmap_parser.c \
+	  mdnssd-min.c
 
 SOURCES_LIBS = sslsym.c
 		

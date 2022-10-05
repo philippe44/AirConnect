@@ -118,11 +118,16 @@ char *strlwr(char *str);
 
 #define open _open
 #define read _read
-#define poll WSAPoll
+
 #define fresize(f, s) chsize(fileno(f), s)
 #define strcasecmp stricmp
 
+int poll(struct pollfd* fds, unsigned long numfds, int timeout);
+int asprintf(char** s, const char* fmt, ...);
+int vasprintf(char** strp, const char* fmt, va_list args);
+#define VALGRIND_MAKE_MEM_DEFINED(x,y)
 typedef uint32_t in_addr_t;
+#define socklen_t int
 typedef SSIZE_T	ssize_t;
 
 #define RTLD_NOW 0

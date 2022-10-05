@@ -23,6 +23,7 @@
     <ClCompile Include="..\common\raopcore.c" />
     <ClCompile Include="..\common\util.c" />
     <ClCompile Include="..\tools\log_util.c" />
+    <ClCompile Include="..\tools\platform.c" />
     <ClCompile Include="..\tools\sslsym.c">
       <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>

@@ -20,6 +20,7 @@
 
 #ifndef SSLSYM_H
 #define SSLSYM_H
+#include <stdbool.h>
 
 bool	load_ssl_symbols(void);
 void	free_ssl_symbols(void);

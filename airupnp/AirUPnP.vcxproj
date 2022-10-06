@@ -82,7 +82,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>__PTW32_STATIC_LIB;UPNP_STATIC_LIB;FLAC__NO_DLL;USE_XML;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BaseCommon)\openssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\libpupnp\targets\win32\x86\include;$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BaseCommon)\libopenssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\libpupnp\targets\win32\x86\include;$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ProgramDataBaseFileName>$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pdb</ProgramDataBaseFileName>
     </ClCompile>

@@ -35,3 +35,6 @@
 [submodule "common/libpupnp"]
 	path = common/libpupnp
 	url = https://github.com/philippe44/libpupnp
+[submodule "common/libopenssl"]
+	path = common/libopenssl
+	url = https://github.com/philippe44/libopenssl

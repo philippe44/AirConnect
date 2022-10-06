@@ -19,9 +19,6 @@
 [submodule "common/dmap-parser"]
 	path = common/dmap-parser
 	url = https://github.com/philippe44/dmap-parser
-[submodule "aircast/jansson"]
-	path = aircast/jansson
-	url = https://github.com/philippe44/jansson
 [submodule "aircast/nanopb"]
 	path = aircast/nanopb
 	url = https://github.com/nanopb/nanopb
@@ -32,3 +29,9 @@
 	path = common/openssl
 	url = https://github.com/philippe44/openssl
 	branch = OpenSSL_1_1_1-stable
+[submodule "aircast/libjansson"]
+	path = aircast/libjansson
+	url = https://github.com/philippe44/libjansson
+[submodule "common/libpupnp"]
+	path = common/libpupnp
+	url = https://github.com/philippe44/libpupnp

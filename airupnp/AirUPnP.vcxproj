@@ -39,8 +39,8 @@
     <Library Include="..\common\pthreads4w\targets\win32\x86\libpthreadVC3d.lib" />
     <Library Include="..\common\shine\targets\win32\x86\shine.lib" />
     <Library Include="..\common\tinysvcmdns\targets\win32\x86\tinysvcmdns.lib" />
-    <Library Include="..\common\pupnp\targets\win32\x86\ixmlsd.lib" />
-    <Library Include="..\common\pupnp\targets\win32\x86\libupnps.lib" />
+    <Library Include="..\common\libpupnp\targets\win32\x86\ixmlsd.lib" />
+    <Library Include="..\common\libpupnp\targets\win32\x86\libupnps.lib" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -82,7 +82,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>__PTW32_STATIC_LIB;UPNP_STATIC_LIB;FLAC__NO_DLL;USE_XML;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BaseCommon)\openssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\pupnp\upnp\inc;$(BaseCommon)\pupnp\ixml\inc;$(BaseCommon)\pupnp\targets\win32\include;$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BaseCommon)\openssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\libpupnp\targets\win32\x86\include;$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ProgramDataBaseFileName>$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pdb</ProgramDataBaseFileName>
     </ClCompile>
@@ -101,7 +101,7 @@
       <ProgramDataBaseFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pd</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(BaseCommon)\openssl\targets\win32\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(BaseCommon)\libopenssl\targets\win32\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>libssl_static.lib;libcrypto_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

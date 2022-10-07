@@ -16,9 +16,6 @@
 [submodule "aircast/nanopb"]
 	path = aircast/nanopb
 	url = https://github.com/nanopb/nanopb
-[submodule "common/pupnp"]
-	path = common/pupnp
-	url = https://github.com/philippe44/pupnp
 [submodule "aircast/libjansson"]
 	path = aircast/libjansson
 	url = https://github.com/philippe44/libjansson

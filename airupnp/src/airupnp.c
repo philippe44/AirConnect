@@ -25,8 +25,8 @@
 
 #include "platform.h"
 #include "airupnp.h"
+#include "tinysvcmdns.h"
 #include "upnpdebug.h"
-#include "upnptools.h"
 #include "util.h"
 #include "avt_util.h"
 #include "config_upnp.h"

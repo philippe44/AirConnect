@@ -16,7 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\common\dmap-parser\dmap_parser.c" />
-    <ClCompile Include="..\common\mdns-sd\mdnssd-min.c" />
     <ClCompile Include="..\common\alac.c" />
     <ClCompile Include="..\common\base64.c" />
     <ClCompile Include="..\common\hairtunes.c" />
@@ -35,12 +34,11 @@
   <ItemGroup>
     <Library Include="..\common\flac\targets\win32\x86\FLAC.lib" />
     <Library Include="..\common\flac\targets\win32\x86\utf8.lib" />
+    <Library Include="..\common\libmdns\targets\win32\x86\libmdns.lib" />
     <Library Include="..\common\ogg\targets\win32\x86\libogg.lib" />
     <Library Include="..\common\pthreads4w\targets\win32\x86\libpthreadVC3d.lib" />
     <Library Include="..\common\shine\targets\win32\x86\shine.lib" />
-    <Library Include="..\common\tinysvcmdns\targets\win32\x86\tinysvcmdns.lib" />
-    <Library Include="..\common\libpupnp\targets\win32\x86\ixmlsd.lib" />
-    <Library Include="..\common\libpupnp\targets\win32\x86\libupnps.lib" />
+    <Library Include="..\common\libpupnp\targets\win32\x86\libpupnp.lib" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -80,9 +78,9 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4129;4018;4244;4101;4267;4102;4068;4142</DisableSpecificWarnings>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>__PTW32_STATIC_LIB;UPNP_STATIC_LIB;FLAC__NO_DLL;USE_XML;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UPNP_STATIC_LIB;FLAC__NO_DLL;USE_XML;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BaseCommon)\libopenssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\libpupnp\targets\win32\x86\include;$(BaseCommon)\tinysvcmdns;$(BaseCommon)\pthreads4w\targets\win32\x86\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BaseCommon)\libopenssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\libpupnp\targets\win32\x86\include\upnp;$(BaseCommon)\libpupnp\targets\win32\x86\include\ixml;$(BaseCommon)\libmdns\targets\include\tinysvcmdns;$(BaseCommon)\libmdns\targets\include\mdnssd;$(BaseCommon)\pthreads4w\targets\win32\x86\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\flac\include;$(BaseCommon)\mdns-sd\;$(BaseCommon)\shine\src\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ProgramDataBaseFileName>$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pdb</ProgramDataBaseFileName>
     </ClCompile>
@@ -102,7 +100,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BaseCommon)\libopenssl\targets\win32\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libssl_static.lib;libcrypto_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libopenssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

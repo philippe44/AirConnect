@@ -28,9 +28,8 @@
 #include <openssl/pem.h>
 #include <openssl/engine.h>
 
-#include "mdns.h"
-#include "mdnsd.h"
-#include "mdnssd-itf.h"
+#include "tinysvcmdns.h"
+#include "mdnssd.h"
 #include "util.h"
 #include "base64.h"
 #include "raopcore.h"

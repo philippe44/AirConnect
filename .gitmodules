@@ -10,12 +10,6 @@
 [submodule "common/shine"]
 	path = common/shine
 	url = https://github.com/philippe44/shine
-[submodule "common/tinysvcmdns"]
-	path = common/tinysvcmdns
-	url = https://github.com/philippe44/tinysvcmdns
-[submodule "common/mdns-sd"]
-	path = common/mdns-sd
-	url = https://github.com/philippe44/mdns-sd
 [submodule "common/dmap-parser"]
 	path = common/dmap-parser
 	url = https://github.com/philippe44/dmap-parser
@@ -25,10 +19,6 @@
 [submodule "common/pupnp"]
 	path = common/pupnp
 	url = https://github.com/philippe44/pupnp
-[submodule "common/openssl"]
-	path = common/openssl
-	url = https://github.com/philippe44/openssl
-	branch = OpenSSL_1_1_1-stable
 [submodule "aircast/libjansson"]
 	path = aircast/libjansson
 	url = https://github.com/philippe44/libjansson
@@ -38,3 +28,6 @@
 [submodule "common/libopenssl"]
 	path = common/libopenssl
 	url = https://github.com/philippe44/libopenssl
+[submodule "common/libmdns"]
+	path = common/libmdns
+	url = https://github.com/philippe44/libmdns

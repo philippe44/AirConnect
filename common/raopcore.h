@@ -22,7 +22,7 @@
 #define __RAOPCORE_H
 
 #include "pthread.h"
-#include "mdnsd.h"
+#include "tinysvcmdns.h"
 #include "hairtunes.h"
 
 typedef enum { RAOP_STREAM, RAOP_PLAY, RAOP_FLUSH, RAOP_PAUSE, RAOP_STOP, RAOP_VOLUME } raop_event_t ;

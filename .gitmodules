@@ -28,3 +28,9 @@
 [submodule "common/libmdns"]
 	path = common/libmdns
 	url = https://github.com/philippe44/libmdns
+[submodule "libcodecs"]
+	path = libcodecs
+	url = https://github.com/philippe44/libcodecs
+[submodule "common/libcodecs"]
+	path = common/libcodecs
+	url = https://github.com/philippe44/libcodecs

@@ -16,9 +16,7 @@ COMMON		= $(BASE)/common
 SRC		= ./src
 #VALGRIND	= $(BASE)/valgrind
 UPNP 		= $(COMMON)/libpupnp
-SHINE		= $(COMMON)/shine
-FLAC		= $(COMMON)/flac
-OGG		= $(COMMON)/ogg
+CODECS		= $(COMMON)/libcodecs
 DMAP_PARSER	= $(COMMON)/dmap-parser
 OPENSSL		= $(COMMON)/libopenssl
 NANOPB		= ./nanopb
@@ -39,13 +37,13 @@ vpath %.c $(TOOLS):$(COMMON):$(SRC):$(SQUEEZETINY):$(NANOPB):$(MDNSSD):$(TINYSVC
 
 INCLUDE = -I. \
 		  -I$(OPENSSL)/targets/$(HOST)/$(PLATFORM)/include \
-		  -I$(SHINE)/targets/include \
 		  -I$(DMAP_PARSER) \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC) -I$(SRC)/inc \
 		  -I$(UPNP)/targets/$(HOST)/$(PLATFORM)/include \
-		  -I$(FLAC)/targets/include\
+		  -I$(CODECS)/targets/include/flac \
+		  -I$(CODECS)/targets/include/shine \
 		  -I$(MDNS)/targets/include/tinysvcmdns \
 		  -I$(MDNS)/targets/include/mdnssd \
 		  -I$(NANOPB) \
@@ -64,8 +62,7 @@ OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%.o,$(SO
 OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(SOURCES)) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
 
 LIBRARY 		= $(UPNP)/targets/$(HOST)/$(PLATFORM)/libpupnp.a \
-			  $(FLAC)/targets/$(HOST)/$(PLATFORM)/libFLAC-static.a  $(OGG)/targets/$(HOST)/$(PLATFORM)/libogg.a \
-			  $(SHINE)/targets/$(HOST)/$(PLATFORM)/libshine.a \
+			  $(CODECS)/targets/$(HOST)/$(PLATFORM)/libcodecs.a \
 			  $(MDNS)/targets/$(HOST)/$(PLATFORM)/libmdns.a \
 			  $(JANSSON)/targets/$(HOST)/$(PLATFORM)/libjansson.a
 				  

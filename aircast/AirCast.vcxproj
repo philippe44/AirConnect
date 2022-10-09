@@ -41,7 +41,7 @@
     <Library Include="..\common\libmdns\targets\win32\x86\libmdns.lib" />
     <Library Include="..\common\pthreads4w\targets\win32\x86\libpthreadVC3d.lib" />
     <Library Include="..\common\libpupnp\targets\win32\x86\libpupnp.lib" />
-    <Library Include="libjansson\targets\win32\x86\jansson.lib" />
+    <Library Include="libjansson\targets\win32\x86\libjansson.lib" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

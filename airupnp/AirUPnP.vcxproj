@@ -68,7 +68,7 @@
     <OutDir>$(SolutionDir)\bin\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Static|Win32'">
-    <TargetName>$(ProjectName)-win-static</TargetName>
+    <TargetName>$(ProjectName)-static</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

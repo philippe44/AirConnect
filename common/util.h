@@ -28,8 +28,9 @@
 
 #include "platform.h"
 #include "pthread.h"
-#ifdef USE_XML
+#if __has_include("ixml.h")
 #include "ixml.h"
+#define HAS_IXML
 #endif
 
 #define NFREE(p) if (p) { free(p); p = NULL; }
@@ -89,7 +90,7 @@ void 		dup_metadata(struct metadata_s *dst, struct metadata_s *src);
 
 int			pthread_cond_reltimedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, uint32_t msWait);
 
-#ifdef USE_XML
+#ifdef HAS_IXML
 const char*	XMLGetLocalName(IXML_Document *doc, int Depth);
 IXML_Node*	XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...);
 IXML_Node*	XMLUpdateNode(IXML_Document *doc, IXML_Node *parent, bool refresh, char *name, char *fmt, ...);
@@ -126,9 +127,6 @@ void 		winsock_close(void);
 int 		shutdown_socket(int sd);
 int 		bind_socket(struct in_addr host, short unsigned *port, int mode);
 int 		conn_socket(unsigned short port);
-#if !WIN
-int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size);
-#endif
 
 typedef struct key_data_s {
 

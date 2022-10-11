@@ -75,9 +75,9 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4129;4018;4244;4101;4267;4102;4068;4142</DisableSpecificWarnings>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>UPNP_STATIC_LIB;FLAC__NO_DLL;USE_XML;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UPNP_STATIC_LIB;FLAC__NO_DLL;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BaseCommon)\libopenssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\libpupnp\targets\win32\x86\include\upnp;$(BaseCommon)\libpupnp\targets\win32\x86\include\ixml;$(BaseCommon)\libmdns\targets\include\tinysvcmdns;$(BaseCommon)\libmdns\targets\include\mdnssd;$(BaseCommon)\pthreads4w\targets\win32\x86\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\libcodecs\targets\include\flac;$(BaseCommon)\mdns-sd\;$(BaseCommon)\libcodecs\targets\include\shine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BaseCommon)\libopenssl\targets\win32\x86\include;$(BaseCommon);$(BaseCommon)\libpupnp\targets\win32\x86\include\upnp;$(BaseCommon)\libpupnp\targets\win32\x86\include\ixml;$(BaseCommon)\libmdns\targets\include\tinysvcmdns;$(BaseCommon)\libmdns\targets\include\mdnssd;$(BaseCommon)\pthreads4w\targets\win32\x86\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\libcodecs\targets\include\flac;$(BaseCommon)\libcodecs\targets\include\shine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ProgramDataBaseFileName>$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pdb</ProgramDataBaseFileName>
     </ClCompile>

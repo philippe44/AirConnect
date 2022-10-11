@@ -927,7 +927,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 {
 	char *friendlyName = NULL;
 	int i;
-	unsigned long mac_size = 6;
+	uint32_t mac_size = 6;
 	in_addr_t ip;
 	uint32_t now = gettime_ms();
 

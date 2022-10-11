@@ -1,6 +1,6 @@
 /*****************************************************************************
  * cross-platform functions
- *  (c) Philippe, philippe_44@outlook.com: AirPlay V2 + simple library
+ *  (c) Philippe, philippe_44@outlook.com: 
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -55,6 +55,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 #if LINUX || OSX || FREEBSD || SUNOS
 #include <strings.h>
@@ -76,28 +77,10 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
-#if SUNOS
-typedef uint8_t  uint8_t;
-typedef uint16_t u16_t;
-typedef uint32_t uint32_t;
-typedef uint64_t u64_t;
-typedef int16_t   s16_t;
-typedef int32_t   s32_t;
-typedef int64_t   s64_t;
-#else
-typedef u_int8_t  uint8_t;
-typedef u_int16_t u16_t;
-typedef u_int32_t uint32_t;
-typedef u_int64_t u64_t;
-typedef int16_t   s16_t;
-typedef int32_t   s32_t;
-typedef int64_t   s64_t;
-#endif
-
 #define last_error() errno
 #define ERROR_WOULDBLOCK EWOULDBLOCK
 
-int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size);
+int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], uint32_t *size);
 #define fresize(f,s) ftruncate(fileno(f), s)
 char *strlwr(char *str);
 #define _random(x) random()
@@ -125,7 +108,9 @@ char *strlwr(char *str);
 int poll(struct pollfd* fds, unsigned long numfds, int timeout);
 int asprintf(char** s, const char* fmt, ...);
 int vasprintf(char** strp, const char* fmt, va_list args);
+
 #define VALGRIND_MAKE_MEM_DEFINED(x,y)
+#define __attribute__(X)
 typedef uint32_t in_addr_t;
 #define socklen_t int
 typedef SSIZE_T	ssize_t;
@@ -138,5 +123,4 @@ uint32_t gettime_ms(void);
 uint64_t gettime_ms64(void);
 
 #define _STR_LEN_	256
-
 #endif     // __PLATFORM

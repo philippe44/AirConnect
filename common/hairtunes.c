@@ -86,7 +86,7 @@ enum { DATA, CONTROL, TIMING };
 static char *mime_types[] = { "audio/mpeg", "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav" };
 
 static struct wave_header_s {
-	uint8_t 	chunk_id[4];
+	uint8_t	chunk_id[4];
 	uint8_t	chunk_size[4];
 	uint8_t	format[4];
 	uint8_t	subchunk1_id[4];
@@ -94,7 +94,7 @@ static struct wave_header_s {
 	uint8_t	audio_format[2];
 	uint8_t	channels[2];
 	uint8_t	sample_rate[4];
-	uint8_t    byte_rate[4];
+	uint8_t byte_rate[4];
 	uint8_t	block_align[2];
 	uint8_t	bits_per_sample[2];
 	uint8_t	subchunk2_id[4];

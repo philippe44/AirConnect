@@ -439,7 +439,8 @@ void get_mac(uint8_t mac[]) {
 
 /*----------------------------------------------------------------------------*/
 #if LINUX
-int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size) {
+int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], uint32_t* size)
+{
 	int                 s;
 	struct arpreq       areq;
 	struct sockaddr_in *sin;
@@ -468,7 +469,7 @@ int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size) {
 	return 0;
 }
 #elif OSX
-int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size)
+int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], uint32_t *size)
 {
 	int mib[6];
 	size_t needed;
@@ -518,7 +519,7 @@ int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size)
 	return (found_entry);
 }
 #elif !WIN
-int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], unsigned long *size)
+int SendARP(in_addr_t src, in_addr_t dst, uint8_t mac[], uint32_t* size)
 {
 	LOG_ERROR("No SendARP build for this platform", NULL);
 	return 1;
@@ -923,7 +924,7 @@ uint64_t gettime_ms64(void) {
 #else
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	return (u64_t) (tv.tv_sec + 0x83AA7E80) * 1000 + tv.tv_usec / 1000;
+	return (uint64_t) (tv.tv_sec + 0x83AA7E80) * 1000 + tv.tv_usec / 1000;
 #endif
 }
 
@@ -1329,7 +1330,7 @@ char *kd_dump(key_data_t *kd)
 /* 																			  */
 /*----------------------------------------------------------------------------*/
 
-#ifdef USE_XML
+#ifdef HAS_IXML
 /*----------------------------------------------------------------------------*/
 IXML_Node *XMLAddNode(IXML_Document *doc, IXML_Node *parent, char *name, char *fmt, ...)
 {

@@ -23,7 +23,7 @@ OPENSSL		= $(COMMON)/libopenssl/targets/$(HOST)/$(PLATFORM)
 NANOPB		= nanopb
 JANSSON		= libjansson
 
-DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUSE_XML
+DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE
 CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
 LDFLAGS 	+= -s -lpthread -ldl -lm -lrt -L. 
 

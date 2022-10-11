@@ -636,7 +636,7 @@ void MakeMacUnique(struct sMR *Device)
 /*----------------------------------------------------------------------------*/
 static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group, struct in_addr ip, uint16_t port)
 {
-	unsigned long mac_size = 6;
+	uint32_t mac_size = 6;
 
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));

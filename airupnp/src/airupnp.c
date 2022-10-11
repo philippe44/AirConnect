@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 
 #include "platform.h"
+#include "ixmlextra.h"
 #include "airupnp.h"
 #include "tinysvcmdns.h"
 #include "upnpdebug.h"

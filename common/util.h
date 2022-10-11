@@ -28,10 +28,6 @@
 
 #include "platform.h"
 #include "pthread.h"
-#if __has_include("ixml.h")
-#include "ixml.h"
-#define HAS_IXML
-#endif
 
 #define NFREE(p) if (p) { free(p); p = NULL; }
 

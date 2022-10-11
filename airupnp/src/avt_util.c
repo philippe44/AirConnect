@@ -23,6 +23,7 @@
 #include <math.h>
 
 #include "platform.h"
+#include "ixmlextra.h"
 #include "upnptools.h"
 #include "upnp.h"
 #include "airupnp.h"

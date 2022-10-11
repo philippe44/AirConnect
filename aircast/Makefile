@@ -16,14 +16,14 @@ COMMON		= $(BASE)/common
 SRC		= ./src
 MDNS		= $(COMMON)/libmdns/targets
 #VALGRIND	= $(BASE)/valgrind
-UPNP 		= $(COMMON)/libpupnp/targets/$(HOST)/$(PLATFORM)
+PUPNP 		= $(COMMON)/libpupnp/targets/$(HOST)/$(PLATFORM)
 CODECS		= $(COMMON)/libcodecs/targets
 DMAP_PARSER	= $(COMMON)/dmap-parser
 OPENSSL		= $(COMMON)/libopenssl/targets/$(HOST)/$(PLATFORM)
 NANOPB		= nanopb
-JANSSON		= libjansson
+JANSSON		= libjansson/targets/$(HOST)/$(PLATFORM)
 
-DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE
+DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUPNP_STATIC_LIB
 CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
 LDFLAGS 	+= -s -lpthread -ldl -lm -lrt -L. 
 
@@ -41,13 +41,11 @@ INCLUDE = -I. \
 		  -I$(TOOLS) \
 		  -I$(COMMON) \
 		  -I$(SRC)/inc \
-		  -I$(UPNP)/include \
-		  -I$(CODECS)/include/flac \
-		  -I$(CODECS)/include/shine \
-		  -I$(MDNS)/include/tinysvcmdns \
-		  -I$(MDNS)/include/mdnssd \
+		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
+		  -I$(CODECS)/include/flac -I$(CODECS)/include/shine \
+		  -I$(MDNS)/include/tinysvcmdns -I$(MDNS)/include/mdnssd \
 		  -I$(NANOPB) \
-		  -I$(JANSSON)/targets/$(HOST)/$(PLATFORM)/include
+		  -I$(JANSSON)/include
 		  		  
 DEPS	= $(SRC)/aircast.h
 				  
@@ -61,10 +59,10 @@ SOURCES_LIBS = sslsym.c
 OBJECTS 		= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES) $(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES)) $(patsubst %.c,$(BUILDDIR)/%-static.o,$(SOURCES_LIBS)) 
 
-LIBRARY		= $(UPNP)/libpupnp.a \
+LIBRARY		= $(PUPNP)/libpupnp.a \
 			  $(CODECS)/$(HOST)/$(PLATFORM)/libcodecs.a \
 			  $(MDNS)/$(HOST)/$(PLATFORM)/libmdns.a \
-			  $(JANSSON)/targets/$(HOST)/$(PLATFORM)/libjansson.a
+			  $(JANSSON)/libjansson.a
 				  
 LIBRARY_STATIC 	= $(LIBRARY) $(OPENSSL)/libopenssl.a
 

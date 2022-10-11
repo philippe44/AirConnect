@@ -21,6 +21,7 @@
 #include <stdarg.h>
 
 #include "platform.h"
+#include "ixmlextra.h"
 #include "airupnp.h"
 #include "util.h"
 #include "config_upnp.h"

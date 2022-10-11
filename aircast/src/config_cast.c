@@ -21,6 +21,7 @@
 #include <stdarg.h>
 
 #include "platform.h"
+#include "ixmlextra.h"
 #include "aircast.h"
 #include "util.h"
 #include "config_cast.h"

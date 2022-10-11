@@ -20,6 +20,7 @@
 
 #include "platform.h"
 #include "ixml.h"
+#include "ixmlextra.h"
 #include "airupnp.h"
 #include "avt_util.h"
 #include "upnpdebug.h"

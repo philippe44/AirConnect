@@ -1,15 +1,10 @@
-[submodule "common/flac"]
-	path = common/flac
-	url = https://github.com/philippe44/flac
-[submodule "common/ogg"]
-	path = common/ogg
-	url = https://github.com/philippe44/ogg
 [submodule "common/pthreads4w"]
 	path = common/pthreads4w
 	url = https://github.com/philippe44/pthreads4w
 [submodule "common/shine"]
 	path = common/shine
 	url = https://github.com/philippe44/shine
+	fetchRecurseSubmodules = no
 [submodule "common/dmap-parser"]
 	path = common/dmap-parser
 	url = https://github.com/philippe44/dmap-parser
@@ -19,18 +14,20 @@
 [submodule "aircast/libjansson"]
 	path = aircast/libjansson
 	url = https://github.com/philippe44/libjansson
+	fetchRecurseSubmodules = no
 [submodule "common/libpupnp"]
 	path = common/libpupnp
 	url = https://github.com/philippe44/libpupnp
+	fetchRecurseSubmodules = no
 [submodule "common/libopenssl"]
 	path = common/libopenssl
 	url = https://github.com/philippe44/libopenssl
+	fetchRecurseSubmodules = no
 [submodule "common/libmdns"]
 	path = common/libmdns
 	url = https://github.com/philippe44/libmdns
-[submodule "libcodecs"]
-	path = libcodecs
-	url = https://github.com/philippe44/libcodecs
+	fetchRecurseSubmodules = no	
 [submodule "common/libcodecs"]
 	path = common/libcodecs
 	url = https://github.com/philippe44/libcodecs
+	fetchRecurseSubmodules = no

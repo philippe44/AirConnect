@@ -51,7 +51,7 @@ SOURCES = castcore.c castmessage.pb.c aircast.c cast_util.c cast_parse.c config_
 	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
 	  pb_common.c pb_decode.c pb_encode.c \
 		
-SOURCES_LIBS = sslsym.c
+SOURCES_LIBS = cross_ssl.c
 		
 OBJECTS 		= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES) $(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES)) $(patsubst %.c,$(BUILDDIR)/%-static.o,$(SOURCES_LIBS)) 

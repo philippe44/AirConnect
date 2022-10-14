@@ -35,7 +35,7 @@
 [submodule "common/crosstools"]
 	path = common/crosstools
 	url = https://github.com/philippe44/crosstools
-[submodule "common/common/raoptools"]
-	path = common/common/raoptools
+[submodule "common/raoptools"]
+	path = common/raoptools
 	url = https://github.com/philippe44/raoptools
-	fetchRecurseSubmodules = no	
+	fetchRecurseSubmodules = no

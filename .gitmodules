@@ -1,10 +1,11 @@
 [submodule "common/pthreads4w"]
 	path = common/pthreads4w
 	url = https://github.com/philippe44/pthreads4w
+	fetchRecurseSubmodules = no	
 [submodule "common/shine"]
 	path = common/shine
 	url = https://github.com/philippe44/shine
-	fetchRecurseSubmodules = no	
+	fetchRecurseSubmodules = no
 [submodule "common/dmap-parser"]
 	path = common/dmap-parser
 	url = https://github.com/philippe44/dmap-parser
@@ -25,17 +26,16 @@
 	fetchRecurseSubmodules = no	
 [submodule "common/libmdns"]
 	path = common/libmdns
-	fetchRecurseSubmodules = no
 	url = https://github.com/philippe44/libmdns
+	fetchRecurseSubmodules = no
 [submodule "common/libcodecs"]
 	path = common/libcodecs
 	url = https://github.com/philippe44/libcodecs
+	fetchRecurseSubmodules = no
 [submodule "common/crosstools"]
 	path = common/crosstools
 	url = https://github.com/philippe44/crosstools
 [submodule "common/common/raoptools"]
 	path = common/common/raoptools
 	url = https://github.com/philippe44/raoptools
-[submodule "common/raoptools"]
-	path = common/raoptools
-	url = https://github.com/philippe44/raoptools
+	fetchRecurseSubmodules = no	

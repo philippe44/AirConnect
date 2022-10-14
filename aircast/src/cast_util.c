@@ -1,30 +1,17 @@
 /*
- *  Chromecast control utils
+ *  Chromecast misc utils
  *
  *  (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * See LICENSE
  *
  */
 
 
 #include <stdlib.h>
-#include <math.h>
 
 #include "platform.h"
-#include "log_util.h"
-#include "util.h"
+#include "cross_log.h"
 #include "castcore.h"
 #include "cast_util.h"
 #include "castitf.h"
@@ -33,28 +20,22 @@ extern log_level cast_loglevel;
 static log_level *loglevel = &cast_loglevel;
 
 /*----------------------------------------------------------------------------*/
-bool CastIsConnected(struct sCastCtx *Ctx)
-{
-	bool status;
-
+bool CastIsConnected(struct sCastCtx *Ctx) {
 	if (!Ctx) return false;
 
 	pthread_mutex_lock(&Ctx->Mutex);
-	status = Ctx->Status >= CAST_CONNECTED;
+	bool status = Ctx->Status >= CAST_CONNECTED;
 	pthread_mutex_unlock(&Ctx->Mutex);
 	return status;
 }
 
 
 /*----------------------------------------------------------------------------*/
-bool CastIsMediaSession(struct sCastCtx *Ctx)
-{
-	bool status;
-
+bool CastIsMediaSession(struct sCastCtx *Ctx) {
 	if (!Ctx) return false;
 
 	pthread_mutex_lock(&Ctx->Mutex);
-	status = Ctx->mediaSessionId != 0;
+	bool status = Ctx->mediaSessionId != 0;
 	pthread_mutex_unlock(&Ctx->Mutex);
 
 	return status;
@@ -62,8 +43,7 @@ bool CastIsMediaSession(struct sCastCtx *Ctx)
 
 
 /*----------------------------------------------------------------------------*/
-void CastGetStatus(struct sCastCtx *Ctx)
-{
+void CastGetStatus(struct sCastCtx *Ctx) {
 	// SSL context might not be set yet
 	if (!Ctx) return;
 
@@ -74,8 +54,7 @@ void CastGetStatus(struct sCastCtx *Ctx)
 
 
 /*----------------------------------------------------------------------------*/
-void CastGetMediaStatus(struct sCastCtx *Ctx)
-{
+void CastGetMediaStatus(struct sCastCtx *Ctx) {
 	// SSL context might not be set yet
 	if (!Ctx) return;
 
@@ -91,8 +70,7 @@ void CastGetMediaStatus(struct sCastCtx *Ctx)
 
 /*----------------------------------------------------------------------------*/
 #define LOAD_FLUSH
-bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadata_s *MetaData)
-{
+bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadata_s *MetaData) {
 	json_t *msg;
 	char* str;
 
@@ -171,7 +149,7 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadat
 #endif
 		strcpy(req->Type, "LOAD");
 		req->data.msg = msg;
-		QueueInsert(&Ctx->reqQueue, req);
+		queue_insert(&Ctx->reqQueue, req);
 		LOG_INFO("[%p]: Queuing %s", Ctx->owner, req->Type);
 	}
 
@@ -181,10 +159,8 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadat
 	return true;
 }
 
-
 /*----------------------------------------------------------------------------*/
-void CastSimple(struct sCastCtx *Ctx, char *Type)
-{
+void CastSimple(struct sCastCtx *Ctx, char *Type) {
 	// lock on wait for a Cast response
 	pthread_mutex_lock(&Ctx->Mutex);
 
@@ -208,7 +184,7 @@ void CastSimple(struct sCastCtx *Ctx, char *Type)
 	else {
 		tReqItem *req = malloc(sizeof(tReqItem));
 		strcpy(req->Type, Type);
-		QueueInsert(&Ctx->reqQueue, req);
+		queue_insert(&Ctx->reqQueue, req);
 		LOG_INFO("[%p]: Queuing %s", Ctx->owner, req->Type);
 	}
 
@@ -217,8 +193,7 @@ void CastSimple(struct sCastCtx *Ctx, char *Type)
 
 
 /*----------------------------------------------------------------------------*/
-void CastStop(struct sCastCtx *Ctx)
-{
+void CastStop(struct sCastCtx *Ctx) {
 	// lock on wait for a Cast response
 	pthread_mutex_lock(&Ctx->Mutex);
 
@@ -250,7 +225,7 @@ void CastStop(struct sCastCtx *Ctx)
 
 		tReqItem *req = malloc(sizeof(tReqItem));
 		strcpy(req->Type, "STOP");
-		QueueInsert(&Ctx->reqQueue, req);
+		queue_insert(&Ctx->reqQueue, req);
 		LOG_INFO("[%p]: Queuing %s", Ctx->owner, req->Type);
 
 	// launching happening, just go back to CONNECT mode
@@ -267,23 +242,19 @@ void CastStop(struct sCastCtx *Ctx)
 
 
 /*----------------------------------------------------------------------------*/
-void CastPowerOff(struct sCastCtx *Ctx)
-{
+void CastPowerOff(struct sCastCtx *Ctx) {
 	CastRelease(Ctx);
 	CastDisconnect(Ctx);
 }
 
 
 /*----------------------------------------------------------------------------*/
-void CastPowerOn(struct sCastCtx *Ctx)
-{
+void CastPowerOn(struct sCastCtx *Ctx) {
 	CastConnect(Ctx);
 }
 
-
 /*----------------------------------------------------------------------------*/
-void CastRelease(struct sCastCtx *Ctx)
-{
+void CastRelease(struct sCastCtx *Ctx) {
 	pthread_mutex_lock(&Ctx->Mutex);
 	if (Ctx->Status != CAST_DISCONNECTED) {
 		SendCastMessage(Ctx, CAST_RECEIVER, NULL,
@@ -295,8 +266,7 @@ void CastRelease(struct sCastCtx *Ctx)
 
 
 /*----------------------------------------------------------------------------*/
-void CastSetDeviceVolume(struct sCastCtx *Ctx, double Volume, bool Queue)
-{
+void CastSetDeviceVolume(struct sCastCtx *Ctx, double Volume, bool Queue) {
 	if (Ctx->group) Volume = Volume * Ctx->MediaVolume;
 
 	if (Volume > 1.0) Volume = 1.0;
@@ -332,24 +302,15 @@ void CastSetDeviceVolume(struct sCastCtx *Ctx, double Volume, bool Queue)
 		tReqItem *req = malloc(sizeof(tReqItem));
 		strcpy(req->Type, "SET_VOLUME");
 		req->data.Volume = Volume;
-		QueueInsert(&Ctx->reqQueue, req);
+		queue_insert(&Ctx->reqQueue, req);
 		LOG_INFO("[%p]: Queuing %s", Ctx->owner, req->Type);
 	}
 
 	pthread_mutex_unlock(&Ctx->Mutex);
 }
 
-
 /*----------------------------------------------------------------------------*/
-int CastSeek(char *ControlURL, unsigned Interval)
-{
-	int rc = 0;
-
-	return rc;
+int CastSeek(char *ControlURL, unsigned Interval) {
+	return 0;
 }
-
-
-
-
-
 

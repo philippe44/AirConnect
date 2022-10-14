@@ -1,39 +1,32 @@
 /*
  * AirUPnP - AirPlay to uPNP gateway
  *
- *	(c) Philippe, philippe_44@outlook.com
+ * (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * see LICENSE
  *
  */
 
-#include <math.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <stdio.h>
+#include <string.h>
+#ifdef _WIN32
+#include <process.h>
+#endif
 
 #include "platform.h"
 #include "ixmlextra.h"
 #include "airupnp.h"
 #include "tinysvcmdns.h"
 #include "upnpdebug.h"
-#include "util.h"
+
+#include "cross_ssl.h"
+#include "cross_net.h"
+#include "cross_log.h"
+#include "cross_thread.h"
+
 #include "avt_util.h"
 #include "config_upnp.h"
 #include "mr_util.h"
-#include "log_util.h"
-#include "sslsym.h"
 
 #define VERSION "v0.3.00.0"" ("__DATE__" @ "__TIME__")"
 
@@ -127,7 +120,7 @@ static bool	   			glDaemonize = false;
 #endif
 static bool				glMainRunning = true;
 static struct in_addr 	glHost;
-static char				glHostName[_STR_LEN_];
+static char				glHostName[STR_LEN];
 static struct mdnsd*	glmDNSServer = NULL;
 static char*			glExcluded = NULL;
 static char*			glExcludedModelNumber = NULL;
@@ -139,12 +132,12 @@ static bool				glDiscovery = false;
 static pthread_mutex_t 	glUpdateMutex;
 static pthread_cond_t  	glUpdateCond;
 static pthread_t 		glMainThread, glUpdateThread;
-static tQueue			glUpdateQueue;
+static queue_t			glUpdateQueue;
 static bool				glInteractive = true;
 static char				*glLogFile;
 static uint32_t			glPort;
 static void				*glConfigID = NULL;
-static char				glConfigName[_STR_LEN_] = "./config.xml";
+static char				glConfigName[STR_LEN] = "./config.xml";
 
 static char usage[] =
 
@@ -242,7 +235,7 @@ static void *MRThread(void *args)
 
 	last = gettime_ms();
 
-	for (; p->Running; WakeableSleep(wakeTimer)) {
+	for (; p->Running; crossthreads_sleep(wakeTimer)) {
 		elapsed = gettime_ms() - last;
 
 		// context is valid as long as thread runs
@@ -284,7 +277,7 @@ sleep:
 }
 
 /*----------------------------------------------------------------------------*/
-void HandleRAOP(void *owner, raop_event_t event, void *param)
+void HandleRAOP(void *owner, raopsr_event_t event, void *param)
 {
 	struct sMR *Device = (struct sMR*) owner;
 
@@ -408,7 +401,7 @@ static bool _ProcessQueue(struct sMR *Device)
 	int rc = 0;
 
 	Device->WaitCookie = 0;
-	if ((Action = QueueExtract(&Device->ActionQueue)) == NULL) return false;
+	if ((Action = queue_extract(&Device->ActionQueue)) == NULL) return false;
 
 	Device->WaitCookie = Device->seqN++;
 	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type,
@@ -459,7 +452,7 @@ static void ProcessEvent(Upnp_EventType EventType, const void *_Event, void *Coo
 			GroupVolume = CalcGroupVolume(Master);
 			LOG_INFO("[%p]: UPnP Volume local change %d:%d (%s)", Device, (int) Volume, (int) GroupVolume, Device->Master ? "slave": "master");
 			Volume = GroupVolume < 0 ? Volume / Device->Config.MaxVolume : GroupVolume / 100;
-			raop_notify(Master->Raop, RAOP_VOLUME, &Volume);
+			raopsr_notify(Master->Raop, RAOP_VOLUME, &Volume);
 		}
 	}
 
@@ -525,17 +518,17 @@ int ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie)
 					p->State = TRANSITIONING;
 					LOG_INFO("[%p]: uPNP transition", p);
 				} else if (!strcmp(r, "STOPPED") && p->State != STOPPED) {
-					if (p->RaopState == RAOP_PLAY && !p->ExpectStop) raop_notify(p->Raop, RAOP_STOP, NULL);
+					if (p->RaopState == RAOP_PLAY && !p->ExpectStop) raopsr_notify(p->Raop, RAOP_STOP, NULL);
 					p->State = STOPPED;
 					p->ExpectStop = false;
 					LOG_INFO("[%p]: uPNP stopped", p);
 				} else if (!strcmp(r, "PLAYING") && (p->State != PLAYING)) {
 					p->State = PLAYING;
-					if (p->RaopState != RAOP_PLAY) raop_notify(p->Raop, RAOP_PLAY, NULL);
+					if (p->RaopState != RAOP_PLAY) raopsr_notify(p->Raop, RAOP_PLAY, NULL);
 					LOG_INFO("[%p]: uPNP playing", p);
 				} else if (!strcmp(r, "PAUSED_PLAYBACK") && p->State != PAUSED) {
 					p->State = PAUSED;
-					if (p->RaopState == RAOP_PLAY) raop_notify(p->Raop, RAOP_PAUSE, NULL);
+					if (p->RaopState == RAOP_PLAY) raopsr_notify(p->Raop, RAOP_PAUSE, NULL);
 					LOG_INFO("[%p]: uPNP pause", p);
 				}
 			}
@@ -588,7 +581,7 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 
 			Update->Type = DISCOVERY;
 			Update->Data = strdup(UpnpString_get_String(UpnpDiscovery_get_Location(_Event)));
-			QueueInsert(&glUpdateQueue, Update);
+			queue_insert(&glUpdateQueue, Update);
 			pthread_cond_signal(&glUpdateCond);
 
 			break;
@@ -598,7 +591,7 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 
 			Update->Type = BYE_BYE;
 			Update->Data = strdup(UpnpString_get_String(UpnpDiscovery_get_DeviceID(_Event)));
-			QueueInsert(&glUpdateQueue, Update);
+			queue_insert(&glUpdateQueue, Update);
 			pthread_cond_signal(&glUpdateCond);
 
 			break;
@@ -608,7 +601,7 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 
 			Update->Type = SEARCH_TIMEOUT;
 			Update->Data = NULL;
-			QueueInsert(&glUpdateQueue, Update);
+			queue_insert(&glUpdateQueue, Update);
 			pthread_cond_signal(&glUpdateCond);
 
 			// if there is a cookie, it's a targeted Sonos search
@@ -706,9 +699,8 @@ static void *UpdateThread(void *args)
 		pthread_cond_wait(&glUpdateCond, &glUpdateMutex);
 		pthread_mutex_unlock(&glUpdateMutex);
 
-		for (; glMainRunning && (Update = QueueExtract(&glUpdateQueue)) != NULL; QueueFreeItem(&glUpdateQueue, Update)) {
+		for (; glMainRunning && (Update = queue_extract(&glUpdateQueue)) != NULL; queue_free_item(&glUpdateQueue, Update)) {
 			struct sMR *Device;
-			int i;
 			uint32_t now = gettime_ms() / 1000;
 
 			// UPnP end of search timer
@@ -716,7 +708,7 @@ static void *UpdateThread(void *args)
 
 				LOG_DEBUG("Presence checking", NULL);
 
-				for (i = 0; i < glMaxDevices; i++) {
+				for (int i = 0; i < glMaxDevices; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running && (Device->State != PLAYING || Device->RaopState != RAOP_PLAY) &&
 						((Device->LastSeen + PRESENCE_TIMEOUT) - now > PRESENCE_TIMEOUT	||
@@ -724,7 +716,7 @@ static void *UpdateThread(void *args)
 
 						pthread_mutex_lock(&Device->Mutex);
 						LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->Config.Name);
-						raop_delete(Device->Raop);
+						raopsr_delete(Device->Raop);
 						// device's mutex returns unlocked
 						DelMRDevice(Device);
 					}
@@ -739,7 +731,7 @@ static void *UpdateThread(void *args)
 				if (!CheckAndLock(Device)) continue;
 
 				LOG_INFO("[%p]: renderer bye-bye: %s", Device, Device->Config.Name);
-				raop_delete(Device->Raop);
+				raopsr_delete(Device->Raop);
 				// device's mutex returns unlocked
 				DelMRDevice(Device);
 
@@ -760,7 +752,7 @@ static void *UpdateThread(void *args)
 				}
 
 				// existing device ?
-				for (i = 0; i < glMaxDevices; i++) {
+				for (int i = 0; i < glMaxDevices; i++) {
 					Device = glMRDevices + i;
 					if (Device->Running && !strcmp(Device->DescDocURL, Update->Data)) {
 						char *friendlyName = NULL;
@@ -779,7 +771,7 @@ static void *UpdateThread(void *args)
 							LOG_INFO("[%p]: Device name change %s %s", Device, friendlyName, Device->friendlyName);
 							strcpy(Device->friendlyName, friendlyName);
 							sprintf(Device->Config.Name, "%s+", friendlyName);
-							raop_update(Device->Raop, Device->Config.Name, "airupnp");
+							raopsr_update(Device->Raop, Device->Config.Name, "airupnp");
 							Updated = true;
 						}
 
@@ -789,7 +781,7 @@ static void *UpdateThread(void *args)
 							LOG_INFO("[%p]: Sonos %s is now master", Device, Device->Config.Name);
 							pthread_mutex_lock(&Device->Mutex);
 							Device->Master = NULL;
-							Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
+							Device->Raop = raopsr_create(glHost, glmDNSServer, Device->Config.Name,
 								   "airupnp", Device->Config.mac, Device->Config.Codec,
 								   Device->Config.Metadata, Device->Config.Drift, Device->Config.Flush,
 								   Device->Config.Latency, Device,
@@ -800,7 +792,7 @@ static void *UpdateThread(void *args)
 							pthread_mutex_lock(&Device->Mutex);
 							LOG_INFO("[%p]: Sonos %s is now slave", Device, Device->Config.Name);
 							Device->Master = Master;
-							raop_delete(Device->Raop);
+							raopsr_delete(Device->Raop);
 							Device->Raop = NULL;
 							pthread_mutex_unlock(&Device->Mutex);
 						}
@@ -845,7 +837,7 @@ static void *UpdateThread(void *args)
 
 				if (AddMRDevice(Device, UDN, DescDoc, Update->Data) && !glDiscovery) {
 					// create a new AirPlay
-					Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
+					Device->Raop = raopsr_create(glHost, glmDNSServer, Device->Config.Name,
 									   "airupnp", Device->Config.mac, Device->Config.Codec,
 									   Device->Config.Metadata, Device->Config.Drift, Device->Config.Flush,
 									   Device->Config.Latency, Device,
@@ -880,7 +872,7 @@ static void *MainThread(void *args)
 {
 	while (glMainRunning) {
 
-		WakeableSleep(30*1000);				
+		crossthreads_sleep(30*1000);				
 		if (!glMainRunning) break;
 
 		if (glLogFile && glLogLimit != - 1) {
@@ -1002,15 +994,15 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	// set remaining items now that we are sure
 	if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
 		Device->MetaData.duration = 1;
-		Device->MetaData.title = strdup("Streaming from AirConnect");
+		strcpy(Device->MetaData.title, "Streaming from AirConnect");
 	} else {
-		Device->MetaData.remote_title = strdup("Streaming from AirConnect");
+		strcpy(Device->MetaData.remote_title, "Streaming from AirConnect");
     }
-	if (*Device->Config.ArtWork) Device->MetaData.artwork = strdup(Device->Config.ArtWork);
+	if (*Device->Config.ArtWork) strncpy(Device->MetaData.artwork, Device->Config.ArtWork, sizeof(Device->MetaData.artwork) - 1);
 	Device->Running = true;
 	if (friendlyName) strcpy(Device->friendlyName, friendlyName);
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", friendlyName);
-	QueueInit(&Device->ActionQueue, false, NULL);
+	queue_init(&Device->ActionQueue, false, NULL);
 
 	// set protocolinfo (will be used for some HTTP response)
 	if (!strcasecmp(Device->Config.Codec, "pcm")) Device->ProtocolInfo = Device->Config.ProtocolInfo.pcm;
@@ -1048,7 +1040,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 /*----------------------------------------------------------------------------*/
 bool isExcluded(char *Model, char *ModelNumber)
 {
-	char item[_STR_LEN_];
+	char item[STR_LEN];
 	char *p = glExcluded;
 	char *q = glExcludedModelNumber;
 	char *o = glIncludedModelNumbers;
@@ -1089,7 +1081,7 @@ bool isExcluded(char *Model, char *ModelNumber)
 /*----------------------------------------------------------------------------*/
 static bool Start(bool cold)
 {
-	char hostname[_STR_LEN_];
+	char hostname[STR_LEN];
 	int rc;
 	char IP[16] = "";
 
@@ -1115,20 +1107,17 @@ static bool Start(bool cold)
 	UpnpSetMaxContentLength(60000);
 
 	glHost.s_addr = inet_addr(IP);
-	gethostname(glHostName, _STR_LEN_);
+	gethostname(glHostName, STR_LEN);
 	glPort = UpnpGetServerPort();
 
 	LOG_INFO("Binding to %s:%d", IP, glPort);
 
 	if (cold) {
 		// manually load openSSL symbols to accept multiple versions
-		if (!load_ssl_symbols()) {
+		if (!cross_load_ssl()) {
 			LOG_ERROR("Cannot load SSL libraries", NULL);
 			goto Error;
 		}
-
-		// initialize MR utils
-		InitUtils();
 
 		// mutex should *always* be valid
 		glMRDevices = calloc(glMaxDevices, sizeof(struct sMR));
@@ -1141,7 +1130,7 @@ static bool Start(bool cold)
 	if (glHost.s_addr != INADDR_ANY) {
 		pthread_mutex_init(&glUpdateMutex, 0);
 		pthread_cond_init(&glUpdateCond, 0);
-		QueueInit(&glUpdateQueue, true, FreeUpdate);
+		queue_init(&glUpdateQueue, true, FreeUpdate);
 		pthread_create(&glUpdateThread, NULL, &UpdateThread, NULL);
 
 		rc = UpnpRegisterClient(MasterHandler, NULL, &glControlPointHandle);
@@ -1150,7 +1139,7 @@ static bool Start(bool cold)
 			goto Error;
 		}
 
-		snprintf(hostname, _STR_LEN_, "%s.local", glHostName);
+		snprintf(hostname, STR_LEN, "%s.local", glHostName);
 		if ((glmDNSServer = mdnsd_start(glHost)) == NULL) goto Error;
 		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
@@ -1196,7 +1185,7 @@ static bool Stop(bool exit)
 		pthread_cond_destroy(&glUpdateCond);
 
 		// remove discovered items
-		QueueFlush(&glUpdateQueue);
+		queue_flush(&glUpdateQueue);
 
 		// stop broadcasting devices
 		mdnsd_stop(glmDNSServer);
@@ -1208,21 +1197,15 @@ static bool Stop(bool exit)
 	if (exit) {
 		// simple log size management thread
 		LOG_INFO("terminate main thread ...", NULL);
-		WakeAll();
+		crossthreads_wake();
 		pthread_join(glMainThread, NULL);
 
 		// these are for sure unused now that libupnp cannot signal anything
 		for (i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
-		EndUtils();
-		
 		if (glConfigID) ixmlDocument_free(glConfigID);
-#if WIN
-		winsock_close();
-#endif
-
-		free_ssl_symbols();
-
+		netsock_close();
+		cross_free_ssl();
 	}
 
 	return true;
@@ -1230,10 +1213,8 @@ static bool Stop(bool exit)
 
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
-	int i;
-
 	if (!glGracefullShutdown) {
-		for (i = 0; i < glMaxDevices; i++) {
+		for (int i = 0; i < glMaxDevices; i++) {
 			struct sMR *p = &glMRDevices[i];
 			if (p->Running && p->State == PLAYING) AVTStop(p);
 		}
@@ -1249,10 +1230,10 @@ static void sighandler(int signum) {
 /*---------------------------------------------------------------------------*/
 bool ParseArgs(int argc, char **argv) {
 	char *optarg = NULL;
-	int i, optind = 1;
+	int optind = 1;
 	char cmdline[256] = "";
 
-	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < sizeof(cmdline)); i++) {
+	for (int i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < sizeof(cmdline)); i++) {
 		strcat(cmdline, argv[i]);
 		strcat(cmdline, " ");
 	}
@@ -1366,9 +1347,6 @@ bool ParseArgs(int argc, char **argv) {
 /*----------------------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
-	int i;
-	char resp[20] = "";
-
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);
 #if defined(SIGQUIT)
@@ -1381,12 +1359,10 @@ int main(int argc, char *argv[])
 	signal(SIGPIPE, SIG_IGN);
 #endif
 
-#if WIN
-	winsock_init();
-#endif
+	netsock_init();
 
 	// first try to find a config file on the command line
-	for (i = 1; i < argc; i++) {
+	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "-x")) {
 			strcpy(glConfigName, argv[i+1]);
 		}
@@ -1451,16 +1427,15 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	while (strcmp(resp, "exit")) {
-
+	for (char resp[20] = ""; strcmp(resp, "exit");) {
 #if LINUX || FREEBSD || SUNOS
 		if (!glDaemonize && glInteractive)
-			i = scanf("%s", resp);
+			(void)! scanf("%s", resp);
 		else
 			pause();
 #else
 		if (glInteractive)
-			i = scanf("%s", resp);
+			(void)! scanf("%s", resp);
 		else
 #if OSX
 			pause();
@@ -1468,34 +1443,31 @@ int main(int argc, char *argv[])
 			Sleep(INFINITE);
 #endif
 #endif
+		char level[20];
 
 		if (!strcmp(resp, "raopdbg"))	{
-			char level[20];
-			i = scanf("%s", level);
+			(void)! scanf("%s", level);
 			raop_loglevel = debug2level(level);
 		}
 
 		if (!strcmp(resp, "maindbg"))	{
-			char level[20];
-			i = scanf("%s", level);
+			(void)! scanf("%s", level);
 			main_loglevel = debug2level(level);
 		}
 
 		if (!strcmp(resp, "utildbg"))	{
-			char level[20];
-			i = scanf("%s", level);
+			(void)! scanf("%s", level);
 			util_loglevel = debug2level(level);
 		}
 
 		if (!strcmp(resp, "upnpdbg"))	{
-			char level[20];
-			i = scanf("%s", level);
+			(void)! scanf("%s", level);
 			upnp_loglevel = debug2level(level);
 		}
 
 		if (!strcmp(resp, "save"))	{
 			char name[128];
-			i = scanf("%s", name);
+			(void)! scanf("%s", name);
 			SaveConfig(name, glConfigID, true);
 		}
 
@@ -1503,7 +1475,7 @@ int main(int argc, char *argv[])
 			uint32_t now = gettime_ms() / 1000;
 			bool all = !strcmp(resp, "dumpall");
 
-			for (i = 0; i < glMaxDevices; i++) {
+			for (int i = 0; i < glMaxDevices; i++) {
 				struct sMR *p = &glMRDevices[i];
 				bool Locked = pthread_mutex_trylock(&p->Mutex);
 
@@ -1515,7 +1487,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
-	}
+	};
 
 	// must be protected in case this interrupts a UPnPEventProcessing
 	LOG_INFO("stopping devices ...", NULL);

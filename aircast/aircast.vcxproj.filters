@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\common\dmap-parser\dmap_parser.c" />
+    <ClCompile Include="nanopb\pb_common.c" />
+    <ClCompile Include="nanopb\pb_decode.c" />
+    <ClCompile Include="nanopb\pb_encode.c" />
+    <ClCompile Include="src\aircast.c" />
+    <ClCompile Include="src\castcore.c" />
+    <ClCompile Include="src\castmessage.pb.c" />
+    <ClCompile Include="src\cast_parse.c" />
+    <ClCompile Include="src\cast_util.c" />
+    <ClCompile Include="src\config_cast.c" />
+    <ClCompile Include="..\common\crosstools\src\cross_log.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\cross_net.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\cross_ssl.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\cross_thread.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\cross_util.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\platform.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\common\libcodecs\targets\win32\$(PlatformTarget)\libcodecs.lib" />
+    <Library Include="..\common\libmdns\targets\win32\$(PlatformTarget)\libmdns.lib" />
+    <Library Include="..\common\pthreads4w\targets\win32\$(PlatformTarget)\libpthreadVC3d.lib" />
+    <Library Include="..\common\libpupnp\targets\win32\$(PlatformTarget)\libpupnp.lib" />
+    <Library Include="libjansson\targets\win32\$(PlatformTarget)\libjansson.lib" />
+    <Library Include="..\common\raoptools\targets\win32\x86\libraop.lib" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="crosstools">
+      <UniqueIdentifier>{206efa88-95f2-4ef6-866d-71dce0afa8f9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

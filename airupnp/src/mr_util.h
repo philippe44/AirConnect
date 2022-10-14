@@ -18,8 +18,7 @@
  *
  */
 
-#ifndef __MR_UTIL_H
-#define __MR_UTIL_H
+#pragma once
 
 #include "airupnp.h"
 
@@ -47,4 +46,3 @@ char 	   	 *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, ch
 
 char*		 uPNPEvent2String(Upnp_EventType S);
 
-#endif

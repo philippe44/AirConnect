@@ -1,22 +1,13 @@
-/*                                                         		// slave becoming master again
- *  AirUPnP - AirPlay to uPNP gateway
+/*
+ * AirUPnP - Renderer utils
  *
- *	(c) Philippe, philippe_44@outlook.com
+ * (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * See LICENSE
  *
  */
+
+#include <string.h>
 
 #include "platform.h"
 #include "ixml.h"
@@ -25,16 +16,15 @@
 #include "avt_util.h"
 #include "upnpdebug.h"
 #include "upnptools.h"
-#include "util.h"
 #include "mr_util.h"
-#include "log_util.h"
+#include "cross_thread.h"
+#include "cross_log.h"
 
 extern log_level	util_loglevel;
 static log_level 	*loglevel = &util_loglevel;
 
 static IXML_Node*	_getAttributeNode(IXML_Node *node, char *SearchAttr);
 int 				_voidHandler(Upnp_EventType EventType, const void *_Event, void *Cookie) { return 0; }
-
 
 /*----------------------------------------------------------------------------*/
 int CalcGroupVolume(struct sMR *Device) {
@@ -149,7 +139,7 @@ void FlushMRDevices(void)
 		if (p->Running) {
 			// critical to stop the device otherwise libupnp might wait forever
 			if (p->RaopState == RAOP_PLAY) AVTStop(p);
-			raop_delete(p->Raop);
+			raopsr_delete(p->Raop);
 			// device's mutex returns unlocked
 			DelMRDevice(p);
 		} else pthread_mutex_unlock(&p->Mutex);
@@ -176,13 +166,12 @@ void DelMRDevice(struct sMR *p)
 	p->Running = false;
 
 	// kick-up all sleepers
-	WakeAll();
+	crossthreads_wake();
 
 	pthread_mutex_unlock(&p->Mutex);
 	pthread_join(p->Thread, NULL);
 
 	AVTActionFlush(&p->ActionQueue);
-	free_metadata(&p->MetaData);
 }
 
 

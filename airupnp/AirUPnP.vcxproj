@@ -15,27 +15,28 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\dmap-parser\dmap_parser.c" />
-    <ClCompile Include="..\common\alac.c" />
-    <ClCompile Include="..\common\base64.c" />
-    <ClCompile Include="..\common\hairtunes.c" />
-    <ClCompile Include="..\common\raopcore.c" />
-    <ClCompile Include="..\common\util.c" />
-    <ClCompile Include="..\tools\log_util.c" />
-    <ClCompile Include="..\tools\platform.c" />
-    <ClCompile Include="..\tools\sslsym.c">
-      <LanguageStandard_C>stdc11</LanguageStandard_C>
+    <ClCompile Include="..\common\crosstools\src\cross_log.c" />
+    <ClCompile Include="..\common\crosstools\src\cross_net.c" />
+    <ClCompile Include="..\common\crosstools\src\cross_ssl.c">
+      <LanguageStandard_C Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">stdc11</LanguageStandard_C>
+      <LanguageStandard_C Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">stdc11</LanguageStandard_C>
+      <LanguageStandard_C Condition="'$(Configuration)|$(Platform)'=='Static|Win32'">stdc11</LanguageStandard_C>
     </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\cross_thread.c" />
+    <ClCompile Include="..\common\crosstools\src\cross_util.c" />
+    <ClCompile Include="..\common\crosstools\src\platform.c" />
     <ClCompile Include="src\airupnp.c" />
     <ClCompile Include="src\avt_util.c" />
     <ClCompile Include="src\config_upnp.c" />
     <ClCompile Include="src\mr_util.c" />
   </ItemGroup>
   <ItemGroup>
+    <Library Include="..\..\libopenssl\targets\win32\x86\libopenssl-dll.lib" />
     <Library Include="..\common\libcodecs\targets\win32\$(PlatformTarget)\libcodecs.lib" />
     <Library Include="..\common\libmdns\targets\win32\$(PlatformTarget)\libmdns.lib" />
     <Library Include="..\common\pthreads4w\targets\win32\$(PlatformTarget)\libpthreadVC3d.lib" />
     <Library Include="..\common\libpupnp\targets\win32\$(PlatformTarget)\libpupnp.lib" />
+    <Library Include="..\common\raoptools\targets\win32\x86\libraop.lib" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -75,11 +76,12 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4129;4018;4244;4101;4267;4102;4068;4142</DisableSpecificWarnings>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>UPNP_STATIC_LIB;FLAC__NO_DLL;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UPNP_STATIC_LIB;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BaseCommon);$(BaseCommon)\libopenssl\targets\win32\$(PlatformTarget)\include;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\addons;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\upnp;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\ixml;$(BaseCommon)\libmdns\targets\include\tinysvcmdns;$(BaseCommon)\libmdns\targets\include\mdnssd;$(BaseCommon)\pthreads4w\targets\win32\$(PlatformTarget)\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\libcodecs\targets\include\flac;$(BaseCommon)\libcodecs\targets\include\shine;$(BaseCommon)\libcodecs\targets\include\addons;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BaseCommon)\raoptools\targets\include;$(BaseCommon)\crosstools\src;$(BaseCommon)\libopenssl\targets\win32\$(PlatformTarget)\include;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\addons;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\upnp;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\ixml;$(BaseCommon)\libmdns\targets\include\tinysvcmdns;$(BaseCommon)\libmdns\targets\include\mdnssd;$(BaseCommon)\pthreads4w\targets\win32\$(PlatformTarget)\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\libcodecs\targets\include\flac;$(BaseCommon)\libcodecs\targets\include\shine;$(BaseCommon)\libcodecs\targets\include\addons;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ProgramDataBaseFileName>$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pdb</ProgramDataBaseFileName>
+      <LanguageStandard_C Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

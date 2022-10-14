@@ -1,33 +1,19 @@
 /*
- *  UPnP control utils
+ * AirUPnP - UPnP control utils
  *
- *	(c) Philippe, philippe_44@outlook.com
+ * (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * see LICENSE
  *
  */
 
-
 #include <stdlib.h>
-#include <math.h>
 
 #include "platform.h"
 #include "ixmlextra.h"
 #include "upnptools.h"
-#include "upnp.h"
 #include "airupnp.h"
-#include "util.h"
+#include "cross_log.h"
 #include "avt_util.h"
 
 /*
@@ -61,7 +47,7 @@ bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 		tAction *Action = malloc(sizeof(tAction));
 		Action->Device = Device;
 		Action->ActionNode = ActionNode;
-		QueueInsert(&Device->ActionQueue, Action);
+		queue_insert(&Device->ActionQueue, Action);
 	}
 
 	return (rc == 0);
@@ -69,11 +55,11 @@ bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 
 
 /*----------------------------------------------------------------------------*/
-void AVTActionFlush(tQueue *Queue)
+void AVTActionFlush(queue_t *Queue)
 {
 	tAction *Action;
 
-	while ((Action = QueueExtract(Queue)) != NULL) {
+	while ((Action = queue_extract(Queue)) != NULL) {
 		free(Action);
 	}
 }

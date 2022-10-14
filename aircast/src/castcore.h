@@ -1,31 +1,22 @@
 /*
- *  Chromecast protocol handler
+ *  Chromecast core protocol handler
  *
  *  (c) Philippe 2016-2017, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * See LICENSE
  *
  */
 
-#ifndef __CASTCORE_H
-#define __CASTCORE_H
+#pragma once
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
+#include "cross_util.h"
+
 #include "aircast.h"
+
 
 #include "openssl/crypto.h"
 #include "openssl/x509.h"
@@ -62,7 +53,7 @@ typedef struct sCastCtx {
 	enum { CAST_WAIT, CAST_WAIT_MEDIA } State;
 	struct in_addr	ip;
 	uint16_t		port;
-	tQueue			eventQueue, reqQueue;
+	queue_t			eventQueue, reqQueue;
 	double 			MediaVolume;
 	uint32_t		lastPong;
 	bool			group;
@@ -80,8 +71,7 @@ typedef struct {
 bool 	SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, ...);
 bool 	LaunchReceiver(tCastCtx *Ctx);
 void 	SetVolume(tCastCtx *Ctx, double Volume);
-void 	CastQueueFlush(tQueue *Queue);
+void 	CastQueueFlush(queue_t *Queue);
 bool	CastConnect(struct sCastCtx *Ctx);
 void 	CastDisconnect(struct sCastCtx *Ctx);
 
-#endif

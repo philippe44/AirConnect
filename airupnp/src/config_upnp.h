@@ -19,8 +19,7 @@
  *
  */
 
-#ifndef __CONFIG_XML_H
-#define __CONFIG_XML_H
+#pragma once
 
 #include <stdlib.h>
 #include <string.h>
@@ -32,5 +31,3 @@ void	  	SaveConfig(char *name, void *ref, bool full);
 void*		LoadConfig(char *name, struct sMRConfig *Conf);
 void*		FindMRConfig(void *ref, char *UDN);
 void*		LoadMRConfig(void *ref, char *UDN, struct sMRConfig *Conf);
-
-#endif

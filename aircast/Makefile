@@ -11,20 +11,20 @@ BUILDDIR	= build/$(PLATFORM)
 EXECUTABLE	= $(BASE)/bin/aircast-$(PLATFORM)
 EXECUTABLE_STATIC	= $(BASE)/bin/aircast-$(PLATFORM)-static
 
-TOOLS		= $(BASE)/tools
+SRC			= src
+TOOLS		= $(COMMON)/crosstools/src
 COMMON		= $(BASE)/common
-SRC		= ./src
 MDNS		= $(COMMON)/libmdns/targets
+RAOP		= $(COMMON)/raoptools/targets
 #VALGRIND	= $(BASE)/valgrind
 PUPNP 		= $(COMMON)/libpupnp/targets/$(HOST)/$(PLATFORM)
 CODECS		= $(COMMON)/libcodecs/targets
-DMAP_PARSER	= $(COMMON)/dmap-parser
 OPENSSL		= $(COMMON)/libopenssl/targets/$(HOST)/$(PLATFORM)
 NANOPB		= nanopb
 JANSSON		= libjansson/targets/$(HOST)/$(PLATFORM)
 
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUPNP_STATIC_LIB
-CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
+CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
 LDFLAGS 	+= -s -lpthread -ldl -lm -lrt -L. 
 
 ifeq ($(OS),Darwin)
@@ -33,14 +33,12 @@ else ifneq ($(OS), SunOS)
 LDFLAGS 	+= -Wl,--gc-sections
 endif
 
-vpath %.c $(TOOLS):$(COMMON):$(SRC):$(NANOPB):$(DMAP_PARSER)
+vpath %.c $(TOOLS):$(SRC):$(NANOPB)
 
-INCLUDE = -I. \
-		  -I$(OPENSSL)/include \
-		  -I$(DMAP_PARSER) \
+INCLUDE = -I$(OPENSSL)/include \
 		  -I$(TOOLS) \
-		  -I$(COMMON) \
 		  -I$(SRC)/inc \
+		  -I$(RAOP)/include \
 		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
 		  -I$(CODECS)/include/flac -I$(CODECS)/include/shine \
 		  -I$(MDNS)/include/tinysvcmdns -I$(MDNS)/include/mdnssd \
@@ -50,16 +48,16 @@ INCLUDE = -I. \
 DEPS	= $(SRC)/aircast.h
 				  
 SOURCES = castcore.c castmessage.pb.c aircast.c cast_util.c cast_parse.c config_cast.c  \
-	  alac.c base64.c hairtunes.c raopcore.c util.c log_util.c platform.c \
+	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
 	  pb_common.c pb_decode.c pb_encode.c \
-	  dmap_parser.c
 		
 SOURCES_LIBS = sslsym.c
 		
 OBJECTS 		= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES) $(SOURCES_LIBS)) 
 OBJECTS_STATIC 	= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES)) $(patsubst %.c,$(BUILDDIR)/%-static.o,$(SOURCES_LIBS)) 
 
-LIBRARY		= $(PUPNP)/libpupnp.a \
+LIBRARY		= $(RAOP)/$(HOST)/$(PLATFORM)/libraop.a \
+			  $(PUPNP)/libpupnp.a \
 			  $(CODECS)/$(HOST)/$(PLATFORM)/libcodecs.a \
 			  $(MDNS)/$(HOST)/$(PLATFORM)/libmdns.a \
 			  $(JANSSON)/libjansson.a

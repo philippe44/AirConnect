@@ -1,32 +1,29 @@
 /*
- * Chromecast protocol handler
+ * Chromecast core protocol handler
  *
  *  (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * See LICENSE
  *
  */
 
+#include <stdlib.h>
 #include <stdarg.h>
 
+#include "cross_log.h"
+#include "cross_thread.h"
 
-#include "log_util.h"
-#include "util.h"
 #include "cast_parse.h"
 #include "castcore.h"
 #include "castitf.h"
 
+#ifdef _WIN32
+#define bswap32(n) _byteswap_ulong((n))
+#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define	bswap32(n) __builtin_bswap32((n))
+#else 
+#define bswap32(n) (n)
+#endif
 
 #define SELECT_SOCKET
 
@@ -106,44 +103,13 @@ static int connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t a
 	return -1;
 }
 
-
 /*----------------------------------------------------------------------------*/
-void InitSSL(void)
-{
-	const SSL_METHOD *method;
-
-	// build the SSL objects...
-	method = SSLv23_client_method();
-
-	glSSLctx = SSL_CTX_new(method);
-	SSL_CTX_set_options(glSSLctx, SSL_OP_NO_SSLv2);
+static void CastExit(void) {
+	if (glSSLctx) SSL_CTX_free(glSSLctx);
 }
 
-
 /*----------------------------------------------------------------------------*/
-void EndSSL(void)
-{
-	SSL_CTX_free(glSSLctx);
-}
-
-
-/*----------------------------------------------------------------------------*/
-void swap32(uint32_t *n)
-{
-#if SL_LITTLE_ENDIAN
-	uint32_t buf = *n;
-	*n = 	(((uint8_t) (buf >> 24))) +
-		(((uint8_t) (buf >> 16)) << 8) +
-		(((uint8_t) (buf >> 8)) << 16) +
-		(((uint8_t) (buf)) << 24);
-#else
-#endif
-}
-
-
-/*----------------------------------------------------------------------------*/
-bool read_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, uint16_t bytes)
-{
+static bool read_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, uint16_t bytes) {
 	uint16_t read = 0;
 	sockfd sock = SSL_get_fd(ssl);
 
@@ -180,23 +146,17 @@ bool read_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, uint16_t bytes)
 	return true;
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool write_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, uint16_t bytes)
-{
-	bool ret;
-
+static bool write_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, uint16_t bytes) {
 	pthread_mutex_lock(Mutex);
-	ret = SSL_write(ssl, buffer, bytes) > 0;
+	bool ret = SSL_write(ssl, buffer, bytes) > 0;
 	pthread_mutex_unlock(Mutex);
 
 	return ret;
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, ...)
-{
+ bool SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, ...) {
 	CastMessage message = CastMessage_init_default;
 	pb_ostream_t stream;
 	uint8_t *buffer;
@@ -216,8 +176,7 @@ bool SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, 
 	if ((buffer = malloc(buffer_len)) == NULL) return false;
 	stream = pb_ostream_from_buffer(buffer, buffer_len);
 	status = pb_encode(&stream, CastMessage_fields, &message);
-	len = stream.bytes_written;
-	swap32(&len);
+	len = bswap32(stream.bytes_written);
 
 	status &= write_bytes(&Ctx->sslMutex, Ctx->ssl, &len, 4);
 	status &= write_bytes(&Ctx->sslMutex, Ctx->ssl, buffer, stream.bytes_written);
@@ -231,58 +190,45 @@ bool SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, 
 	return status;
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool DecodeCastMessage(uint8_t *buffer, uint16_t len, CastMessage *msg)
-{
-	bool status;
+static bool DecodeCastMessage(uint8_t *buffer, uint16_t len, CastMessage *msg) {
 	CastMessage message = CastMessage_init_zero;
 	pb_istream_t stream = pb_istream_from_buffer(buffer, len);
 
-	status = pb_decode(&stream, CastMessage_fields, &message);
+	bool status = pb_decode(&stream, CastMessage_fields, &message);
 	memcpy(msg, &message, sizeof(CastMessage));
 	return status;
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool GetNextMessage(pthread_mutex_t *Mutex, SSL *ssl, CastMessage *message)
-{
-	bool status;
+static bool GetNextMessage(pthread_mutex_t *Mutex, SSL *ssl, CastMessage *message) {
 	uint32_t len;
 	uint8_t *buf;
 
 	// the SSL might just have been closed by another thread
 	if (!ssl || !read_bytes(Mutex, ssl, &len, 4)) return false;
 
-	swap32(&len);
-	if ((buf = malloc(len))== NULL) return false;
-	status = read_bytes(Mutex, ssl, buf, len);
+	len = bswap32(len);
+	if ((buf = malloc(len)) == NULL) return false;
+	bool status = read_bytes(Mutex, ssl, buf, len);
 	status &= DecodeCastMessage(buf, len, message);
+
 	free(buf);
 	return status;
 }
 
-
-
 /*----------------------------------------------------------------------------*/
-json_t *GetTimedEvent(void *p, uint32_t msWait)
-{
-	json_t *data;
-	tCastCtx *Ctx = (tCastCtx*) p;
-
+json_t *GetTimedEvent(struct sCastCtx *Ctx, uint32_t msWait) {
 	pthread_mutex_lock(&Ctx->eventMutex);
 	pthread_cond_reltimedwait(&Ctx->eventCond, &Ctx->eventMutex, msWait);
-	data = QueueExtract(&Ctx->eventQueue);
+	json_t* data = queue_extract(&Ctx->eventQueue);
 	pthread_mutex_unlock(&Ctx->eventMutex);
 
 	return data;
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool LaunchReceiver(tCastCtx *Ctx)
-{
+bool LaunchReceiver(tCastCtx *Ctx) {
 	// try to reconnect if SSL connection is lost
 	if (!CastConnect(Ctx)) {
 		pthread_mutex_unlock(&Ctx->Mutex);
@@ -306,7 +252,7 @@ bool LaunchReceiver(tCastCtx *Ctx)
 			} else {
 				tReqItem *req = malloc(sizeof(tReqItem));
 				strcpy(req->Type, "LAUNCH");
-				QueueInsert(&Ctx->reqQueue, req);
+				queue_insert(&Ctx->reqQueue, req);
 				LOG_INFO("[%p]: Queuing %s", Ctx->owner, req->Type);
 			 }
 			break;
@@ -320,10 +266,8 @@ bool LaunchReceiver(tCastCtx *Ctx)
 	return true;
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool CastConnect(struct sCastCtx *Ctx)
-{
+bool CastConnect(struct sCastCtx *Ctx) {
 	int err;
 	struct sockaddr_in addr;
 
@@ -371,15 +315,13 @@ bool CastConnect(struct sCastCtx *Ctx)
 	pthread_mutex_unlock(&Ctx->Mutex);
 
 	// wake up everybody who can be waiting
-	WakeAll();
+	crossthreads_wake();
 
 	return true;
 }
 
-
 /*----------------------------------------------------------------------------*/
-void CastDisconnect(struct sCastCtx *Ctx)
-{
+void CastDisconnect(struct sCastCtx *Ctx) {
 	pthread_mutex_lock(&Ctx->Mutex);
 
 	// powered off already
@@ -393,7 +335,7 @@ void CastDisconnect(struct sCastCtx *Ctx)
 	Ctx->Status = CAST_DISCONNECTED;
 	NFREE(Ctx->sessionId);
 	NFREE(Ctx->transportId);
-	QueueFlush(&Ctx->eventQueue);
+	queue_flush(&Ctx->eventQueue);
 	CastQueueFlush(&Ctx->reqQueue);
 
 	SSL_shutdown(Ctx->ssl);
@@ -403,10 +345,8 @@ void CastDisconnect(struct sCastCtx *Ctx)
 	pthread_mutex_unlock(&Ctx->Mutex);
 }
 
-
 /*----------------------------------------------------------------------------*/
-void SetMediaVolume(tCastCtx *Ctx, double Volume)
-{
+void SetMediaVolume(tCastCtx *Ctx, double Volume) {
 	if (Volume > 1.0) Volume = 1.0;
 
 	Ctx->waitId = Ctx->reqId++;
@@ -416,14 +356,17 @@ void SetMediaVolume(tCastCtx *Ctx, double Volume)
 						Ctx->waitId, Ctx->mediaSessionId, Volume);
 }
 
-
-
 /*----------------------------------------------------------------------------*/
-
-void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, uint16_t port, double MediaVolume)
-{
+void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, uint16_t port, double MediaVolume) {
 	tCastCtx *Ctx = malloc(sizeof(tCastCtx));
 	pthread_mutexattr_t mutexAttr;
+
+	if (!glSSLctx) {
+		const SSL_METHOD* method = SSLv23_client_method();
+		glSSLctx = SSL_CTX_new(method);
+		SSL_CTX_set_options(glSSLctx, SSL_OP_NO_SSLv2);
+		atexit(CastExit);
+	}
 
 	Ctx->reqId 		= 1;
 	Ctx->waitId 	= Ctx->waitMedia = Ctx->mediaSessionId = 0;
@@ -437,8 +380,8 @@ void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_add
 	Ctx->stopReceiver = stopReceiver;
 	Ctx->ssl  		= SSL_new(glSSLctx);
 
-	QueueInit(&Ctx->eventQueue, false, NULL);
-	QueueInit(&Ctx->reqQueue, false, NULL);
+	queue_init(&Ctx->eventQueue, false, NULL);
+	queue_init(&Ctx->reqQueue, false, NULL);
 	pthread_mutexattr_init(&mutexAttr);
 	pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&Ctx->Mutex, &mutexAttr);
@@ -453,10 +396,8 @@ void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_add
 	return Ctx;
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, uint16_t port)
-{
+bool UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, uint16_t port) {
 	if (Ctx->port != port || Ctx->ip.s_addr != ip.s_addr) {
 		LOG_INFO("[%p]: changed ip:port %s:%d", Ctx, inet_ntoa(ip), port);
 		pthread_mutex_lock(&Ctx->Mutex);
@@ -469,17 +410,13 @@ bool UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, uint16_t port)
 	return false;
 }
 
-
 /*----------------------------------------------------------------------------*/
-struct in_addr GetAddr(struct sCastCtx *Ctx)
-{
+struct in_addr GetAddr(struct sCastCtx *Ctx) {
 	return Ctx->ip;
 }
 
-
 /*----------------------------------------------------------------------------*/
-void DeleteCastDevice(struct sCastCtx *Ctx)
-{
+void DeleteCastDevice(struct sCastCtx *Ctx) {
 	pthread_mutex_lock(&Ctx->Mutex);
 	Ctx->running = false;
 	pthread_mutex_unlock(&Ctx->Mutex);
@@ -487,7 +424,7 @@ void DeleteCastDevice(struct sCastCtx *Ctx)
 	CastDisconnect(Ctx);
 
 	// wake up cast communication & ping threads
-	WakeAll();
+	crossthreads_wake();
 
 	pthread_join(Ctx->PingThread, NULL);
 	pthread_join(Ctx->Thread, NULL);
@@ -507,24 +444,21 @@ void DeleteCastDevice(struct sCastCtx *Ctx)
 	free(Ctx);
 }
 
-
 /*----------------------------------------------------------------------------*/
-void CastQueueFlush(tQueue *Queue)
-{
+void CastQueueFlush(queue_t *Queue) {
 	tReqItem *item;
 
-	while ((item = QueueExtract(Queue)) != NULL) {
+	while ((item = queue_extract(Queue)) != NULL) {
 		if (!strcasecmp(item->Type,"LOAD")) json_decref(item->data.msg);
 		free(item);
 	}
 }
 
-
 /*----------------------------------------------------------------------------*/
 void ProcessQueue(tCastCtx *Ctx) {
 	tReqItem *item;
 
-	if ((item = QueueExtract(&Ctx->reqQueue)) == NULL) return;
+	if ((item = queue_extract(&Ctx->reqQueue)) == NULL) return;
 
 	if (!strcasecmp(item->Type, "LAUNCH")) {
 		Ctx->waitId = Ctx->reqId++;
@@ -635,10 +569,8 @@ void ProcessQueue(tCastCtx *Ctx) {
    free(item);
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void *CastPingThread(void *args)
-{
+static void *CastPingThread(void *args) {
 	tCastCtx *Ctx = (tCastCtx*) args;
 	uint32_t last = gettime_ms();
 
@@ -666,7 +598,7 @@ static void *CastPingThread(void *args)
 			last = now;
 		}
 
-		WakeableSleep(1500);
+		crossthreads_sleep(1500);
 	}
 
 	// clear SSL error allocated memorry
@@ -675,10 +607,8 @@ static void *CastPingThread(void *args)
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void *CastSocketThread(void *args)
-{
+static void *CastSocketThread(void *args) {
 	tCastCtx *Ctx = (tCastCtx*) args;
 	CastMessage Message;
 	json_t *root, *val;
@@ -693,7 +623,7 @@ static void *CastSocketThread(void *args)
 
 		// allow "virtual" power off
 		if (Ctx->Status == CAST_DISCONNECTED) {
-			WakeableSleep(0);
+			crossthreads_sleep(0);
 			continue;
 		}
 
@@ -812,7 +742,7 @@ static void *CastSocketThread(void *args)
 		// queue event and signal handler
 		if (forward) {
 			pthread_mutex_lock(&Ctx->eventMutex);
-			QueueInsert(&Ctx->eventQueue, root);
+			queue_insert(&Ctx->eventQueue, root);
 			pthread_cond_signal(&Ctx->eventCond);
 			pthread_mutex_unlock(&Ctx->eventMutex);
 		}
@@ -823,8 +753,3 @@ static void *CastSocketThread(void *args)
 
 	return NULL;
 }
-
-
-
-
-

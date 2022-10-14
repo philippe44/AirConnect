@@ -3,27 +3,15 @@
  *
  *  (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * See LICENSE
  *
  */
 
 
 #include <stdlib.h>
-#include <math.h>
 
 #include "platform.h"
-#include "log_util.h"
+#include "cross_log.h"
 #include "jansson.h"
 #include "cast_parse.h"
 
@@ -41,11 +29,10 @@ extern log_level cast_loglevel;
 const char *GetAppIdItem(json_t *root, char* appId, char *item)
 {
 	json_t *elm;
-	unsigned i;
 
 	if ((elm = json_object_get(root, "status")) == NULL) return NULL;
 	if ((elm = json_object_get(elm, "applications")) == NULL) return NULL;
-	for (i = 0; i < json_array_size(elm); i++) {
+	for (int i = 0; i < json_array_size(elm); i++) {
 		json_t *id, *data = json_array_get(elm, i);
 		id = json_object_get(data, "appId");
 		if (strcasecmp(json_string_value(id), appId)) continue;

@@ -3,38 +3,31 @@
  *
  *  (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * See LICENSE
  *
  */
 
-#include <math.h>
-#include <fcntl.h>
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+#include <process.h>
+#endif
+
+#include "cross_net.h"
+#include "cross_util.h"
+#include "cross_thread.h"
+#include "cross_log.h"
+#include "cross_ssl.h"
 
 #include "aircast.h"
-#include "log_util.h"
-#include "util.h"
 #include "cast_util.h"
 #include "cast_parse.h"
 #include "castitf.h"
 #include "mdnssd.h"
 #include "tinysvcmdns.h"
-#include "raopcore.h"
 #include "config_cast.h"
-#include "sslsym.h"
+#include "ixml.h"
 
 #define VERSION "v0.3.00.0"" ("__DATE__" @ "__TIME__")"
 
@@ -94,7 +87,7 @@ static char					*glPidFile = NULL;
 static bool					glAutoSaveConfigFile = false;
 static bool					glGracefullShutdown = true;
 static void					*glConfigID = NULL;
-static char					glConfigName[_STR_LEN_] = "./config.xml";
+static char					glConfigName[STR_LEN] = "./config.xml";
 static struct mdnsd*		glmDNSServer = NULL;
 
 static char usage[] =
@@ -169,7 +162,7 @@ static void  RemoveCastDevice(struct sMR *Device);
 static bool	 Start(bool cold);
 static bool	 Stop(bool exit);
 
-void raop_cb(void *owner, raop_event_t event, void *param)
+void raop_cb(void *owner, raopsr_event_t event, void *param)
 {
 	struct sMR *Device = (struct sMR*) owner;
 
@@ -206,9 +199,9 @@ void raop_cb(void *owner, raop_event_t event, void *param)
 			break;
 		case RAOP_PLAY: {
 			metadata_t MetaData = { "", "", "Streaming from AirConnect",
-									"", "", NULL, 0, 0, 0 };
+									"", "", "", "", 0, 0, 0, 0, 0, 0};
 
-			if (*Device->Config.ArtWork) MetaData.artwork = Device->Config.ArtWork;
+			if (*Device->Config.ArtWork) strncpy(MetaData.artwork, Device->Config.ArtWork, sizeof(MetaData.artwork) - 1);
 
 			LOG_INFO("[%p]: Play", Device);
 			if (Device->RaopState != RAOP_PLAY) {
@@ -290,20 +283,20 @@ static void *MRThread(void *args)
 				if (state && !strcasecmp(state, "PLAYING") && p->State != PLAYING) {
 					LOG_INFO("[%p]: Cast playing", p);
 					p->State = PLAYING;
-					if (p->RaopState != RAOP_PLAY) raop_notify(p->Raop, RAOP_PLAY, NULL);
+					if (p->RaopState != RAOP_PLAY) raopsr_notify(p->Raop, RAOP_PLAY, NULL);
 				}
 
 				if (state && !strcasecmp(state, "PAUSED") && p->State == PLAYING) {
 					LOG_INFO("[%p]: Cast pause", p);
 					p->State = PAUSED;
-					if (p->RaopState == RAOP_PLAY) raop_notify(p->Raop, RAOP_PAUSE, NULL);
+					if (p->RaopState == RAOP_PLAY) raopsr_notify(p->Raop, RAOP_PAUSE, NULL);
 				}
 
 				if (state && !strcasecmp(state, "IDLE") && p->State != STOPPED) {
 					const char *cause = GetMediaItem_S(data, 0, "idleReason");
 					if (cause && !p->ExpectStop) {
 						LOG_INFO("[%p]: Cast stopped by other remote", p);
-						if (p->RaopState == RAOP_PLAY) raop_notify(p->Raop, RAOP_STOP, NULL);
+						if (p->RaopState == RAOP_PLAY) raopsr_notify(p->Raop, RAOP_STOP, NULL);
 						p->ExpectStop = false;
 					}
 					p->State = STOPPED;
@@ -323,8 +316,9 @@ static void *MRThread(void *args)
 			// now apply the volume change if any
 			if (Volume != -1 && fabs(Volume - p->Volume) >= 0.01 && now > p->VolumeStampTx + 1000) {
 				p->VolumeStampRx = now;
+				p->VolumeStampRx = now;
 				LOG_INFO("[%p]: Volume local change %0.4lf", p, Volume);
-				raop_notify(p->Raop, RAOP_VOLUME, &Volume);
+				raopsr_notify(p->Raop, RAOP_VOLUME, &Volume);
 				Volume = -1;
 			}
 
@@ -334,7 +328,7 @@ static void *MRThread(void *args)
 			// Cast devices has closed the connection
 			if (type && !strcasecmp(type, "CLOSE")) {
 				LOG_INFO("[%p]: Cast peer closed connection", p);
-				if (p->State != STOPPED) raop_notify(p->Raop, RAOP_STOP, NULL);
+				if (p->State != STOPPED) raopsr_notify(p->Raop, RAOP_STOP, NULL);
 				p->State = STOPPED;
 			}
 
@@ -359,9 +353,7 @@ static void *MRThread(void *args)
 /*----------------------------------------------------------------------------*/
 char *GetmDNSAttribute(txt_attr_t *p, int count, char *name)
 {
-	int j;
-
-	for (j = 0; j < count; j++)
+	for (int j = 0; j < count; j++)
 		if (!strcasecmp(p[j].name, name))
 			return strdup(p[j].value);
 
@@ -372,9 +364,7 @@ char *GetmDNSAttribute(txt_attr_t *p, int count, char *name)
 /*----------------------------------------------------------------------------*/
 static struct sMR *SearchUDN(char *UDN)
 {
-	int i;
-
-	for (i = 0; i < glMaxDevices; i++) {
+	for (int i = 0; i < glMaxDevices; i++) {
 		if (glMRDevices[i].Running && !strcmp(glMRDevices[i].UDN, UDN))
 			return glMRDevices + i;
 	}
@@ -385,8 +375,7 @@ static struct sMR *SearchUDN(char *UDN)
 
 /*----------------------------------------------------------------------------*/
 static bool isMember(struct in_addr host) {
-	int i;
-	for (i = 0; i < glMaxDevices; i++) {
+	for (int i = 0; i < glMaxDevices; i++) {
 		 if (glMRDevices[i].Running && GetAddr(glMRDevices[i].CastCtx).s_addr == host.s_addr)
 			return true;
 	}
@@ -444,12 +433,12 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 						Device->Remove = false;
 						// changing the master, so need to update cast params
 						if (Device->GroupMaster->Host.s_addr == s->host.s_addr) {
-							free(pop_item((list_t**) &Device->GroupMaster));
+							free(list_pop((list_t**) &Device->GroupMaster));
 							UpdateCastDevice(Device->CastCtx, Device->GroupMaster->Host, Device->GroupMaster->Port);
 						} else {
 							struct sGroupMember *Member = Device->GroupMaster;
 							while (Member && (Member->Host.s_addr != s->host.s_addr)) Member = Member->Next;
-							if (Member) free(remove_item((list_t*) Member, (list_t**) &Device->GroupMaster));
+							if (Member) free(list_remove((list_t*) Member, (list_t**) &Device->GroupMaster));
 						}
 					}
 				}
@@ -462,7 +451,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 					struct sGroupMember *Member = calloc(1, sizeof(struct sGroupMember));
 					Member->Host = s->host;
 					Member->Port = s->port;
-					push_item((list_t*) Member, (list_t**) &Device->GroupMaster);
+					list_push((list_t*) Member, (list_t**) &Device->GroupMaster);
 				}
 				
 				UpdateCastDevice(Device->CastCtx, s->addr, s->port);
@@ -472,7 +461,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 					!strncmp(Device->Name, Device->Config.Name, strlen(Device->Name)) &&
 					Device->Config.Name[strlen(Device->Config.Name) - 1] == '+') {
 					LOG_INFO("[%p]: Device name change %s %s", Device, Name, Device->Name);
-					raop_update(Device->Raop, Name, "aircast");
+					raopsr_update(Device->Raop, Name, "aircast");
 					strcpy(Device->Name, Name);
 					sprintf(Device->Config.Name, "%s+", Name);
 				}
@@ -512,7 +501,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		if (!Name) Name = strdup(s->hostname);
 		
 		if (AddCastDevice(Device, Name, UDN, Group, s->addr, s->port) && !glDiscovery) {
-			Device->Raop = raop_create(glHost, glmDNSServer, Device->Config.Name,
+			Device->Raop = raopsr_create(glHost, glmDNSServer, Device->Config.Name,
 										"aircast", Device->Config.mac, Device->Config.Codec,
 										Device->Config.Metadata, Device->Config.Drift,
 										Device->Config.Flush, Device->Config.Latency,
@@ -538,7 +527,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 
 			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
 
-			raop_delete(Device->Raop);
+			raopsr_delete(Device->Raop);
 			RemoveCastDevice(Device);
 
 		}
@@ -571,7 +560,7 @@ static void *MainThread(void *args)
 {
 	while (glMainRunning) {
 
-		WakeableSleep(30*1000);
+		crossthreads_sleep(30*1000);
 		if (!glMainRunning) break;
 
 		if (glLogFile && glLogLimit != - 1) {
@@ -601,7 +590,7 @@ static void *MainThread(void *args)
 		// try to detect IP change when auto-detect
 		if (strstr(glBinding, "?")) {
 			struct in_addr host;
-			host.s_addr = get_localhost(NULL);
+			get_interface(&host);
 			if (host.s_addr != INADDR_ANY && host.s_addr != glHost.s_addr) {
 				LOG_INFO("IP change detected %s", inet_ntoa(glHost));
 				Stop(false);
@@ -618,9 +607,7 @@ static void *MainThread(void *args)
 /*----------------------------------------------------------------------------*/
 void MakeMacUnique(struct sMR *Device)
 {
-	int i;
-
-	for (i = 0; i < glMaxDevices; i++) {
+	for (int i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
 		if (!memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
 			uint32_t hash = hash32(Device->UDN);
@@ -692,12 +679,10 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 /*----------------------------------------------------------------------------*/
 void FlushCastDevices(void)
 {
-	int i;
-
-	for (i = 0; i < glMaxDevices; i++) {
+	for (int i = 0; i < glMaxDevices; i++) {
 		struct sMR *p = &glMRDevices[i];
 		if (p->Running) {
-			raop_delete(p->Raop);
+			raopsr_delete(p->Raop);
 			RemoveCastDevice(p);
 		 }
 	}
@@ -716,34 +701,29 @@ void RemoveCastDevice(struct sMR *Device)
 
 	pthread_join(Device->Thread, NULL);
 
-	clear_list((list_t**) &Device->GroupMaster, free);
+	list_clear((list_t**) &Device->GroupMaster, free);
 }
 
 /*----------------------------------------------------------------------------*/
-static bool Start(bool cold)
-{
-	int i;
-	char hostname[_STR_LEN_];
+static bool Start(bool cold) {
+	char hostname[STR_LEN];
 
-	glHost.s_addr = get_localhost(&glHostName);
+	get_interface(&glHost);
 	if (!strstr(glBinding, "?")) glHost.s_addr = inet_addr(glBinding);
-	snprintf(hostname, _STR_LEN_, "%s.local", glHostName);
+	snprintf(hostname, STR_LEN, "%s.local", glHostName);
 
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
 
 	if (cold) {
 		// manually load openSSL symbols to accept multiple versions
-		if (!load_ssl_symbols()) {
+		if (!cross_load_ssl()) {
 			LOG_ERROR("Cannot load SSL libraries", NULL);
 			return false;
 		}
 
 		// mutexes must always be valid
 		glMRDevices = calloc(glMaxDevices, sizeof(struct sMR));
-		for (i = 0; i < glMaxDevices; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
-
-		InitUtils();
-		InitSSL();
+		for (int i = 0; i < glMaxDevices; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
 
 		// start the main thread
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
@@ -783,21 +763,14 @@ static bool Stop(bool exit)
 
 	if (exit) {
 		LOG_DEBUG("terminate main thread ...", NULL);
-		WakeAll();
+		crossthreads_wake();
 		pthread_join(glMainThread, NULL);
 		for (i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
-		EndSSL();
-		EndUtils();
-
 		NFREE(glHostName);
 		if (glConfigID) ixmlDocument_free(glConfigID);
-
-#if WIN
-		winsock_close();
-#endif
-
-		free_ssl_symbols();
+		netsock_close();
+		cross_free_ssl();
 	}
 
 	return true;
@@ -805,10 +778,8 @@ static bool Stop(bool exit)
 
 /*---------------------------------------------------------------------------*/
 static void sighandler(int signum) {
-	int i;
-
 	if (!glGracefullShutdown) {
-		for (i = 0; i < glMaxDevices; i++) {
+		for (int i = 0; i < glMaxDevices; i++) {
 			struct sMR *p = &glMRDevices[i];
 			if (p->Running && p->State == PLAYING) CastStop(p->CastCtx);
 		}
@@ -824,10 +795,10 @@ static void sighandler(int signum) {
 /*---------------------------------------------------------------------------*/
 bool ParseArgs(int argc, char **argv) {
 	char *optarg = NULL;
-	int i, optind = 1;
+	int optind = 1;
 	char cmdline[256] = "";
 
-	for (i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < sizeof(cmdline)); i++) {
+	for (int i = 0; i < argc && (strlen(argv[i]) + strlen(cmdline) + 2 < sizeof(cmdline)); i++) {
 		strcat(cmdline, argv[i]);
 		strcat(cmdline, " ");
 	}
@@ -931,9 +902,6 @@ bool ParseArgs(int argc, char **argv) {
 /*----------------------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
-	int i;
-	char resp[20] = "";
-
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);
 #if defined(SIGQUIT)
@@ -943,12 +911,10 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, sighandler);
 #endif
 
-#if WIN
-	winsock_init();
-#endif
+	netsock_init();
 
 	// first try to find a config file on the command line
-	for (i = 1; i < argc; i++) {
+	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "-x")) {
 			strcpy(glConfigName, argv[i+1]);
 		}
@@ -1016,17 +982,15 @@ int main(int argc, char *argv[])
 
 	}
 
-
-	while (strcmp(resp, "exit")) {
-
+	for (char resp[20] = ""; strcmp(resp, "exit");) {
 #if LINUX || FREEBSD || SUNOS
 		if (!glDaemonize && glInteractive)
-			i = scanf("%s", resp);
+			(void)! scanf("%s", resp);
 		else
 			pause();
 #else
 		if (glInteractive)
-			i = scanf("%s", resp);
+			(void)! scanf("%s", resp);
 		else
 #if OSX
 			pause();
@@ -1034,42 +998,38 @@ int main(int argc, char *argv[])
 			Sleep(INFINITE);
 #endif
 #endif
+		char level[20];
 
 		if (!strcmp(resp, "maindbg"))	{
-			char level[20];
-			i = scanf("%s", level);
+			(void)! scanf("%s", level);
 			main_loglevel = debug2level(level);
 		}
 
 		if (!strcmp(resp, "utildbg"))	{
-			char level[20];
-			i = scanf("%s", level);
+			(void)! scanf("%s", level);
 			util_loglevel = debug2level(level);
 		}
 
 		if (!strcmp(resp, "castdbg"))	{
-			char level[20];
-			i = scanf("%s", level);
+			(void)! scanf("%s", level);
 			cast_loglevel = debug2level(level);
 		}
 
 		if (!strcmp(resp, "raopdbg"))	{
-			char level[20];
-			i = scanf("%s", level);
+			(void)! scanf("%s", level);
 			raop_loglevel = debug2level(level);
 		}
 
-
-		 if (!strcmp(resp, "save"))	{
+		if (!strcmp(resp, "save"))	{
 			char name[128];
-			i = scanf("%s", name);
+			(void)! scanf("%s", name);
 			SaveConfig(name, glConfigID, true);
 		}
 
 		if (!strcmp(resp, "dump") || !strcmp(resp, "dumpall"))	{
 			bool all = !strcmp(resp, "dumpall");
 
-			for (i = 0; i < glMaxDevices; i++) {
+			for (int i = 0; i < glMaxDevices; i++) {
 				struct sMR *p = &glMRDevices[i];
 				bool Locked = pthread_mutex_trylock(&p->Mutex);
 
@@ -1084,7 +1044,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
-	}
+	};
 
 	LOG_INFO("stopping Cast devices ...", NULL);
 	Stop(true);

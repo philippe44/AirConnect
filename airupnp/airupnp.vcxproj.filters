@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="src\airupnp.c" />
+    <ClCompile Include="src\avt_util.c" />
+    <ClCompile Include="src\config_upnp.c" />
+    <ClCompile Include="src\mr_util.c" />
+    <ClCompile Include="..\common\crosstools\src\cross_log.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\cross_net.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\cross_ssl.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\cross_thread.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\cross_util.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\crosstools\src\platform.c">
+      <Filter>crosstools</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\common\libcodecs\targets\win32\$(PlatformTarget)\libcodecs.lib" />
+    <Library Include="..\common\libmdns\targets\win32\$(PlatformTarget)\libmdns.lib" />
+    <Library Include="..\common\pthreads4w\targets\win32\$(PlatformTarget)\libpthreadVC3d.lib" />
+    <Library Include="..\common\libpupnp\targets\win32\$(PlatformTarget)\libpupnp.lib" />
+    <Library Include="..\..\libopenssl\targets\win32\x86\libopenssl-dll.lib" />
+    <Library Include="..\common\raoptools\targets\win32\x86\libraop.lib" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="crosstools">
+      <UniqueIdentifier>{327936e6-f488-4665-bacd-e765b0e0d3b1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

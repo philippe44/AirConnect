@@ -1,26 +1,15 @@
 /*
- *  Chromecast control utils
+ *  Chromecast parse utils
  *
  *  (c) Philippe 2016-2017, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * See LICENSE
  *
  */
 
-#ifndef __CAST_PARSE_H
-#define __CAST_PARSE_H
+#pragma once
 
+#include <stdbool.h>
 #include "jansson.h"
 
 int 		GetMediaItem_I(json_t *root, int n, char *item);
@@ -30,5 +19,4 @@ const char* GetAppIdItem(json_t *root, char* appId, char *item);
 const char* GetMediaInfoItem_S(json_t *root, int n, char *item);
 bool 		GetMediaVolume(json_t *root, int n, double *volume, bool *muted);
 
-#endif
 

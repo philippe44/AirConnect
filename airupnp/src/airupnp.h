@@ -1,39 +1,46 @@
 /*
  *  AirUPnP - AirPlay to uPNP gateway
  *
- *	(c) Philippe 2017-, philippe_44@outlook.com
+ *	(c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * See LICENSE
  *
  */
 
-#ifndef __AIRUPNP_H
-#define __AIRUPNP_H
+#pragma once
 
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "platform.h"
-#include "raopcore.h"
-#include "upnp.h"
 #include "pthread.h"
-#include "util.h"
+#include "upnp.h"
+
+#include "platform.h"
+#include "raop_server.h"
+#include "cross_util.h"
+
+#define STR_LEN	256
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
 /*----------------------------------------------------------------------------*/
+
+typedef struct metadata_s {
+	char artist[STR_LEN];
+	char album[STR_LEN];
+	char title[STR_LEN];
+	char genre[STR_LEN];
+	char path[STR_LEN];
+	char artwork[STR_LEN];
+	char remote_title[STR_LEN];
+	uint32_t track;
+	uint32_t duration;
+	uint32_t track_hash;
+	uint32_t sample_rate;
+	uint8_t  sample_size;
+	uint8_t  channels;
+} metadata_t;
 
 #define MAX_PROTO		128
 #define MAX_RENDERERS	32
@@ -53,28 +60,27 @@ struct sService {
 	uint32_t			Failed;
 };
 
-
 typedef struct sMRConfig
 {
 	int			HTTPLength;
 	bool		Enabled;
-	char		Name[_STR_LEN_];
+	char		Name[STR_LEN];
 	int			UPnPMax;
 	bool		SendMetaData;
 	bool		SendCoverArt;
 	bool 		Flush;
 	int			MaxVolume;
-	char		Codec[_STR_LEN_];
+	char		Codec[STR_LEN];
 	bool		Metadata;
-	char		Latency[_STR_LEN_];
+	char		Latency[STR_LEN];
 	bool		Drift;
 	uint8_t		mac[6];
-	char		ArtWork[4*_STR_LEN_];
+	char		ArtWork[4*STR_LEN];
 	struct {
-		char pcm[_STR_LEN_];
-		char wav[_STR_LEN_];
-		char flac[_STR_LEN_];
-		char mp3[_STR_LEN_];
+		char pcm[STR_LEN];
+		char wav[STR_LEN];
+		char flac[STR_LEN];
+		char mp3[STR_LEN];
 	} ProtocolInfo;
 } tMRConfig;
 
@@ -84,17 +90,17 @@ struct sMR {
 	tMRConfig Config;
 	char UDN			[RESOURCE_LENGTH];
 	char DescDocURL		[RESOURCE_LENGTH];
-	char friendlyName	[_STR_LEN_];
+	char friendlyName	[STR_LEN];
 	enum eMRstate 	State;
 	bool			ExpectStop;
-	struct raop_ctx_s *Raop;
+	struct raopsr_s *Raop;
 	metadata_t		MetaData;
-	raop_event_t	RaopState;
+	raopsr_event_t	RaopState;
 	uint32_t			Elapsed;
 	uint32_t			LastSeen;
 	uint8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
-	tQueue			ActionQueue;
+	queue_t			ActionQueue;
 	unsigned		TrackPoll, StatePoll;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
@@ -102,8 +108,8 @@ struct sMR {
 	pthread_mutex_t Mutex;
 	pthread_t 		Thread;
 	double			Volume;		// to avoid int volume being stuck at 0
-	uint32_t			VolumeStampRx, VolumeStampTx;
-	uint16_t			ErrorCount;
+	uint32_t		VolumeStampRx, VolumeStampTx;
+	uint16_t		ErrorCount;
 	bool			TimeOut;
 	char 			*ProtocolInfo;
 };
@@ -116,8 +122,5 @@ extern int					glMaxDevices;
 extern char					glBinding[128];
 extern unsigned short		glPortBase, glPortRange;
 
-int 			MasterHandler(Upnp_EventType EventType, const void *Event, void *Cookie);
-int 			ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie);
-
-
-#endif
+int MasterHandler(Upnp_EventType EventType, const void *Event, void *Cookie);
+int ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie);

@@ -27,11 +27,29 @@
 
 #include "platform.h"
 #include "pthread.h"
-#include "raopcore.h"
+#include "raop_server.h"
+
+#define	STR_LEN	256
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
 /*----------------------------------------------------------------------------*/
+
+typedef struct metadata_s {
+	char artist[STR_LEN];
+	char album[STR_LEN];
+	char title[STR_LEN];
+	char genre[STR_LEN];
+	char path[STR_LEN];
+	char artwork[STR_LEN];
+	char remote_title[STR_LEN];
+	uint32_t track;
+	uint32_t duration;
+	uint32_t track_hash;
+	uint32_t sample_rate;
+	uint8_t  sample_size;
+	uint8_t  channels;
+} metadata_t;
 
 #define MAX_PROTO		128
 #define MAX_RENDERERS	32
@@ -43,32 +61,31 @@
 #define	SCAN_TIMEOUT 	15
 #define SCAN_INTERVAL	30
 
-
 enum 	eMRstate { STOPPED, PLAYING, PAUSED };
 
 typedef struct sMRConfig
 {
 	bool		Enabled;
 	bool		StopReceiver;
-	char		Name[_STR_LEN_];
-	char		Codec[_STR_LEN_];
+	char		Name[STR_LEN];
+	char		Codec[STR_LEN];
 	bool		Metadata;
 	bool		Flush;
 	double		MediaVolume;
 	uint8_t		mac[6];
-	char		Latency[_STR_LEN_];
+	char		Latency[STR_LEN];
 	bool		Drift;
-	char		ArtWork[4*_STR_LEN_];
+	char		ArtWork[4*STR_LEN];
 } tMRConfig;
 
 struct sMR {
 	uint32_t Magic;
 	bool  Running;
 	tMRConfig Config;
-	struct raop_ctx_s *Raop;
-	raop_event_t	RaopState;
+	struct raopsr_s *Raop;
+	raopsr_event_t	RaopState;
 	char UDN	   	[RESOURCE_LENGTH];
-	char Name		[_STR_LEN_];
+	char Name		[STR_LEN];
 	enum eMRstate 	State;
 	bool			ExpectStop;
 	uint32_t			Elapsed;

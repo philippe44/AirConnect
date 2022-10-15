@@ -96,6 +96,12 @@
       <AdditionalDependencies>ws2_32.lib;wsock32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt;libcmtd</IgnoreSpecificDefaultLibraries>
     </Link>
+    <Manifest>
+      <AdditionalManifestFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\common\manifest.xml</AdditionalManifestFiles>
+    </Manifest>
+    <Manifest>
+      <AdditionalManifestFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\common\manifest.xml</AdditionalManifestFiles>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Static|Win32'">
     <ClCompile>
@@ -106,6 +112,9 @@
       <AdditionalLibraryDirectories>$(BaseCommon)\libopenssl\targets\win32\$(PlatformTarget);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>libopenssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Manifest>
+      <AdditionalManifestFiles>..\common\manifest.xml</AdditionalManifestFiles>
+    </Manifest>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

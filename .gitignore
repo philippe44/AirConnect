@@ -96,10 +96,8 @@ _backup/
 *.i??
 *.map
 *.tds
-*.xml
 *-idx*
 *.save*
-*.xml
 *.pcm
 *.#*
 *.bin

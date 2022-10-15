@@ -11,6 +11,7 @@
 #include <stdarg.h>
 
 #include "cross_log.h"
+#include "cross_net.h"
 #include "cross_thread.h"
 
 #include "cast_parse.h"
@@ -38,70 +39,6 @@ extern log_level cast_loglevel;
 static log_level *loglevel = &cast_loglevel;
 
 #define DEFAULT_RECEIVER	"CC1AD845"
-
-/*----------------------------------------------------------------------------*/
-#if OSX
-static void set_nosigpipe(sockfd s) {
-	int set = 1;
-	setsockopt(s, SOL_SOCKET, SO_NOSIGPIPE, (void *)&set, sizeof(int));
-}
-#else
-#define set_nosigpipe(s)
-#endif
-
-
-/*----------------------------------------------------------------------------*/
-static void set_nonblock(sockfd s) {
-#if WIN
-	u_long iMode = 1;
-	ioctlsocket(s, FIONBIO, &iMode);
-#else
-	int flags = fcntl(s, F_GETFL,0);
-	fcntl(s, F_SETFL, flags | O_NONBLOCK);
-#endif
-}
-
-
-/*----------------------------------------------------------------------------*/
-static void set_block(sockfd s) {
-#if WIN
-	u_long iMode = 0;
-	ioctlsocket(s, FIONBIO, &iMode);
-#else
-	int flags = fcntl(s, F_GETFL,0);
-	fcntl(s, F_SETFL, flags & (~O_NONBLOCK));
-#endif
-}
-
-
-/*----------------------------------------------------------------------------*/
-static int connect_timeout(sockfd sock, const struct sockaddr *addr, socklen_t addrlen, int timeout) {
-	int conn = connect(sock, addr, addrlen);
-#if !WIN
-	if (conn < 0 && errno != EINPROGRESS) return 1;
-#else
-	if (conn < 0 && WSAGetLastError() != WSAEWOULDBLOCK) return 1;
-#endif
-
-	fd_set w, e;
-	struct timeval tval;
-	
-	FD_ZERO(&w);
-	FD_SET(sock, &w);
-	e = w;
-	tval.tv_sec = timeout / 1000;
-	tval.tv_usec = (timeout - tval.tv_sec * 1000) * 1000;
-
-	// only return 0 if w set and sock error is zero, otherwise return error code
-	if (select(sock + 1, NULL, &w, &e, timeout ? &tval : NULL) == 1 && FD_ISSET(sock, &w)) {
-		int	error = 0;
-		socklen_t len = sizeof(error);
-		getsockopt(sock, SOL_SOCKET, SO_ERROR, (void *)&error, &len);
-		return error;
-	}
-
-	return -1;
-}
 
 /*----------------------------------------------------------------------------*/
 static void CastExit(void) {
@@ -286,7 +223,7 @@ bool CastConnect(struct sCastCtx *Ctx) {
 	addr.sin_addr.s_addr = Ctx->ip.s_addr;
 	addr.sin_port = htons(Ctx->port);
 
-	err = connect_timeout(Ctx->sock, (struct sockaddr *) &addr, sizeof(addr), 2*1000);
+	err = tcp_connect_timeout(Ctx->sock, addr, 2*1000);
 
 	if (err) {
 		closesocket(Ctx->sock);

@@ -33,10 +33,11 @@ else ifneq ($(OS), SunOS)
 LDFLAGS 	+= -Wl,--gc-sections
 endif
 
-vpath %.c $(TOOLS):$(SRC):$(NANOPB)
+vpath %.c $(TOOLS):$(SRC):$(NANOPB):$(COMMON)
 
 INCLUDE = -I$(OPENSSL)/include \
 		  -I$(TOOLS) \
+		  -I$(COMMON) \
 		  -I$(SRC)/inc \
 		  -I$(RAOP)/include \
 		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
@@ -50,6 +51,7 @@ DEPS	= $(SRC)/aircast.h
 SOURCES = castcore.c castmessage.pb.c aircast.c cast_util.c cast_parse.c config_cast.c  \
 	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
 	  pb_common.c pb_decode.c pb_encode.c \
+	  metadata.c
 		
 SOURCES_LIBS = cross_ssl.c
 		

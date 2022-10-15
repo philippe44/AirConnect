@@ -19,28 +19,13 @@
 #include "platform.h"
 #include "raop_server.h"
 #include "cross_util.h"
+#include "metadata.h"
 
 #define STR_LEN	256
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
 /*----------------------------------------------------------------------------*/
-
-typedef struct metadata_s {
-	char artist[STR_LEN];
-	char album[STR_LEN];
-	char title[STR_LEN];
-	char genre[STR_LEN];
-	char path[STR_LEN];
-	char artwork[STR_LEN];
-	char remote_title[STR_LEN];
-	uint32_t track;
-	uint32_t duration;
-	uint32_t track_hash;
-	uint32_t sample_rate;
-	uint8_t  sample_size;
-	uint8_t  channels;
-} metadata_t;
 
 #define MAX_PROTO		128
 #define MAX_RENDERERS	32

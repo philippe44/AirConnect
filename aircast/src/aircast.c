@@ -21,6 +21,7 @@
 #include "cross_ssl.h"
 
 #include "aircast.h"
+#include "metadata.h"
 #include "cast_util.h"
 #include "cast_parse.h"
 #include "castitf.h"
@@ -198,10 +199,8 @@ void raop_cb(void *owner, raopsr_event_t event, void *param)
 			}
 			break;
 		case RAOP_PLAY: {
-			metadata_t MetaData = { "", "", "Streaming from AirConnect",
-									"", "", "", "", 0, 0, 0, 0, 0, 0};
-
-			if (*Device->Config.ArtWork) strncpy(MetaData.artwork, Device->Config.ArtWork, sizeof(MetaData.artwork) - 1);
+			metadata_t MetaData = { .title = "Streaming from AirConnect", .duration = 0, .track = 0 };
+			if (*Device->Config.ArtWork) MetaData.artwork = Device->Config.ArtWork;
 
 			LOG_INFO("[%p]: Play", Device);
 			if (Device->RaopState != RAOP_PLAY) {
@@ -345,6 +344,8 @@ static void *MRThread(void *args)
 		pthread_mutex_unlock(&p->Mutex);
 		last = gettime_ms();
 	}
+
+	list_clear((list_t**)&p->GroupMaster, free);
 
 	return NULL;
 }
@@ -516,26 +517,17 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 		NFREE(Name);
 	}
 
-
 	// look for devices to be removed
-
 	for (j = 0; j < glMaxDevices; j++) {
-
 		Device = glMRDevices + j;
-
 		if (Device->Running && Device->Remove && !CastIsConnected(Device->CastCtx)) {
-
 			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
-
 			raopsr_delete(Device->Raop);
 			RemoveCastDevice(Device);
-
 		}
 	}
 
-
 	if (glAutoSaveConfigFile || glDiscovery) {
-
 		LOG_DEBUG("Updating configuration %s", glConfigName);
 		SaveConfig(glConfigName, glConfigID, false);
 	}
@@ -603,28 +595,9 @@ static void *MainThread(void *args)
 	return NULL;
 }
 
-
-/*----------------------------------------------------------------------------*/
-void MakeMacUnique(struct sMR *Device)
-{
-	for (int i = 0; i < glMaxDevices; i++) {
-		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
-		if (!memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
-			uint32_t hash = hash32(Device->UDN);
-
-			LOG_INFO("[%p]: duplicated mac ... updating", Device);
-			memset(&Device->Config.mac[0], 0xcc, 2);
-			memcpy(&Device->Config.mac[0] + 2, &hash, 4);
-		}
-	}
-}
-
-
 /*----------------------------------------------------------------------------*/
 static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group, struct in_addr ip, uint16_t port)
 {
-	uint32_t mac_size = 6;
-
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
 	LoadMRConfig(glConfigID, UDN, &Device->Config);
@@ -653,23 +626,27 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", Name);
 	strcpy(Device->Name, Name);
 
-	LOG_INFO("[%p]: adding renderer (%s)", Device, Name);
-
-	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", mac_size)) {
+	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", 6)) {
+		uint32_t mac_size = 6;
 		if (group || SendARP(ip.s_addr, INADDR_ANY, Device->Config.mac, &mac_size)) {
-			uint32_t hash = hash32(UDN);
-
-			LOG_ERROR("[%p]: creating MAC %x", Device, Device->Config.Name, hash);
-			memcpy(Device->Config.mac + 2, &hash, 4);
+			*(uint32_t*) (Device->Config.mac + 2) = hash32(Device->UDN);
+			LOG_INFO("[%p]: creating MAC", Device);
 		}
 		memset(Device->Config.mac, 0xcc, 2);
 	}
 
 	// virtual players duplicate mac address
-	MakeMacUnique(Device);
+	for (int i = 0; i < glMaxDevices; i++) {
+		if (glMRDevices[i].Running && Device != glMRDevices + i && !memcmp(&glMRDevices[i].Config.mac, Device->Config.mac, 6)) {
+			memset(Device->Config.mac, 0xcc, 2);
+			*(uint32_t*) (Device->Config.mac + 2) = hash32(Device->UDN);
+			LOG_INFO("[%p]: duplicated mac ... updating", Device);
+		}
+	}
+
+	LOG_INFO("[%p]: adding renderer (%s) with mac %hx%x", Device, Name, *(uint16_t*) Device->Config.mac, *(uint32_t*) (Device->Config.mac + 2));
 
 	Device->CastCtx = CreateCastDevice(Device, Device->Group, Device->Config.StopReceiver, ip, port, Device->Config.MediaVolume);
-
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
 
 	return true;
@@ -677,8 +654,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 
 
 /*----------------------------------------------------------------------------*/
-void FlushCastDevices(void)
-{
+void FlushCastDevices(void) {
 	for (int i = 0; i < glMaxDevices; i++) {
 		struct sMR *p = &glMRDevices[i];
 		if (p->Running) {
@@ -690,8 +666,7 @@ void FlushCastDevices(void)
 
 
 /*----------------------------------------------------------------------------*/
-void RemoveCastDevice(struct sMR *Device)
-{
+void RemoveCastDevice(struct sMR *Device) {
 	pthread_mutex_lock(&Device->Mutex);
 	Device->Running = false;
 	pthread_mutex_unlock(&Device->Mutex);
@@ -700,8 +675,6 @@ void RemoveCastDevice(struct sMR *Device)
 	DeleteCastDevice(Device->CastCtx);
 
 	pthread_join(Device->Thread, NULL);
-
-	list_clear((list_t**) &Device->GroupMaster, free);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -716,7 +689,7 @@ static bool Start(bool cold) {
 
 	if (cold) {
 		// manually load openSSL symbols to accept multiple versions
-		if (!cross_load_ssl()) {
+		if (!cross_ssl_load()) {
 			LOG_ERROR("Cannot load SSL libraries", NULL);
 			return false;
 		}
@@ -742,10 +715,7 @@ static bool Start(bool cold) {
 	return true;
 }
 
-static bool Stop(bool exit)
-{
-	int i;
-
+static bool Stop(bool exit) {
 	glMainRunning = false;
 
 	if (glHost.s_addr != INADDR_ANY) {
@@ -765,12 +735,12 @@ static bool Stop(bool exit)
 		LOG_DEBUG("terminate main thread ...", NULL);
 		crossthreads_wake();
 		pthread_join(glMainThread, NULL);
-		for (i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
+		for (int i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
 		NFREE(glHostName);
 		if (glConfigID) ixmlDocument_free(glConfigID);
 		netsock_close();
-		cross_free_ssl();
+		cross_ssl_free();
 	}
 
 	return true;
@@ -900,8 +870,7 @@ bool ParseArgs(int argc, char **argv) {
 /*----------------------------------------------------------------------------*/
 /*																			  */
 /*----------------------------------------------------------------------------*/
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);
 #if defined(SIGQUIT)

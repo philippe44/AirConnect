@@ -31,9 +31,10 @@ else ifneq ($(OS), SunOS)
 LDFLAGS 	+= -Wl,--gc-sections
 endif
 
-vpath %.c $(TOOLS):$(SRC)
+vpath %.c $(TOOLS):$(SRC):$(COMMON)
 
 INCLUDE = -I$(OPENSSL)/include \
+	  -I$(COMMON) \
 		  -I$(CODECS)/include/flac -I$(CODECS)/include/shine \
 		  -I$(TOOLS) \
 		  -I$(SRC)/inc \
@@ -44,7 +45,8 @@ INCLUDE = -I$(OPENSSL)/include \
 DEPS	= $(SRC)/airupnp.h
 				  
 SOURCES = avt_util.c airupnp.c mr_util.c config_upnp.c  \
-	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c 
+	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
+	  metadata.c
 
 SOURCES_LIBS = cross_ssl.c
 		

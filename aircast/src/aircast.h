@@ -1,25 +1,13 @@
 /*
  *  AirCast: Chromecast to AirPlay
  *
- *  (c) Philippe 2016-2017, philippe_44@outlook.com
+ *  (c) Philippe, philippe_44@outlook.com
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  See LICENSE
  *
  */
 
-#ifndef __AIRCAST_H
-#define __AIRCAST_H
+#pragma once
 
 #include <signal.h>
 #include <stdarg.h>
@@ -28,28 +16,13 @@
 #include "platform.h"
 #include "pthread.h"
 #include "raop_server.h"
-
-#define	STR_LEN	256
+#include "cast_util.h"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
 /*----------------------------------------------------------------------------*/
 
-typedef struct metadata_s {
-	char artist[STR_LEN];
-	char album[STR_LEN];
-	char title[STR_LEN];
-	char genre[STR_LEN];
-	char path[STR_LEN];
-	char artwork[STR_LEN];
-	char remote_title[STR_LEN];
-	uint32_t track;
-	uint32_t duration;
-	uint32_t track_hash;
-	uint32_t sample_rate;
-	uint8_t  sample_size;
-	uint8_t  channels;
-} metadata_t;
+#define STR_LEN	256
 
 #define MAX_PROTO		128
 #define MAX_RENDERERS	32
@@ -110,5 +83,3 @@ extern struct sMR			*glMRDevices;
 extern int					glMaxDevices;
 extern unsigned short		glPortBase, glPortRange;
 extern char					glBinding[16];
-
-#endif

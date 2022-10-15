@@ -7,10 +7,10 @@
  *
  */
 
-
 #include <stdlib.h>
 
 #include "platform.h"
+#include "metadata.h"
 #include "cross_log.h"
 #include "castcore.h"
 #include "cast_util.h"
@@ -29,7 +29,6 @@ bool CastIsConnected(struct sCastCtx *Ctx) {
 	return status;
 }
 
-
 /*----------------------------------------------------------------------------*/
 bool CastIsMediaSession(struct sCastCtx *Ctx) {
 	if (!Ctx) return false;
@@ -41,7 +40,6 @@ bool CastIsMediaSession(struct sCastCtx *Ctx) {
 	return status;
 }
 
-
 /*----------------------------------------------------------------------------*/
 void CastGetStatus(struct sCastCtx *Ctx) {
 	// SSL context might not be set yet
@@ -51,7 +49,6 @@ void CastGetStatus(struct sCastCtx *Ctx) {
 	SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"GET_STATUS\",\"requestId\":%d}", Ctx->reqId++);
 	pthread_mutex_unlock(&Ctx->Mutex);
 }
-
 
 /*----------------------------------------------------------------------------*/
 void CastGetMediaStatus(struct sCastCtx *Ctx) {
@@ -66,7 +63,6 @@ void CastGetMediaStatus(struct sCastCtx *Ctx) {
     }
 	pthread_mutex_unlock(&Ctx->Mutex);
 }
-
 
 /*----------------------------------------------------------------------------*/
 #define LOAD_FLUSH
@@ -191,7 +187,6 @@ void CastSimple(struct sCastCtx *Ctx, char *Type) {
 	pthread_mutex_unlock(&Ctx->Mutex);
 }
 
-
 /*----------------------------------------------------------------------------*/
 void CastStop(struct sCastCtx *Ctx) {
 	// lock on wait for a Cast response
@@ -240,13 +235,11 @@ void CastStop(struct sCastCtx *Ctx) {
 	pthread_mutex_unlock(&Ctx->Mutex);
 }
 
-
 /*----------------------------------------------------------------------------*/
 void CastPowerOff(struct sCastCtx *Ctx) {
 	CastRelease(Ctx);
 	CastDisconnect(Ctx);
 }
-
 
 /*----------------------------------------------------------------------------*/
 void CastPowerOn(struct sCastCtx *Ctx) {

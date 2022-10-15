@@ -12,11 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-
-#include "cross_util.h"
-
-#include "aircast.h"
-
+#include <fcntl.h>
 
 #include "openssl/crypto.h"
 #include "openssl/x509.h"
@@ -24,8 +20,7 @@
 #include "openssl/ssl.h"
 #include "openssl/err.h"
 
-#include <fcntl.h>
-
+#include "cross_util.h"
 #include <pb_encode.h>
 #include <pb_decode.h>
 #include "jansson.h"

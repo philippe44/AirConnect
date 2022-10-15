@@ -273,6 +273,10 @@ sleep:
 		pthread_mutex_unlock(&p->Mutex);
 	}
 
+	// clean our stuff before exiting
+	metadata_free(&p->MetaData);
+	AVTActionFlush(&p->ActionQueue);
+
 	return NULL;
 }
 
@@ -919,9 +923,6 @@ static void *MainThread(void *args)
 static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location)
 {
 	char *friendlyName = NULL;
-	int i;
-	uint32_t mac_size = 6;
-	in_addr_t ip;
 	uint32_t now = gettime_ms();
 
 	// read parameters from default then config file
@@ -956,11 +957,11 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
 
-	memset(&Device->MetaData, 0, sizeof(metadata_t));
+	metadata_init(&Device->MetaData);
 	memset(&Device->Service, 0, sizeof(struct sService) * NB_SRV);
 
 	/* find the different services */
-	for (i = 0; i < NB_SRV; i++) {
+	for (int i = 0; i < NB_SRV; i++) {
 		char *ServiceId = NULL, *ServiceType = NULL;
 		char *EventURL = NULL, *ControlURL = NULL;
 
@@ -985,20 +986,15 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Master = GetMaster(Device, &friendlyName);
 	Device->Volume = CtrlGetVolume(Device);
 
-	if (Device->Master) {
-		LOG_INFO("[%p] skipping Sonos slave %s", Device, friendlyName);
-	} else {
-		LOG_INFO("[%p]: adding renderer (%s)", Device, friendlyName);
-	}
-
 	// set remaining items now that we are sure
 	if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
 		Device->MetaData.duration = 1;
-		strcpy(Device->MetaData.title, "Streaming from AirConnect");
+		Device->MetaData.title = strdup("Streaming from AirConnect");
 	} else {
-		strcpy(Device->MetaData.remote_title, "Streaming from AirConnect");
+		Device->MetaData.remote_title = strdup("Streaming from AirConnect");
     }
-	if (*Device->Config.ArtWork) strncpy(Device->MetaData.artwork, Device->Config.ArtWork, sizeof(Device->MetaData.artwork) - 1);
+	if (*Device->Config.ArtWork) Device->MetaData.artwork = strdup(Device->Config.ArtWork);
+
 	Device->Running = true;
 	if (friendlyName) strcpy(Device->friendlyName, friendlyName);
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", friendlyName);
@@ -1010,25 +1006,39 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	else if (strcasestr(Device->Config.Codec, "mp3")) Device->ProtocolInfo = Device->Config.ProtocolInfo.mp3;
 	else Device->ProtocolInfo = Device->Config.ProtocolInfo.flac;
 
-	ip = ExtractIP(location);
-	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", mac_size)) {
-		if (SendARP(ip, INADDR_ANY, Device->Config.mac, &mac_size)) {
-			uint32_t hash = hash32(UDN);
+	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", 6)) {
+		char ip[32];
+		uint32_t mac_size = 6;
 
-			LOG_ERROR("[%p]: cannot get mac %s, creating fake %x", Device, Device->Config.Name, hash);
-			memcpy(Device->Config.mac + 2, &hash, 4);
+		sscanf(location, "http://%[^:]", ip);
+		if (SendARP(inet_addr(ip), INADDR_ANY, Device->Config.mac, &mac_size)) {
+			*(uint32_t*) (Device->Config.mac + 2) = hash32(Device->UDN);
+			LOG_INFO("[%p]: creating MAC", Device);
+			LOG_INFO("[%p]: duplicated mac ... updating", Device);
 		}
 		memset(Device->Config.mac, 0xbb, 2);
 	}
 
-	MakeMacUnique(Device);
+	// make sure MAC is unique	
+	for (int i = 0; i < glMaxDevices; i++) {
+		if (glMRDevices[i].Running && Device != glMRDevices + i && !memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
+			memset(Device->Config.mac, 0xcc, 2);
+			*(uint32_t*)(Device->Config.mac + 2) = hash32(Device->UDN);
+			LOG_INFO("[%p]: duplicated mac ... updating", Device);
+		}
+	}
+
+	if (Device->Master) {
+		LOG_INFO("[%p] skipping Sonos slave %s", Device, friendlyName);
+	} else {
+		LOG_INFO("[%p]: adding renderer (%s) with mac %hx%x", Device, friendlyName, *(uint16_t*)Device->Config.mac, *(uint32_t*)(Device->Config.mac + 2));
+	}
 
 	NFREE(friendlyName);
-
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
 
 	/* subscribe here, not before */
-	for (i = 0; i < NB_SRV; i++) if (Device->Service[i].TimeOut)
+	for (int i = 0; i < NB_SRV; i++) if (Device->Service[i].TimeOut)
 		UpnpSubscribeAsync(glControlPointHandle, Device->Service[i].EventURL,
 						   Device->Service[i].TimeOut, MasterHandler,
 						   (void*) strdup(UDN));
@@ -1114,7 +1124,7 @@ static bool Start(bool cold)
 
 	if (cold) {
 		// manually load openSSL symbols to accept multiple versions
-		if (!cross_load_ssl()) {
+		if (!cross_ssl_load()) {
 			LOG_ERROR("Cannot load SSL libraries", NULL);
 			goto Error;
 		}
@@ -1205,7 +1215,7 @@ static bool Stop(bool exit)
 
 		if (glConfigID) ixmlDocument_free(glConfigID);
 		netsock_close();
-		cross_free_ssl();
+		cross_ssl_free();
 	}
 
 	return true;

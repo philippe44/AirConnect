@@ -36,9 +36,6 @@ struct sMR*  UDN2Device(const char *SID);
 
 struct sService* EventURL2Service(const UpnpString *URL, struct sService *s);
 
-void 		MakeMacUnique(struct sMR *Device);
-in_addr_t	ExtractIP(const char *URL);
-
 int 	   	 XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 							const char *serviceTypeBase, char **serviceId,
 							char **serviceType, char **eventURL, char **controlURL);

@@ -170,8 +170,6 @@ void DelMRDevice(struct sMR *p)
 
 	pthread_mutex_unlock(&p->Mutex);
 	pthread_join(p->Thread, NULL);
-
-	AVTActionFlush(&p->ActionQueue);
 }
 
 
@@ -251,34 +249,6 @@ bool CheckAndLock(struct sMR *Device)
 	return false;
 }
 
-
-/*----------------------------------------------------------------------------*/
-void MakeMacUnique(struct sMR *Device)
-{
-	int i;
-
-	// mutex is locked
-	for (i = 0; i < glMaxDevices; i++) {
-		if (!glMRDevices[i].Running || Device == &glMRDevices[i]) continue;
-		if (!memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
-			uint32_t hash = hash32(Device->UDN);
-
-			LOG_INFO("[%p]: duplicated mac ... updating", Device);
-			memset(&Device->Config.mac[0], 0xcc, 2);
-			memcpy(&Device->Config.mac[0] + 2, &hash, 4);
-		}
-	}
-}
-
-
-/*----------------------------------------------------------------------------*/
-in_addr_t ExtractIP(const char *URL)
-{
-	char ip[32] = "";
-
-	sscanf(URL, "http://%[^:]", ip);
-	return inet_addr(ip);
-}
 
 /*----------------------------------------------------------------------------*/
 /* 																			  */

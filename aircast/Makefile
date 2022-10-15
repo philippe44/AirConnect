@@ -50,8 +50,7 @@ DEPS	= $(SRC)/aircast.h
 				  
 SOURCES = castcore.c castmessage.pb.c aircast.c cast_util.c cast_parse.c config_cast.c  \
 	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
-	  pb_common.c pb_decode.c pb_encode.c \
-	  metadata.c
+	  pb_common.c pb_decode.c pb_encode.c 
 		
 SOURCES_LIBS = cross_ssl.c
 		
@@ -82,7 +81,7 @@ $(BUILDDIR)/%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
 
 $(BUILDDIR)/%-static.o : %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DLINKALL $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_LIB_STATIC $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
 	
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) 

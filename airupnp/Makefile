@@ -45,8 +45,7 @@ INCLUDE = -I$(OPENSSL)/include \
 DEPS	= $(SRC)/airupnp.h
 				  
 SOURCES = avt_util.c airupnp.c mr_util.c config_upnp.c  \
-	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
-	  metadata.c
+	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c 
 
 SOURCES_LIBS = cross_ssl.c
 		
@@ -76,7 +75,7 @@ $(BUILDDIR)/%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
 
 $(BUILDDIR)/%-static.o : %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DLINKALL $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_LIB_STATIC $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
 	
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) 

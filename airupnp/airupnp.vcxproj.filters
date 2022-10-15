@@ -23,7 +23,6 @@
     <ClCompile Include="..\common\crosstools\src\platform.c">
       <Filter>crosstools</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\metadata.c" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\common\libcodecs\targets\win32\$(PlatformTarget)\libcodecs.lib" />

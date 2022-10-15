@@ -25,7 +25,3 @@ typedef struct metadata_s {
 	uint8_t  sample_size;
 	uint8_t  channels;
 } metadata_t;
-
-void               metadata_init(struct metadata_s* data);
-void               metadata_free(struct metadata_s* const data);
-struct metadata_s* metadata_clone(struct metadata_s* const data);

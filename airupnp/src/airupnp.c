@@ -274,7 +274,6 @@ sleep:
 	}
 
 	// clean our stuff before exiting
-	metadata_free(&p->MetaData);
 	AVTActionFlush(&p->ActionQueue);
 
 	return NULL;
@@ -957,7 +956,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	strcpy(Device->UDN, UDN);
 	strcpy(Device->DescDocURL, location);
 
-	metadata_init(&Device->MetaData);
+	memset(&Device->MetaData, 0, sizeof(Device->MetaData));
 	memset(&Device->Service, 0, sizeof(struct sService) * NB_SRV);
 
 	/* find the different services */
@@ -989,11 +988,11 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	// set remaining items now that we are sure
 	if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
 		Device->MetaData.duration = 1;
-		Device->MetaData.title = strdup("Streaming from AirConnect");
+		Device->MetaData.title = "Streaming from AirConnect";
 	} else {
-		Device->MetaData.remote_title = strdup("Streaming from AirConnect");
+		Device->MetaData.remote_title = "Streaming from AirConnect";
     }
-	if (*Device->Config.ArtWork) Device->MetaData.artwork = strdup(Device->Config.ArtWork);
+	if (*Device->Config.ArtWork) Device->MetaData.artwork = Device->Config.ArtWork;
 
 	Device->Running = true;
 	if (friendlyName) strcpy(Device->friendlyName, friendlyName);

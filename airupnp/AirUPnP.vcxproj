@@ -25,7 +25,6 @@
     <ClCompile Include="..\common\crosstools\src\cross_thread.c" />
     <ClCompile Include="..\common\crosstools\src\cross_util.c" />
     <ClCompile Include="..\common\crosstools\src\platform.c" />
-    <ClCompile Include="..\common\metadata.c" />
     <ClCompile Include="src\airupnp.c" />
     <ClCompile Include="src\avt_util.c" />
     <ClCompile Include="src\config_upnp.c" />

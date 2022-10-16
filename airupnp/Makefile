@@ -52,12 +52,12 @@ SOURCES_LIBS = cross_ssl.c
 OBJECTS		= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES) $(SOURCES_LIBS))
 OBJECTS_STATIC 	= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES)) $(patsubst %.c,$(BUILDDIR)/%-static.o,$(SOURCES_LIBS)) 
 
-LIBRARY		= $(RAOP)/$(HOST)/$(PLATFORM)/libraop.a \
+LIBRARY	= $(RAOP)/$(HOST)/$(PLATFORM)/libraop.a \
 			$(PUPNP)/libpupnp.a \
 			$(CODECS)/$(HOST)/$(PLATFORM)/libcodecs.a \
 			$(MDNS)/$(HOST)/$(PLATFORM)/libmdns.a  
 			
-LIBRARY_STATIC 	= $(LIBRARY) $(OPENSSL)/libopenssl.a
+LIBRARY_STATIC = $(LIBRARY) $(OPENSSL)/libopenssl.a
 
 all: directory $(EXECUTABLE) $(EXECUTABLE_STATIC)
 		

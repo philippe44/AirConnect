@@ -163,8 +163,8 @@ static void  RemoveCastDevice(struct sMR *Device);
 static bool	 Start(bool cold);
 static bool	 Stop(bool exit);
 
-void raop_cb(void *owner, raopsr_event_t event, void *param)
-{
+/*----------------------------------------------------------------------------*/
+void raop_cb(void *owner, raopsr_event_t event, void *param) {
 	struct sMR *Device = (struct sMR*) owner;
 
 	pthread_mutex_lock(&Device->Mutex);
@@ -239,12 +239,10 @@ void raop_cb(void *owner, raopsr_event_t event, void *param)
 	pthread_mutex_unlock(&Device->Mutex);
 }
 
-
 /*----------------------------------------------------------------------------*/
 #define TRACK_POLL  (1000)
 #define MAX_ACTION_ERRORS (5)
-static void *MRThread(void *args)
-{
+static void *MRThread(void *args) {
 	int elapsed, wakeTimer = TRACK_POLL;
 	unsigned last = gettime_ms();
 	struct sMR *p = (struct sMR*) args;
@@ -350,10 +348,8 @@ static void *MRThread(void *args)
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-char *GetmDNSAttribute(txt_attr_t *p, int count, char *name)
-{
+char *GetmDNSAttribute(txt_attr_t *p, int count, char *name) {
 	for (int j = 0; j < count; j++)
 		if (!strcasecmp(p[j].name, name))
 			return strdup(p[j].value);
@@ -361,10 +357,8 @@ char *GetmDNSAttribute(txt_attr_t *p, int count, char *name)
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static struct sMR *SearchUDN(char *UDN)
-{
+static struct sMR *SearchUDN(char *UDN) {
 	for (int i = 0; i < glMaxDevices; i++) {
 		if (glMRDevices[i].Running && !strcmp(glMRDevices[i].UDN, UDN))
 			return glMRDevices + i;
@@ -373,9 +367,8 @@ static struct sMR *SearchUDN(char *UDN)
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static bool isMember(struct in_addr host) {
+static bool isMember(struct in_addr host) { 
 	for (int i = 0; i < glMaxDevices; i++) {
 		 if (glMRDevices[i].Running && GetAddr(glMRDevices[i].CastCtx).s_addr == host.s_addr)
 			return true;
@@ -383,13 +376,10 @@ static bool isMember(struct in_addr host) {
 	return false;
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
-{
+bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop) {
 	struct sMR *Device;
 	mDNSservice_t *s;
-	int j;
 
 	if (*loglevel == lDEBUG) {
 		LOG_DEBUG("----------------- round ------------------", NULL);
@@ -479,18 +469,17 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 			continue;
 		}
 
-		// device creation so search a free spot.
-		for (j = 0; j < glMaxDevices && glMRDevices[j].Running; j++);
+		// new device so search a free spot - as this function is not called
+		// recursively, no need to lock the device's mutex
+		for (Device = glMRDevices; Device->Running && Device < glMRDevices + glMaxDevices; Device++);
 
 		// no more room !
-		if (j == glMaxDevices) {
-			LOG_ERROR("Too many Cast devices", NULL);
+		if (Device == glMRDevices + glMaxDevices) {
+			LOG_ERROR("Too many devices (max:%u)", glMaxDevices);
 			NFREE(UDN);
 			break;
 		}
-
-		Device = glMRDevices + j;
-
+		
 		// if model is a group
 		Model = GetmDNSAttribute(s->attr, s->attr_count, "md");
 		if (Model && !strcasestr(Model, "Group")) Group = false;
@@ -518,8 +507,8 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 	}
 
 	// look for devices to be removed
-	for (j = 0; j < glMaxDevices; j++) {
-		Device = glMRDevices + j;
+	for (int i = 0; i < glMaxDevices; i++) {
+		Device = glMRDevices + i;
 		if (Device->Running && Device->Remove && !CastIsConnected(Device->CastCtx)) {
 			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
 			raopsr_delete(Device->Raop);
@@ -536,20 +525,16 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop)
 	return false;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void *mDNSsearchThread(void *args)
-{
+static void *mDNSsearchThread(void *args) {
 	// launch the query,
 	query_mDNS(glmDNSsearchHandle, "_googlecast._tcp.local", 120,
 			   glDiscovery ? DISCOVERY_TIME : 0, &mDNSsearchCallback, NULL);
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void *MainThread(void *args)
-{
+static void *MainThread(void *args) {
 	while (glMainRunning) {
 
 		crossthreads_sleep(30*1000);
@@ -596,8 +581,7 @@ static void *MainThread(void *args)
 }
 
 /*----------------------------------------------------------------------------*/
-static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group, struct in_addr ip, uint16_t port)
-{
+static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group, struct in_addr ip, uint16_t port) {
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
 	LoadMRConfig(glConfigID, UDN, &Device->Config);
@@ -652,7 +636,6 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 	return true;
 }
 
-
 /*----------------------------------------------------------------------------*/
 void FlushCastDevices(void) {
 	for (int i = 0; i < glMaxDevices; i++) {
@@ -663,7 +646,6 @@ void FlushCastDevices(void) {
 		 }
 	}
 }
-
 
 /*----------------------------------------------------------------------------*/
 void RemoveCastDevice(struct sMR *Device) {
@@ -715,6 +697,7 @@ static bool Start(bool cold) {
 	return true;
 }
 
+/*---------------------------------------------------------------------------*/
 static bool Stop(bool exit) {
 	glMainRunning = false;
 
@@ -760,7 +743,6 @@ static void sighandler(int signum) {
 	Stop(true);
 	exit(0);
 }
-
 
 /*---------------------------------------------------------------------------*/
 bool ParseArgs(int argc, char **argv) {

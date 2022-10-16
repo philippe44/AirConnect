@@ -135,7 +135,7 @@ static pthread_t 		glMainThread, glUpdateThread;
 static queue_t			glUpdateQueue;
 static bool				glInteractive = true;
 static char				*glLogFile;
-static uint32_t			glPort;
+static uint16_t			glPort;
 static void				*glConfigID = NULL;
 static char				glConfigName[STR_LEN] = "./config.xml";
 
@@ -227,8 +227,7 @@ static bool 	_ProcessQueue(struct sMR *Device);
 #define STATE_POLL  (500)
 #define MAX_ACTION_ERRORS (5)
 #define MIN_POLL (min(TRACK_POLL, STATE_POLL))
-static void *MRThread(void *args)
-{
+static void *MRThread(void *args) {
 	int elapsed, wakeTimer = MIN_POLL;
 	unsigned last;
 	struct sMR *p = (struct sMR*) args;
@@ -280,8 +279,7 @@ sleep:
 }
 
 /*----------------------------------------------------------------------------*/
-void HandleRAOP(void *owner, raopsr_event_t event, void *param)
-{
+void HandleRAOP(void *owner, raopsr_event_t event, void *param) {
 	struct sMR *Device = (struct sMR*) owner;
 
 	// this is async, so need to check context validity
@@ -381,8 +379,7 @@ void HandleRAOP(void *owner, raopsr_event_t event, void *param)
 
 
 /*----------------------------------------------------------------------------*/
-void HandleHTTP(void *owner, struct key_data_s *headers, struct key_data_s *response)
-{
+void HandleHTTP(void *owner, struct key_data_s *headers, struct key_data_s *response) {
 	struct sMR *Device = (struct sMR*) owner;
 	char *p;
 
@@ -394,11 +391,8 @@ void HandleHTTP(void *owner, struct key_data_s *headers, struct key_data_s *resp
 	}
 }
 
-
-
 /*----------------------------------------------------------------------------*/
-static bool _ProcessQueue(struct sMR *Device)
-{
+static bool _ProcessQueue(struct sMR *Device) {
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	tAction *Action;
 	int rc = 0;
@@ -420,10 +414,8 @@ static bool _ProcessQueue(struct sMR *Device)
 	return (rc == 0);
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void ProcessEvent(Upnp_EventType EventType, const void *_Event, void *Cookie)
-{
+static void ProcessEvent(Upnp_EventType EventType, const void *_Event, void *Cookie) {
 	UpnpEvent* Event = (UpnpEvent*)_Event;
 	struct sMR *Device = SID2Device(UpnpEvent_get_SID(Event));
 	IXML_Document *VarDoc = UpnpEvent_get_ChangedVariables(Event);
@@ -465,10 +457,8 @@ static void ProcessEvent(Upnp_EventType EventType, const void *_Event, void *Coo
 	pthread_mutex_unlock(&Device->Mutex);
 }
 
-
 /*----------------------------------------------------------------------------*/
-int ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie)
-{
+int ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie) {
 	static int recurse = 0;
 	struct sMR *p = NULL;
 
@@ -480,7 +470,6 @@ int ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie)
 			char* r;;
 			
 			p = CURL2Device(UpnpActionComplete_get_CtrlUrl(Event));
-
 			if (!CheckAndLock(p)) return 0;
 
 			LOG_SDEBUG("[%p]: ac %i %s (cookie %p)", p, EventType, UpnpString_get_String(UpnpActionComplete_get_CtrlUrl(Event)));
@@ -562,10 +551,8 @@ int ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie)
 	return 0;
 }
 
-
 /*----------------------------------------------------------------------------*/
-int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
-{
+int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie) {
 	// this variable is not thread_safe and not supposed to be
 	static int recurse = 0;
 
@@ -681,19 +668,15 @@ int MasterHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 	return 0;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void FreeUpdate(void *_Item)
-{
+static void FreeUpdate(void *_Item) {
 	tUpdate *Item = (tUpdate*) _Item;
 	NFREE(Item->Data);
 	free(Item);
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void *UpdateThread(void *args)
-{
+static void *UpdateThread(void *args) {
 	while (glMainRunning) {
 		tUpdate *Update;
 		bool Updated = false;
@@ -742,11 +725,10 @@ static void *UpdateThread(void *args)
 			} else if (Update->Type == DISCOVERY) {
 				IXML_Document *DescDoc = NULL;
 				char *UDN = NULL, *ModelName = NULL, *ModelNumber = NULL;
-				int i, rc;
 
 				// it's a Sonos group announce, just do a targeted search and exit
 				if (strstr(Update->Data, "group_description")) {
-					for (i = 0; i < glMaxDevices; i++) {
+					for (int i = 0; i < glMaxDevices; i++) {
    						Device = glMRDevices + i;
 						if (Device->Running && *Device->Service[TOPOLOGY_IDX].ControlURL)
 							UpnpSearchAsync(glControlPointHandle, 5, Device->UDN, Device);
@@ -806,6 +788,7 @@ static void *UpdateThread(void *args)
 				}
 
 				// this can take a very long time, too bad for the queue...
+				int rc;
 				if ((rc = UpnpDownloadXmlDoc(Update->Data, &DescDoc)) != UPNP_E_SUCCESS) {
 					LOG_DEBUG("Error obtaining description %s -- error = %d\n", Update->Data, rc);
 					goto cleanup;
@@ -827,15 +810,14 @@ static void *UpdateThread(void *args)
 
 				// new device so search a free spot - as this function is not called
 				// recursively, no need to lock the device's mutex
-				for (i = 0; i < glMaxDevices && glMRDevices[i].Running; i++) {}
+				for (Device = glMRDevices; Device->Running && Device < glMRDevices + glMaxDevices; Device++);
 
 				// no more room !
-				if (i == glMaxDevices) {
+				if (Device == glMRDevices + glMaxDevices) {
 					LOG_ERROR("Too many uPNP devices (max:%u)", glMaxDevices);
 					goto cleanup;
 				}
-
-				Device = &glMRDevices[i];
+				
 				Updated = true;
 
 				if (AddMRDevice(Device, UDN, DescDoc, Update->Data) && !glDiscovery) {
@@ -869,10 +851,8 @@ cleanup:
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static void *MainThread(void *args)
-{
+static void *MainThread(void *args) {
 	while (glMainRunning) {
 
 		crossthreads_sleep(30*1000);				
@@ -919,8 +899,7 @@ static void *MainThread(void *args)
 }
 
 /*----------------------------------------------------------------------------*/
-static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location)
-{
+static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, const char *location) {
 	char *friendlyName = NULL;
 	uint32_t now = gettime_ms();
 
@@ -962,10 +941,10 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	/* find the different services */
 	for (int i = 0; i < NB_SRV; i++) {
 		char *ServiceId = NULL, *ServiceType = NULL;
-		char *EventURL = NULL, *ControlURL = NULL;
+		char *EventURL = NULL, *ControlURL = NULL, *ServiceURL = NULL;
 
 		strcpy(Device->Service[i].Id, "");
-		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceType, &ServiceId, &EventURL, &ControlURL)) {
+		if (XMLFindAndParseService(DescDoc, location, cSearchedSRV[i].name, &ServiceType, &ServiceId, &EventURL, &ControlURL, &ServiceURL)) {
 			struct sService *s = &Device->Service[cSearchedSRV[i].idx];
 			LOG_SDEBUG("\tservice [%s] %s %s, %s, %s", cSearchedSRV[i].name, ServiceType, ServiceId, EventURL, ControlURL);
 
@@ -980,6 +959,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		NFREE(ServiceType);
 		NFREE(EventURL);
 		NFREE(ControlURL);
+		NFREE(ServiceURL);
 	}
 
 	Device->Master = GetMaster(Device, &friendlyName);
@@ -1013,7 +993,6 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		if (SendARP(inet_addr(ip), INADDR_ANY, Device->Config.mac, &mac_size)) {
 			*(uint32_t*) (Device->Config.mac + 2) = hash32(Device->UDN);
 			LOG_INFO("[%p]: creating MAC", Device);
-			LOG_INFO("[%p]: duplicated mac ... updating", Device);
 		}
 		memset(Device->Config.mac, 0xbb, 2);
 	}
@@ -1045,10 +1024,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	return (Device->Master == NULL);
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool isExcluded(char *Model, char *ModelNumber)
-{
+bool isExcluded(char *Model, char *ModelNumber) {
 	char item[STR_LEN];
 	char *p = glExcluded;
 	char *q = glExcludedModelNumber;
@@ -1086,18 +1063,16 @@ bool isExcluded(char *Model, char *ModelNumber)
 	return false;
 }
 
-
 /*----------------------------------------------------------------------------*/
-static bool Start(bool cold)
-{
+static bool Start(bool cold) {
 	char hostname[STR_LEN];
 	int rc;
 	char IP[16] = "";
 
 	glHost.s_addr = INADDR_ANY;
 
-	// sscanf does not caprure empty strings
-	if (!strstr(glBinding, "?") && !sscanf(glBinding, "%[^:]:%u", IP, &glPort)) sscanf(glBinding, ":%u", &glPort);
+	// sscanf does not capture empty strings
+	if (!strstr(glBinding, "?") && !sscanf(glBinding, "%[^:]:%hu", IP, &glPort)) sscanf(glBinding, ":%hu", &glPort);
 
 	if (!*IP) {
 		struct in_addr host;
@@ -1119,7 +1094,7 @@ static bool Start(bool cold)
 	gethostname(glHostName, STR_LEN);
 	glPort = UpnpGetServerPort();
 
-	LOG_INFO("Binding to %s:%d", IP, glPort);
+	LOG_INFO("Binding to %s:%hu", IP, glPort);
 
 	if (cold) {
 		// manually load openSSL symbols to accept multiple versions
@@ -1168,10 +1143,8 @@ Error:
 
 }
 
-
 /*----------------------------------------------------------------------------*/
-static bool Stop(bool exit)
-{
+static bool Stop(bool exit) {
 	int i;
 
 	glMainRunning = false;
@@ -1234,7 +1207,6 @@ static void sighandler(int signum) {
 	Stop(true);
 	exit(0);
 }
-
 
 /*---------------------------------------------------------------------------*/
 bool ParseArgs(int argc, char **argv) {
@@ -1354,8 +1326,7 @@ bool ParseArgs(int argc, char **argv) {
 /*----------------------------------------------------------------------------*/
 /*																			  */
 /*----------------------------------------------------------------------------*/
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	signal(SIGINT, sighandler);
 	signal(SIGTERM, sighandler);
 #if defined(SIGQUIT)

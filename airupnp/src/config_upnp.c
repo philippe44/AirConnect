@@ -236,7 +236,7 @@ void *LoadConfig(char *name, tMRConfig *Conf) {
 		if (l1_node_list) ixmlNodeList_free(l1_node_list);
 	}
 
-	elm = ixmlDocument_getElementById((IXML_Document	*)elm, "protocolInfo");
+	elm = ixmlDocument_getElementById((IXML_Document*)elm, "protocolInfo");
 	if (elm) {
 		IXML_NodeList* l1_node_list = ixmlNode_getChildNodes((IXML_Node*) elm);
 		for (unsigned i = 0; i < ixmlNodeList_length(l1_node_list); i++) {

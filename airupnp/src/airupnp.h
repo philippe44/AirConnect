@@ -81,8 +81,8 @@ struct sMR {
 	struct raopsr_s *Raop;
 	metadata_t		MetaData;
 	raopsr_event_t	RaopState;
-	uint32_t			Elapsed;
-	uint32_t			LastSeen;
+	uint32_t		Elapsed;
+	uint32_t		LastSeen;
 	uint8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
 	queue_t			ActionQueue;

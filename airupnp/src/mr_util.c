@@ -14,11 +14,10 @@
 #include "ixmlextra.h"
 #include "airupnp.h"
 #include "avt_util.h"
-#include "upnpdebug.h"
 #include "upnptools.h"
-#include "mr_util.h"
 #include "cross_thread.h"
 #include "cross_log.h"
+#include "mr_util.h"
 
 extern log_level	util_loglevel;
 static log_level 	*loglevel = &util_loglevel;
@@ -45,9 +44,7 @@ int CalcGroupVolume(struct sMR *Device) {
 	return GroupVolume / n;
 }
 
-
 /*----------------------------------------------------------------------------*/
-
 struct sMR *GetMaster(struct sMR *Device, char **Name)
 {
 	IXML_Document *ActionNode = NULL, *Response;
@@ -125,10 +122,7 @@ struct sMR *GetMaster(struct sMR *Device, char **Name)
 	return Master;
 }
 
-
-
 /*----------------------------------------------------------------------------*/
-
 void FlushMRDevices(void)
 {
 	int i;
@@ -146,18 +140,15 @@ void FlushMRDevices(void)
 	}
 }
 
-
 /*----------------------------------------------------------------------------*/
 void DelMRDevice(struct sMR *p)
 {
-	int i;
-
 	// already locked expect for failed creation which means a trylock is fine
 	pthread_mutex_trylock(&p->Mutex);
 
 	// try to unsubscribe but missing players will not succeed and as a result
 	// terminating the libupnp takes a while ...
-	for (i = 0; i < NB_SRV; i++) {
+	for (int i = 0; i < NB_SRV; i++) {
 		if (p->Service[i].TimeOut) {
 			UpnpUnSubscribeAsync(glControlPointHandle, p->Service[i].SID, _voidHandler, NULL);
 		}
@@ -171,7 +162,6 @@ void DelMRDevice(struct sMR *p)
 	pthread_mutex_unlock(&p->Mutex);
 	pthread_join(p->Thread, NULL);
 }
-
 
 /*----------------------------------------------------------------------------*/
 struct sMR* CURL2Device(const UpnpString *CtrlURL)
@@ -188,7 +178,6 @@ struct sMR* CURL2Device(const UpnpString *CtrlURL)
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
 struct sMR* SID2Device(const UpnpString *SID)
 {
@@ -204,7 +193,6 @@ struct sMR* SID2Device(const UpnpString *SID)
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
 struct sService *EventURL2Service(const UpnpString *URL, struct sService *s)
 {
@@ -215,7 +203,6 @@ struct sService *EventURL2Service(const UpnpString *URL, struct sService *s)
 
 	return NULL;
 }
-
 
 /*----------------------------------------------------------------------------*/
 struct sMR* UDN2Device(const char *UDN)
@@ -230,12 +217,11 @@ struct sMR* UDN2Device(const char *UDN)
 	return NULL;
 }
 
-
 /*----------------------------------------------------------------------------*/
 bool CheckAndLock(struct sMR *Device)
 {
 	if (!Device) {
-		LOG_INFO("device is NULL", NULL);
+		LOG_INFO("device is NULL");
 		return false;
 	}
 
@@ -297,21 +283,21 @@ static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, b
 }
 
 /*----------------------------------------------------------------------------*/
-int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
-	const char *serviceTypeBase, char **serviceType, char **serviceId, char **eventURL, char **controlURL)
-{
+int XMLFindAndParseService(IXML_Document* DescDoc, const char* location,
+	const char* serviceTypeBase, char** serviceType, char** serviceId, 
+	char** eventURL, char** controlURL, char** serviceURL) {
 	unsigned int i;
 	unsigned long length;
 	int found = 0;
 	int ret;
 	unsigned int sindex = 0;
-	char *tempServiceType = NULL;
-	char *baseURL = NULL;
-	const char *base = NULL;
-	char *relcontrolURL = NULL;
-	char *releventURL = NULL;
-	IXML_NodeList *serviceList = NULL;
-	IXML_Element *service = NULL;
+	char* tempServiceType = NULL;
+	char* baseURL = NULL;
+	const char* base = NULL;
+	char* relcontrolURL = NULL;
+	char* releventURL = NULL;
+	IXML_NodeList* serviceList = NULL;
+	IXML_Element* service = NULL;
 	bool contd = true;
 
 	baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase", true);
@@ -324,31 +310,33 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 		releventURL = NULL;
 		service = NULL;
 
-		if ((serviceList = XMLGetNthServiceList(DescDoc , sindex, &contd)) == NULL) continue;
+		if ((serviceList = XMLGetNthServiceList(DescDoc, sindex, &contd)) == NULL) continue;
 		length = ixmlNodeList_length(serviceList);
 		for (i = 0; i < length; i++) {
-			service = (IXML_Element *)ixmlNodeList_item(serviceList, i);
-			tempServiceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
+			service = (IXML_Element*)ixmlNodeList_item(serviceList, i);
+			tempServiceType = XMLGetFirstElementItem((IXML_Element*)service, "serviceType");
 			LOG_SDEBUG("serviceType %s", tempServiceType);
 
 			// remove version from service type
 			*strrchr(tempServiceType, ':') = '\0';
 			if (tempServiceType && strcmp(tempServiceType, serviceTypeBase) == 0) {
+				NFREE(*serviceURL);
+				*serviceURL = XMLGetFirstElementItem((IXML_Element*)service, "SCPDURL");
 				NFREE(*serviceType);
-				*serviceType = XMLGetFirstElementItem((IXML_Element *)service, "serviceType");
+				*serviceType = XMLGetFirstElementItem((IXML_Element*)service, "serviceType");
 				NFREE(*serviceId);
 				*serviceId = XMLGetFirstElementItem(service, "serviceId");
 				LOG_SDEBUG("Service %s, serviceId: %s", serviceType, *serviceId);
 				relcontrolURL = XMLGetFirstElementItem(service, "controlURL");
 				releventURL = XMLGetFirstElementItem(service, "eventSubURL");
 				NFREE(*controlURL);
-				*controlURL = (char*) malloc(strlen(base) + strlen(relcontrolURL) + 1);
+				*controlURL = (char*)malloc(strlen(base) + strlen(relcontrolURL) + 1);
 				if (*controlURL) {
 					ret = UpnpResolveURL(base, relcontrolURL, *controlURL);
 					if (ret != UPNP_E_SUCCESS) LOG_ERROR("Error generating controlURL from %s + %s", base, relcontrolURL);
 				}
 				NFREE(*eventURL);
-				*eventURL = (char*) malloc(strlen(base) + strlen(releventURL) + 1);
+				*eventURL = (char*)malloc(strlen(base) + strlen(releventURL) + 1);
 				if (*eventURL) {
 					ret = UpnpResolveURL(base, releventURL, *eventURL);
 					if (ret != UPNP_E_SUCCESS) LOG_ERROR("Error generating eventURL from %s + %s", base, releventURL);
@@ -374,6 +362,38 @@ int XMLFindAndParseService(IXML_Document *DescDoc, const char *location,
 	return found;
 }
 
+/*----------------------------------------------------------------------------*/
+bool XMLFindAction(const char* base, char* service, char* action) {
+	char* url = malloc(strlen(base) + strlen(service) + 1);
+	IXML_Document* AVTDoc = NULL;
+	bool res = false;
+
+	UpnpResolveURL(base, service, url);
+
+	if (UpnpDownloadXmlDoc(url, &AVTDoc) == UPNP_E_SUCCESS) {
+		IXML_Element* actions = ixmlDocument_getElementById(AVTDoc, "actionList");
+		IXML_NodeList* actionList = ixmlDocument_getElementsByTagName((IXML_Document*)actions, "action");
+		int i;
+
+		for (i = 0; actionList && i < (int)ixmlNodeList_length(actionList); i++) {
+			IXML_Node* node = ixmlNodeList_item(actionList, i);
+			const char* name;
+			node = (IXML_Node*)ixmlDocument_getElementById((IXML_Document*)node, "name");
+			node = ixmlNode_getFirstChild(node);
+			name = ixmlNode_getNodeValue(node);
+			if (name && !strcasecmp(name, action)) {
+				res = true;
+				break;
+			}
+		}
+		ixmlNodeList_free(actionList);
+	}
+
+	free(url);
+	ixmlDocument_free(AVTDoc);
+
+	return res;
+}
 
 /*----------------------------------------------------------------------------*/
 char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr)
@@ -425,7 +445,6 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 	return ret;
 }
 
-
 /*----------------------------------------------------------------------------*/
 static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
 {
@@ -448,7 +467,6 @@ static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
 
 	return ret;
 }
-
 
 /*----------------------------------------------------------------------------*/
 char *uPNPEvent2String(Upnp_EventType S)
@@ -490,12 +508,3 @@ char *uPNPEvent2String(Upnp_EventType S)
 
 	return "";
 }
-
-
-
-
-
-
-
-
-

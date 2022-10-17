@@ -120,7 +120,6 @@ static bool	   			glDaemonize = false;
 #endif
 static bool				glMainRunning = true;
 static struct in_addr 	glHost;
-static char				glHostName[STR_LEN];
 static struct mdnsd*	glmDNSServer = NULL;
 static char*			glExcluded = NULL;
 static char*			glExcludedModelNumber = NULL;
@@ -1065,19 +1064,16 @@ bool isExcluded(char *Model, char *ModelNumber) {
 
 /*----------------------------------------------------------------------------*/
 static bool Start(bool cold) {
-	char hostname[STR_LEN];
 	int rc;
-	char IP[16] = "";
 
-	glHost.s_addr = INADDR_ANY;
+	// bind to an address
+	get_interface(&glHost);
 
-	// sscanf does not capture empty strings
-	if (!strstr(glBinding, "?") && !sscanf(glBinding, "%[^:]:%hu", IP, &glPort)) sscanf(glBinding, ":%hu", &glPort);
-
-	if (!*IP) {
-		struct in_addr host;
-		get_interface(&host);
-		strcpy(IP, inet_ntoa(host));
+	if (!strstr(glBinding, "?")) {
+		char addr[16] = "";
+		// sscanf does not capture empty strings
+		if (!sscanf(glBinding, "%[^:]:%hu", addr, &glPort)) sscanf(glBinding, ":%hu", &glPort);
+		if (*addr) glHost.s_addr = inet_addr(addr);
 	}
 
 	UpnpSetLogLevel(UPNP_CRITICAL);
@@ -1089,12 +1085,9 @@ static bool Start(bool cold) {
 	}
 
 	UpnpSetMaxContentLength(60000);
-
-	glHost.s_addr = inet_addr(IP);
-	gethostname(glHostName, STR_LEN);
 	glPort = UpnpGetServerPort();
 
-	LOG_INFO("Binding to %s:%hu", IP, glPort);
+	LOG_INFO("Binding to %s:%hu", inet_ntoa(glHost), glPort);
 
 	if (cold) {
 		// manually load openSSL symbols to accept multiple versions
@@ -1123,7 +1116,9 @@ static bool Start(bool cold) {
 			goto Error;
 		}
 
-		snprintf(hostname, STR_LEN, "%s.local", glHostName);
+		char hostname[STR_LEN];
+		gethostname(hostname, sizeof(hostname));
+		strcat(hostname, ".local");
 		if ((glmDNSServer = mdnsd_start(glHost)) == NULL) goto Error;
 		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 

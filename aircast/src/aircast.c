@@ -81,7 +81,6 @@ static struct mDNShandle_s	*glmDNSsearchHandle;
 static struct in_addr 		glHost;
 static pthread_t 			glMainThread, glmDNSsearchThread;
 static char					*glLogFile;
-static char					*glHostName = NULL;
 static bool					glDiscovery = false;
 static bool					glInteractive = true;
 static char					*glPidFile = NULL;
@@ -661,11 +660,9 @@ void RemoveCastDevice(struct sMR *Device) {
 
 /*----------------------------------------------------------------------------*/
 static bool Start(bool cold) {
-	char hostname[STR_LEN];
-
+	// must bind to an address
 	get_interface(&glHost);
 	if (!strstr(glBinding, "?")) glHost.s_addr = inet_addr(glBinding);
-	snprintf(hostname, STR_LEN, "%s.local", glHostName);
 
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
 
@@ -685,7 +682,10 @@ static bool Start(bool cold) {
 	}
 
 	if (glHost.s_addr != INADDR_ANY) {
-		// initialize mDNS broadcast
+		char hostname[STR_LEN];
+		gethostname(hostname, sizeof(hostname));
+		strcat(hostname, ".local");
+
 		if ((glmDNSServer = mdnsd_start(glHost)) == NULL) return false;
 		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
@@ -720,7 +720,6 @@ static bool Stop(bool exit) {
 		pthread_join(glMainThread, NULL);
 		for (int i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
-		NFREE(glHostName);
 		if (glConfigID) ixmlDocument_free(glConfigID);
 		netsock_close();
 		cross_ssl_free();

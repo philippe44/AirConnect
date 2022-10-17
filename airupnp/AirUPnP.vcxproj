@@ -34,9 +34,9 @@
     <Library Include="..\..\libopenssl\targets\win32\x86\libopenssl-dll.lib" />
     <Library Include="..\common\libcodecs\targets\win32\$(PlatformTarget)\libcodecs.lib" />
     <Library Include="..\common\libmdns\targets\win32\$(PlatformTarget)\libmdns.lib" />
-    <Library Include="..\common\pthreads4w\targets\win32\$(PlatformTarget)\libpthreadVC3d.lib" />
+    <Library Include="..\common\libpthreads4w\targets\win32\$(PlatformTarget)\libpthreadVC3d.lib" />
     <Library Include="..\common\libpupnp\targets\win32\$(PlatformTarget)\libpupnp.lib" />
-    <Library Include="..\common\raoptools\targets\win32\x86\libraop.lib" />
+    <Library Include="..\common\libraop\targets\win32\x86\libraop.lib" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -78,7 +78,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>UPNP_STATIC_LIB;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(BaseCommon);$(BaseCommon)\raoptools\targets\include;$(BaseCommon)\crosstools\src;$(BaseCommon)\libopenssl\targets\win32\$(PlatformTarget)\include;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\addons;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\upnp;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\ixml;$(BaseCommon)\libmdns\targets\include\tinysvcmdns;$(BaseCommon)\libmdns\targets\include\mdnssd;$(BaseCommon)\pthreads4w\targets\win32\$(PlatformTarget)\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\libcodecs\targets\include\flac;$(BaseCommon)\libcodecs\targets\include\shine;$(BaseCommon)\libcodecs\targets\include\addons;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BaseCommon);$(BaseCommon)\libraop\targets\include;$(BaseCommon)\crosstools\src;$(BaseCommon)\libopenssl\targets\win32\$(PlatformTarget)\include;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\addons;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\upnp;$(BaseCommon)\libpupnp\targets\win32\$(PlatformTarget)\include\ixml;$(BaseCommon)\libmdns\targets\include\tinysvcmdns;$(BaseCommon)\libmdns\targets\include\mdnssd;$(BaseCommon)\libpthreads4w\targets\win32\$(PlatformTarget)\include;$(BaseDir)\tools;$(BaseCommon)\dmap-parser\;$(BaseCommon)\libcodecs\targets\include\flac;$(BaseCommon)\libcodecs\targets\include\shine;$(BaseCommon)\libcodecs\targets\include\addons;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ProgramDataBaseFileName>$(TEMP)vc$(PlatformToolsetVersion)$(ProjectName).pdb</ProgramDataBaseFileName>
       <LanguageStandard_C Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</LanguageStandard_C>

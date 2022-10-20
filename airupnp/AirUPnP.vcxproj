@@ -31,7 +31,6 @@
     <ClCompile Include="src\mr_util.c" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="..\..\libopenssl\targets\win32\x86\libopenssl-dll.lib" />
     <Library Include="..\common\libcodecs\targets\win32\$(PlatformTarget)\libcodecs.lib" />
     <Library Include="..\common\libmdns\targets\win32\$(PlatformTarget)\libmdns.lib" />
     <Library Include="..\common\libpthreads4w\targets\win32\$(PlatformTarget)\libpthreadVC3d.lib" />
@@ -105,7 +104,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BaseCommon)\libopenssl\targets\win32\$(PlatformTarget);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libopenssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libopenssl_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>..\common\manifest.xml</AdditionalManifestFiles>

@@ -110,7 +110,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BaseCommon)\libopenssl\targets\win32\$(PlatformTarget);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libopenssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libopenssl_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>..\common\manifest.xml</AdditionalManifestFiles>

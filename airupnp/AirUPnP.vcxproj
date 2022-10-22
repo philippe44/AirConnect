@@ -89,6 +89,7 @@
       </AdditionalLibraryDirectories>
       <AdditionalDependencies>ws2_32.lib;wsock32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt;libcmtd</IgnoreSpecificDefaultLibraries>
+	  <AdditionalOptions>/Brepro</AdditionalOptions>
     </Link>
     <Manifest>
       <AdditionalManifestFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\common\manifest.xml</AdditionalManifestFiles>

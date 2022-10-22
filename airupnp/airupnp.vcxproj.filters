@@ -27,10 +27,9 @@
   <ItemGroup>
     <Library Include="..\common\libcodecs\targets\win32\$(PlatformTarget)\libcodecs.lib" />
     <Library Include="..\common\libmdns\targets\win32\$(PlatformTarget)\libmdns.lib" />
-    <Library Include="..\common\pthreads4w\targets\win32\$(PlatformTarget)\libpthreadVC3d.lib" />
     <Library Include="..\common\libpupnp\targets\win32\$(PlatformTarget)\libpupnp.lib" />
-    <Library Include="..\..\libopenssl\targets\win32\x86\libopenssl-dll.lib" />
-    <Library Include="..\common\raoptools\targets\win32\x86\libraop.lib" />
+    <Library Include="..\common\libpthreads4w\targets\win32\$(PlatformTarget)\libpthreadVC3d.lib" />
+    <Library Include="..\common\libraop\targets\win32\x86\libraop.lib" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="crosstools">

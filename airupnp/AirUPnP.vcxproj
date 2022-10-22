@@ -44,6 +44,7 @@
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <BaseDir>..</BaseDir>
     <BaseCommon>$(BaseDir)\common</BaseCommon>
+	<Deterministic>true</Deterministic>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -89,7 +90,6 @@
       </AdditionalLibraryDirectories>
       <AdditionalDependencies>ws2_32.lib;wsock32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcmt;libcmtd</IgnoreSpecificDefaultLibraries>
-	  <Deterministic>true</Deterministic>
     </Link>
     <Manifest>
       <AdditionalManifestFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\common\manifest.xml</AdditionalManifestFiles>

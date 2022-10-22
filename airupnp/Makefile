@@ -11,7 +11,7 @@ endif
 
 BASE		= ..
 
-BUILDDIR	= build/$(HOST)/$(PLATFORM)
+BUILDDIR	= bin/$(HOST)/$(PLATFORM)
 EXECUTABLE 	= $(BASE)/bin/airupnp-$(HOST)-$(PLATFORM)
 EXECUTABLE_STATIC	= $(BASE)/bin/airupnp-$(HOST)-$(PLATFORM)-static
 

@@ -11,7 +11,7 @@ endif
 
 BASE = ..
 
-BUILDDIR	= build/$(HOST)/$(PLATFORM)
+BUILDDIR	= bin/$(HOST)/$(PLATFORM)
 EXECUTABLE	= $(BASE)/bin/aircast-$(HOST)-$(PLATFORM)
 EXECUTABLE_STATIC	= $(BASE)/bin/aircast-$(HOST)-$(PLATFORM)-static
 

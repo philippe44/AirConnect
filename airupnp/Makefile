@@ -5,6 +5,10 @@ endif
 PLATFORM ?= $(firstword $(subst -, ,$(CC)))
 HOST ?= $(word 2, $(subst -, ,$(CC)))
 
+ifneq ($(HOST),macos)
+LINKSTATIC = -static
+endif
+
 BASE		= ..
 
 BUILDDIR	= build/$(HOST)/$(PLATFORM)
@@ -59,7 +63,7 @@ $(EXECUTABLE): $(OBJECTS) $(DEPS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
 	
 $(EXECUTABLE_STATIC): $(OBJECTS_STATIC) $(DEPS)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) -o $@	
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@	
 
 directory:
 	@mkdir -p $(BUILDDIR)

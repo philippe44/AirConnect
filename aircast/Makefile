@@ -5,6 +5,10 @@ endif
 PLATFORM ?= $(firstword $(subst -, ,$(CC)))
 HOST ?= $(word 2, $(subst -, ,$(CC)))
 
+ifneq ($(HOST),macos)
+LINKSTATIC = -static
+endif
+
 BASE = ..
 
 BUILDDIR	= build/$(HOST)/$(PLATFORM)
@@ -61,11 +65,11 @@ LIBRARY_STATIC 	= $(LIBRARY) $(OPENSSL)/libopenssl.a
 
 all: directory $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
-$(EXECUTABLE): $(OBJECTS)
+$(EXECUTABLE): $(OBJECTS) $(DEPS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
 
-$(EXECUTABLE_STATIC): $(OBJECTS_STATIC)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) -o $@	
+$(EXECUTABLE_STATIC): $(OBJECTS_STATIC) $(DEPS)
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@	
 
 directory:
 	@mkdir -p $(BUILDDIR)

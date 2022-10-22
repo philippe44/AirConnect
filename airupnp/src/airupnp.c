@@ -16,7 +16,7 @@
 #include "platform.h"
 #include "ixmlextra.h"
 #include "airupnp.h"
-#include "tinysvcmdns.h"
+#include "mdnssvc.h"
 #include "upnpdebug.h"
 
 #include "cross_ssl.h"

@@ -283,7 +283,7 @@ int CtrlGetGroupVolume(struct sMR *Device)
 	char *Item;
 	int Volume = -1;
 
-	if (!Service->ControlURL) return Volume;
+	if (*Service->ControlURL) return Volume;
 
 	ActionNode = UpnpMakeAction("GetGroupVolume", Service->Type, 0, NULL);
 	UpnpAddToAction(&ActionNode, "GetGroupVolume", Service->Type, "InstanceID", "0");
@@ -313,7 +313,7 @@ int CtrlGetVolume(struct sMR *Device)
 	char *Item;
 	int Volume = -1;
 
-	if (!Service->ControlURL) return Volume;
+	if (*Service->ControlURL) return Volume;
 
 	ActionNode = UpnpMakeAction("GetVolume", Service->Type, 0, NULL);
 	UpnpAddToAction(&ActionNode, "GetVolume", Service->Type, "InstanceID", "0");

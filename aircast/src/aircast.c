@@ -26,7 +26,7 @@
 #include "cast_parse.h"
 #include "castitf.h"
 #include "mdnssd.h"
-#include "tinysvcmdns.h"
+#include "mdnssvc.h"
 #include "config_cast.h"
 #include "ixml.h"
 

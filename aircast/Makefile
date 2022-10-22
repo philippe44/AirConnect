@@ -7,9 +7,9 @@ HOST ?= $(word 2, $(subst -, ,$(CC)))
 
 BASE = ..
 
-BUILDDIR	= build/$(PLATFORM)
-EXECUTABLE	= $(BASE)/bin/aircast-$(PLATFORM)
-EXECUTABLE_STATIC	= $(BASE)/bin/aircast-$(PLATFORM)-static
+BUILDDIR	= build/$(HOST)/$(PLATFORM)
+EXECUTABLE	= $(BASE)/bin/aircast-$(HOST)-$(PLATFORM)
+EXECUTABLE_STATIC	= $(BASE)/bin/aircast-$(HOST)-$(PLATFORM)-static
 
 SRC			= src
 TOOLS		= $(COMMON)/crosstools/src
@@ -25,13 +25,7 @@ JANSSON		= libjansson/targets/$(HOST)/$(PLATFORM)
 
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUPNP_STATIC_LIB
 CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
-LDFLAGS 	+= -s -lpthread -ldl -lm -lrt -L. 
-
-ifeq ($(OS),Darwin)
-LDFLAGS 	+= -Wl,-dead_strip
-else ifneq ($(OS), SunOS)
-LDFLAGS 	+= -Wl,--gc-sections
-endif
+LDFLAGS 	+= -s -lpthread -ldl -lm -L. 
 
 vpath %.c $(TOOLS):$(SRC):$(NANOPB):$(COMMON)
 
@@ -42,7 +36,7 @@ INCLUDE = -I$(OPENSSL)/include \
 		  -I$(RAOP)/include \
 		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
 		  -I$(CODECS)/include/flac -I$(CODECS)/include/shine \
-		  -I$(MDNS)/include/tinysvcmdns -I$(MDNS)/include/mdnssd \
+		  -I$(MDNS)/include/mdnssvc -I$(MDNS)/include/mdnssd \
 		  -I$(NANOPB) \
 		  -I$(JANSSON)/include
 		  		  
@@ -71,7 +65,7 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
 
 $(EXECUTABLE_STATIC): $(OBJECTS_STATIC)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) -static -o $@	
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) -o $@	
 
 directory:
 	@mkdir -p $(BUILDDIR)
@@ -81,7 +75,7 @@ $(BUILDDIR)/%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
 
 $(BUILDDIR)/%-static.o : %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_LIB_STATIC $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_STATIC_LIB $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
 	
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) 

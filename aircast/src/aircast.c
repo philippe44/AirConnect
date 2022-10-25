@@ -342,7 +342,7 @@ static void *MRThread(void *args) {
 		last = gettime_ms();
 	}
 
-	list_clear((list_t**)&p->GroupMaster, free);
+	list_clear((cross_list_t**)&p->GroupMaster, free);
 
 	return NULL;
 }
@@ -423,12 +423,12 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop) {
 						Device->Remove = false;
 						// changing the master, so need to update cast params
 						if (Device->GroupMaster->Host.s_addr == s->host.s_addr) {
-							free(list_pop((list_t**) &Device->GroupMaster));
+							free(list_pop((cross_list_t**) &Device->GroupMaster));
 							UpdateCastDevice(Device->CastCtx, Device->GroupMaster->Host, Device->GroupMaster->Port);
 						} else {
 							struct sGroupMember *Member = Device->GroupMaster;
 							while (Member && (Member->Host.s_addr != s->host.s_addr)) Member = Member->Next;
-							if (Member) free(list_remove((list_t*) Member, (list_t**) &Device->GroupMaster));
+							if (Member) free(list_remove((cross_list_t*) Member, (cross_list_t**) &Device->GroupMaster));
 						}
 					}
 				}
@@ -441,7 +441,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop) {
 					struct sGroupMember *Member = calloc(1, sizeof(struct sGroupMember));
 					Member->Host = s->host;
 					Member->Port = s->port;
-					list_push((list_t*) Member, (list_t**) &Device->GroupMaster);
+					list_push((cross_list_t*) Member, (cross_list_t**) &Device->GroupMaster);
 				}
 				
 				UpdateCastDevice(Device->CastCtx, s->addr, s->port);
@@ -563,11 +563,11 @@ static void *MainThread(void *args) {
 			}
 		}
 
-		// try to detect IP change when auto-detect
-		if (strstr(glBinding, "?")) {
+		// try to detect IP change when not forced
+		if (inet_addr(glBinding) == INADDR_NONE) {
 			struct in_addr host;
-			get_interface(&host);
-			if (host.s_addr != INADDR_ANY && host.s_addr != glHost.s_addr) {
+			host = get_interface(!strchr(glBinding, '?') ? glBinding : NULL);
+			if (host.s_addr != INADDR_NONE && host.s_addr != glHost.s_addr) {
 				LOG_INFO("IP change detected %s", inet_ntoa(glHost));
 				Stop(false);
 				glMainRunning = true;
@@ -627,7 +627,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 		}
 	}
 
-	LOG_INFO("[%p]: adding renderer (%s) with mac %hx%x", Device, Name, *(uint16_t*) Device->Config.mac, *(uint32_t*) (Device->Config.mac + 2));
+	LOG_INFO("[%p]: adding renderer (%s) with mac %hX%X", Device, Name, *(uint16_t*) Device->Config.mac, *(uint32_t*) (Device->Config.mac + 2));
 
 	Device->CastCtx = CreateCastDevice(Device, Device->Group, Device->Config.StopReceiver, ip, port, Device->Config.MediaVolume);
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
@@ -661,10 +661,11 @@ void RemoveCastDevice(struct sMR *Device) {
 /*----------------------------------------------------------------------------*/
 static bool Start(bool cold) {
 	// must bind to an address
-	get_interface(&glHost);
-	if (!strstr(glBinding, "?")) glHost.s_addr = inet_addr(glBinding);
-
+	glHost = get_interface(!strchr(glBinding, '?') ? glBinding : NULL);
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
+
+	// can't find a suitable interface
+	if (glHost.s_addr == INADDR_NONE) return false;
 
 	if (cold) {
 		// manually load openSSL symbols to accept multiple versions
@@ -681,18 +682,16 @@ static bool Start(bool cold) {
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
 	}
 
-	if (glHost.s_addr != INADDR_ANY) {
-		char hostname[STR_LEN];
-		gethostname(hostname, sizeof(hostname));
-		strcat(hostname, ".local");
+	char hostname[STR_LEN];
+	gethostname(hostname, sizeof(hostname));
+	strcat(hostname, ".local");
 
-		if ((glmDNSServer = mdnsd_start(glHost)) == NULL) return false;
-		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
+	if ((glmDNSServer = mdnsd_start(glHost)) == NULL) return false;
+	mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
-		// start the mDNS devices discovery thread
-		glmDNSsearchHandle = init_mDNS(false, glHost);
-		pthread_create(&glmDNSsearchThread, NULL, &mDNSsearchThread, NULL);
-	}
+	// start the mDNS devices discovery thread
+	glmDNSsearchHandle = init_mDNS(false, glHost);
+	pthread_create(&glmDNSsearchThread, NULL, &mDNSsearchThread, NULL);
 
 	return true;
 }

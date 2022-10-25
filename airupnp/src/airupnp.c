@@ -131,7 +131,7 @@ static bool				glDiscovery = false;
 static pthread_mutex_t 	glUpdateMutex;
 static pthread_cond_t  	glUpdateCond;
 static pthread_t 		glMainThread, glUpdateThread;
-static queue_t			glUpdateQueue;
+static cross_queue_t			glUpdateQueue;
 static bool				glInteractive = true;
 static char				*glLogFile;
 static uint16_t			glPort;
@@ -881,11 +881,11 @@ static void *MainThread(void *args) {
 			}
 		}
 
-		// try to detect IP change when auto-detect
-		if (strstr(glBinding, "?")) {
-			struct in_addr Host;
-			get_interface(&Host);
-			if (Host.s_addr != INADDR_ANY && Host.s_addr != glHost.s_addr) {
+		// try to detect IP change when not forced
+		if (inet_addr(glBinding) == INADDR_NONE) {
+			struct in_addr host;
+			host = get_interface(!strchr(glBinding, '?') ? glBinding : NULL);
+			if (host.s_addr != INADDR_NONE && host.s_addr != glHost.s_addr) {
 				LOG_INFO("IP change detected %s", inet_ntoa(glHost));
 				Stop(false);
 				glMainRunning = true;
@@ -1008,7 +1008,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	if (Device->Master) {
 		LOG_INFO("[%p] skipping Sonos slave %s", Device, friendlyName);
 	} else {
-		LOG_INFO("[%p]: adding renderer (%s) with mac %hx%x", Device, friendlyName, *(uint16_t*)Device->Config.mac, *(uint32_t*)(Device->Config.mac + 2));
+		LOG_INFO("[%p]: adding renderer (%s) with mac %hX%X", Device, friendlyName, *(uint16_t*)Device->Config.mac, *(uint32_t*)(Device->Config.mac + 2));
 	}
 
 	NFREE(friendlyName);
@@ -1064,21 +1064,20 @@ bool isExcluded(char *Model, char *ModelNumber) {
 
 /*----------------------------------------------------------------------------*/
 static bool Start(bool cold) {
-	int rc;
+	char addr[128] = "";
 
-	// bind to an address
-	get_interface(&glHost);
+	// sscanf does not capture empty strings
+	if (!strchr(glBinding, '?') && !sscanf(glBinding, "%[^:]:%hu", addr, &glPort)) sscanf(glBinding, ":%hu", &glPort);
+	
+	glHost = get_interface(addr);
 
-	if (!strstr(glBinding, "?")) {
-		char addr[16] = "";
-		// sscanf does not capture empty strings
-		if (!sscanf(glBinding, "%[^:]:%hu", addr, &glPort)) sscanf(glBinding, ":%hu", &glPort);
-		if (*addr) glHost.s_addr = inet_addr(addr);
-	}
+	// can't find a suitable interface
+	if (glHost.s_addr == INADDR_NONE) return false;
 
 	UpnpSetLogLevel(UPNP_CRITICAL);
-	rc = UpnpInit2(NULL, glPort);
-
+	// only set iface name if it's a name
+	int rc = UpnpInit2((*addr && inet_addr(addr) == INADDR_NONE) ? addr : NULL, glPort);
+	
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("UPnP init failed: %d", rc);
 		goto Error;
@@ -1104,30 +1103,27 @@ static bool Start(bool cold) {
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
 	}
 
-	if (glHost.s_addr != INADDR_ANY) {
-		pthread_mutex_init(&glUpdateMutex, 0);
-		pthread_cond_init(&glUpdateCond, 0);
-		queue_init(&glUpdateQueue, true, FreeUpdate);
-		pthread_create(&glUpdateThread, NULL, &UpdateThread, NULL);
+	pthread_mutex_init(&glUpdateMutex, 0);
+	pthread_cond_init(&glUpdateCond, 0);
+	queue_init(&glUpdateQueue, true, FreeUpdate);
+	pthread_create(&glUpdateThread, NULL, &UpdateThread, NULL);
 
-		rc = UpnpRegisterClient(MasterHandler, NULL, &glControlPointHandle);
-		if (rc != UPNP_E_SUCCESS) {
-			LOG_ERROR("Error registering ControlPoint: %d", rc);
-			goto Error;
-		}
+	rc = UpnpRegisterClient(MasterHandler, NULL, &glControlPointHandle);
+	if (rc != UPNP_E_SUCCESS) {
+		LOG_ERROR("Error registering ControlPoint: %d", rc);
+		goto Error;
+	}
 
-		char hostname[STR_LEN];
-		gethostname(hostname, sizeof(hostname));
-		strcat(hostname, ".local");
-		if ((glmDNSServer = mdnsd_start(glHost)) == NULL) goto Error;
-		mdnsd_set_hostname(glmDNSServer, hostname, glHost);
+	char hostname[STR_LEN];
+	gethostname(hostname, sizeof(hostname));
+	strcat(hostname, ".local");
+	if ((glmDNSServer = mdnsd_start(glHost)) == NULL) goto Error;
+	mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
-		for (int i = 0; i < glMRConfig.UPnPMax; i++) {
-			char SearchTopic[sizeof(MEDIA_RENDERER)+2];
-			snprintf(SearchTopic, sizeof(SearchTopic), "%s:%i", MEDIA_RENDERER, i + 1);
-			UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, SearchTopic, NULL);
-		}
-
+	for (int i = 0; i < glMRConfig.UPnPMax; i++) {
+		char SearchTopic[sizeof(MEDIA_RENDERER)+2];
+		snprintf(SearchTopic, sizeof(SearchTopic), "%s:%i", MEDIA_RENDERER, i + 1);
+		UpnpSearchAsync(glControlPointHandle, DISCOVERY_TIME, SearchTopic, NULL);
 	}
 
 	return true;

@@ -30,7 +30,7 @@ bool 	AVTSetPlayMode(struct sMR *Device);
 bool 	AVTSeek(struct sMR *Device, unsigned Interval);
 bool 	AVTBasic(struct sMR *Device, char *Action);
 bool 	AVTStop(struct sMR *Device);
-void	AVTActionFlush(queue_t *Queue);
+void	AVTActionFlush(cross_queue_t *Queue);
 int 	CtrlSetVolume(struct sMR *Device, uint8_t Volume, void *Cookie);
 int 	CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie);
 int 	CtrlGetVolume(struct sMR *Device);

@@ -55,7 +55,7 @@ bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 
 
 /*----------------------------------------------------------------------------*/
-void AVTActionFlush(queue_t *Queue)
+void AVTActionFlush(cross_queue_t *Queue)
 {
 	tAction *Action;
 

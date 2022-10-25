@@ -48,7 +48,7 @@ typedef struct sCastCtx {
 	enum { CAST_WAIT, CAST_WAIT_MEDIA } State;
 	struct in_addr	ip;
 	uint16_t		port;
-	queue_t			eventQueue, reqQueue;
+	cross_queue_t	eventQueue, reqQueue;
 	double 			MediaVolume;
 	uint32_t		lastPong;
 	bool			group;
@@ -66,7 +66,7 @@ typedef struct {
 bool 	SendCastMessage(struct sCastCtx *Ctx, char *ns, char *dest, char *payload, ...);
 bool 	LaunchReceiver(tCastCtx *Ctx);
 void 	SetVolume(tCastCtx *Ctx, double Volume);
-void 	CastQueueFlush(queue_t *Queue);
+void 	CastQueueFlush(cross_queue_t *Queue);
 bool	CastConnect(struct sCastCtx *Ctx);
 void 	CastDisconnect(struct sCastCtx *Ctx);
 

@@ -6,7 +6,9 @@ PLATFORM ?= $(firstword $(subst -, ,$(CC)))
 HOST ?= $(word 2, $(subst -, ,$(CC)))
 
 ifneq ($(HOST),macos)
+ifneq ($(HOST),solaris)
 LINKSTATIC = -static
+endif
 endif
 
 BASE		= ..

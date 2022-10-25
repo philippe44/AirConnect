@@ -85,7 +85,7 @@ struct sMR {
 	uint32_t		LastSeen;
 	uint8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
-	queue_t			ActionQueue;
+	cross_queue_t	ActionQueue;
 	unsigned		TrackPoll, StatePoll;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;

@@ -382,7 +382,7 @@ void DeleteCastDevice(struct sCastCtx *Ctx) {
 }
 
 /*----------------------------------------------------------------------------*/
-void CastQueueFlush(queue_t *Queue) {
+void CastQueueFlush(cross_queue_t *Queue) {
 	tReqItem *item;
 
 	while ((item = queue_extract(Queue)) != NULL) {

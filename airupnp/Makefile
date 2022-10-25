@@ -8,6 +8,8 @@ HOST ?= $(word 2, $(subst -, ,$(CC)))
 ifneq ($(HOST),macos)
 ifneq ($(HOST),solaris)
 LINKSTATIC = -static
+else
+LDFLAGS += -lssp	
 endif
 endif
 

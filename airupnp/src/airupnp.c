@@ -1079,7 +1079,7 @@ static bool Start(bool cold) {
 	int rc = UpnpInit2((*addr && inet_addr(addr) == INADDR_NONE) ? addr : NULL, glPort);
 	
 	if (rc != UPNP_E_SUCCESS) {
-		LOG_ERROR("UPnP init failed: %d", rc);
+		LOG_ERROR("UPnP init in %s (%s) failed: %d", inet_ntoa(glHost), addr, rc);
 		goto Error;
 	}
 

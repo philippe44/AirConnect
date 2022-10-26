@@ -1,6 +1,6 @@
 # AirConnect: Send audio to UPnP/Sonos/Chromecast players using AirPlay
 
-**NOTE** For now, I've build with glibc which are "too" recent, so likely the non-static versions will not run on your system. Please use the `-static`version or update your system or wait till I find a solution.
+**NOTE** For now, I've built with glibc's which are "too" recent, so likely the non-static version will not run on your system. Please use the `-static`version or update your system or wait till I find a solution.
 
 Use these applications to add AirPlay capabilities to Chromecast and UPnP (like Sonos) players, to make them appear as AirPlay devices.
 

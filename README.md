@@ -245,11 +245,13 @@ Many have asked for a way to do video/audio synchronisation so that UPnP (Sonos)
 
 AirConnect is now properly using submodules so you can just pull recursively
 ```
-git pull https://github.com/philippe44/airconnect --recursive
+git clone https://github.com/philippe44/airconnect [--recursive]
 ```
-It's a humongous pull, so be patient. Under Linux, you just need to go to the aircast or airconnect sub-directory and run `../build.sh [<platform>] [clean]`. For Windows, there are VS projects/solution.
+It's a humongous clone, so be patient. Under Linux, you just need to go to the aircast or airconnect sub-directory and run `../build.sh [<platform>] [clean]`. For Windows, there are VS projects/solution. 
 
-I've pre-built a lot of libraries so not every sub-module needs to be rebuild. Each module contains a `target`directory with all headers and libraries already built. Now if you want to rebuild them (which I strongly advice against), each of them contains its own `build.sh` you can use, but you're on your own. 
+I've pre-built a lot of libraries so not every sub-module needs to be rebuild. Each module contains a `target`directory with all headers and libraries already built. Now if you want to rebuild them (which I strongly advice against), each of them contains its own `build.sh` or `build.cmd`for Windows you can use, but you're on your own. 
+
+I do not recommend cloning recursively, but instead do a regular clone and then inside the `airconnect`directory, do a `git submodule update --init`. This will just get a one level cloning which is enough to provide you with all pre-built libraries.
 
 Note also that this is a cross-build (for Linux) so calling the builder with no parameter will try all compilers you have on your Linux box, amongst x86, x86_64, arm, aarch64, sparc64, mips, powerpc, macos, freebsd and solaris. When using parameter \<platform>\, you can use any string and the script will use any compiler that contains that string.
 
@@ -262,5 +264,7 @@ To enable cross-compilation, you can use the following compilers already availab
  sudo apt-get install gcc-mips-linux-gnu binutils-mips-linux-gnu
  sudo apt-get install gcc-powerpc-linux-gnu binutils-powerpc-linux-gnu
  ``` 
- **IMPORTANT:** On x86_64, do not try to use multilib, it is incompatible with at least arm and aarch64 and will be removed upon addition of any of these, thus removing support for x86 builds (at least up to Ubuntu 22.04 and this has been a problem for years and the devs don't seem to care). Hence the solution is to explicitly add the i686 compiler. The tradeoff is that you lose possibility to use '-m32' to produce 32 bits from default compiler. 
+ For macos, freebsd and solaris, you must rebuild your own compilers, I did that using https://github.com/tpoechtrager/osxcross (with this fix https://github.com/tpoechtrager/cctools-port/pull/126, so need to tweak the build.sh to make cctools point to my repo). For solaris and freebsd, I rebuilt my own, I'll put a small script that shows how, but it's very close to https://github.com/marcelog/Freebsd-Cross-GCC/blob/master/do.sh, with a fix for sysroot like here https://acg.cis.upenn.edu/milom/cross-compile.html).
+ 
+ **IMPORTANT:** On x86_64, do not try to use multilib, it is incompatible with at least arm and aarch64 and will be removed upon addition of any of these, thus removing support for x86 builds (at least up to Ubuntu 22.04 and this has been a problem for years and the devs don't seem to care). Hence the solution is to explicitly add the i686 compiler as per first line abobe). The tradeoff is that you lose possibility to use '-m32' to produce 32 bits from default compiler. 
  

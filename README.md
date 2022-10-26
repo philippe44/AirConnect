@@ -251,7 +251,7 @@ It's a humongous pull, so be patient. Under Linux, you just need to go to the ai
 
 I've pre-built a lot of libraries so not every sub-module needs to be rebuild. Each module contains a `target`directory with all headers and libraries already built. Now if you want to rebuild them (which I strongly advice against), each of them contains its own `build.sh` you can use, but you're on your own. 
 
-Note also that this is a cross-build (for Linux) so calling the builder with no parameter will try all compilers you have on your Linux box, amongst x86, x86_64, arm, aarch64, sparc64, mips and powerpc. When using parameter \<platform>\, you can use any string and the script will use any compiler that contains that string.
+Note also that this is a cross-build (for Linux) so calling the builder with no parameter will try all compilers you have on your Linux box, amongst x86, x86_64, arm, aarch64, sparc64, mips, powerpc, macos, freebsd and solaris. When using parameter \<platform>\, you can use any string and the script will use any compiler that contains that string.
 
 To enable cross-compilation, you can use the following compilers already available on Debian distributions
 ```

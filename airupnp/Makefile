@@ -9,7 +9,7 @@ ifneq ($(HOST),macos)
 ifneq ($(HOST),solaris)
 LINKSTATIC = -static
 else
-LDFLAGS += -lssp	
+LDFLAGS += -lssp
 endif
 endif
 
@@ -30,8 +30,8 @@ CODECS		= $(COMMON)/libcodecs/targets
 OPENSSL		= $(COMMON)/libopenssl/targets/$(HOST)/$(PLATFORM)
 
 DEFINES 	+= -DNDEBUG -D_GNU_SOURCE -DUPNP_STATIC_LIB
-CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
-LDFLAGS 	+= -s -lpthread -ldl -lm -L. 
+CFLAGS  	+= -Wall -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections
+LDFLAGS 	+= -s -lpthread -ldl -lm -L.
 
 vpath %.c $(TOOLS):$(SRC):$(COMMON)
 
@@ -42,32 +42,32 @@ INCLUDE = -I$(OPENSSL)/include \
 		  -I$(SRC)/inc \
 		  -I$(RAOP)/include \
 		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
-		  -I$(MDNS)/include/mdnssvc -I$(MDNS)/include/mdnssd 
-		  		  
+		  -I$(MDNS)/include/mdnssvc -I$(MDNS)/include/mdnssd
+
 DEPS	= $(SRC)/airupnp.h
-				  
+
 SOURCES = avt_util.c airupnp.c mr_util.c config_upnp.c  \
-	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c 
+	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c
 
 SOURCES_LIBS = cross_ssl.c
-		
+
 OBJECTS		= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES) $(SOURCES_LIBS))
-OBJECTS_STATIC 	= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES)) $(patsubst %.c,$(BUILDDIR)/%-static.o,$(SOURCES_LIBS)) 
+OBJECTS_STATIC 	= $(patsubst %.c,$(BUILDDIR)/%.o,$(SOURCES)) $(patsubst %.c,$(BUILDDIR)/%-static.o,$(SOURCES_LIBS))
 
 LIBRARY	= $(RAOP)/$(HOST)/$(PLATFORM)/libraop.a \
 			$(PUPNP)/libpupnp.a \
 			$(CODECS)/$(HOST)/$(PLATFORM)/libcodecs.a \
-			$(MDNS)/$(HOST)/$(PLATFORM)/libmdns.a  
-			
+			$(MDNS)/$(HOST)/$(PLATFORM)/libmdns.a
+
 LIBRARY_STATIC = $(LIBRARY) $(OPENSSL)/libopenssl.a
 
 all: directory $(EXECUTABLE) $(EXECUTABLE_STATIC)
-		
+
 $(EXECUTABLE): $(OBJECTS) $(DEPS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
-	
+
 $(EXECUTABLE_STATIC): $(OBJECTS_STATIC) $(DEPS)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@	
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@
 
 directory:
 	@mkdir -p $(BUILDDIR)
@@ -77,7 +77,7 @@ $(BUILDDIR)/%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
 
 $(BUILDDIR)/%-static.o : %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_STATIC_LIB $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
-	
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_STATIC_LIB $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o
+
 clean:
-	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) 
+	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC)

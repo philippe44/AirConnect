@@ -1,3 +1,6 @@
+1.0.1
+ - use new compilers so that min glib is 2.23
+ 
 1.0.0
  - new build system
   - fix IGMP snooping (hopefully)

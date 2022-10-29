@@ -30,7 +30,7 @@
 #include "config_cast.h"
 #include "ixml.h"
 
-#define VERSION "v1.0.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.0.1"" ("__DATE__" @ "__TIME__")"
 
 #define DISCOVERY_TIME 	20
 #define MEDIA_VOLUME	0.5

@@ -21,11 +21,13 @@
 #include "cross_util.h"
 #include "metadata.h"
 
-#define STR_LEN	256
+#define VERSION "v1.0.2"" ("__DATE__" @ "__TIME__")"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
 /*----------------------------------------------------------------------------*/
+
+#define STR_LEN	256
 
 #define MAX_PROTO		128
 #define MAX_RENDERERS	32

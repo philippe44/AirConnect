@@ -28,8 +28,6 @@
 #include "config_upnp.h"
 #include "mr_util.h"
 
-#define VERSION "v1.0.2"" ("__DATE__" @ "__TIME__")"
-
 #define	AV_TRANSPORT 			"urn:schemas-upnp-org:service:AVTransport"
 #define	RENDERING_CTRL 			"urn:schemas-upnp-org:service:RenderingControl"
 #define	CONNECTION_MGR 			"urn:schemas-upnp-org:service:ConnectionManager"

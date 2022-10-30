@@ -244,29 +244,4 @@ When [f] is set, silence frames will be inserted as soon as no RTP frames have b
 Many have asked for a way to do video/audio synchronisation so that UPnP (Sonos) players can be used as speakers when playing video on a computer or tablet (YouTube for example). Due to this RTP-to-HTTP bridging, this cannot be done as the exact time when an audio frame is played cannot be controlled on the HTTP client. AirPlay speakers can achieve that because the iPhone/iPad/MAC player will  "delay" the video by a known amount, send the audio in advance (usually 2 sec) and then control the exact time when this audio is output by the speaker. But although AirConnect has the exact request timing and maintains synchronization with the player, it cannot "relay" that synchronization to the speakers. UPnP protocol does not allow this and Sonos has not made their protocol public. Sometimes you might get lucky because the video-to-audio delay will almost match the HTTP player delay, but it is not reproductible and will not be stable over time.
 
 ## Compiling from source
-
-AirConnect is now properly using submodules so you can just pull recursively
-```
-git clone https://github.com/philippe44/airconnect [--recursive]
-```
-It's a humongous clone, so be patient. Under Linux, you just need to go to the aircast or airconnect sub-directory and run `../build.sh [<platform>] [clean]`. For Windows, there are VS projects/solution. 
-
-I've pre-built a lot of libraries so not every sub-module needs to be rebuild. Each module contains a `target`directory with all headers and libraries already built. Now if you want to rebuild them (which I strongly advice against), each of them contains its own `build.sh` or `build.cmd`for Windows you can use, but you're on your own. 
-
-I do not recommend cloning recursively, but instead do a regular clone and then inside the `airconnect`directory, do a `git submodule update --init`. This will just get a one level cloning which is enough to provide you with all pre-built libraries.
-
-Note also that this is a cross-build (for Linux) so calling the builder with no parameter will try all compilers you have on your Linux box, amongst x86, x86_64, arm, aarch64, sparc64, mips, powerpc, macos, freebsd and solaris. When using parameter \<platform>\, you can use any string and the script will use any compiler that contains that string.
-
-To enable cross-compilation, you can use the following compilers already available on Debian distributions
-```
- sudo apt-get install gcc-i686-linux-gnu binutils-i686-linux-gnu
- sudo apt-get install gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
- sudo apt-getmake gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi
- sudo apt-get install gcc-sparc64-linux-gnu binutils-sparc64-linux-gnu
- sudo apt-get install gcc-mips-linux-gnu binutils-mips-linux-gnu
- sudo apt-get install gcc-powerpc-linux-gnu binutils-powerpc-linux-gnu
- ``` 
- For macos, freebsd and solaris, you must rebuild your own compilers, I did that using https://github.com/tpoechtrager/osxcross (with this fix https://github.com/tpoechtrager/cctools-port/pull/126, so need to tweak the build.sh to make cctools point to my repo). For solaris and freebsd, I rebuilt my own, I'll put a small script that shows how, but it's very close to https://github.com/marcelog/Freebsd-Cross-GCC/blob/master/do.sh, with a fix for sysroot like here https://acg.cis.upenn.edu/milom/cross-compile.html).
- 
- **IMPORTANT:** On x86_64, do not try to use multilib, it is incompatible with at least arm and aarch64 and will be removed upon addition of any of these, thus removing support for x86 builds (at least up to Ubuntu 22.04 and this has been a problem for years and the devs don't seem to care). Hence the solution is to explicitly add the i686 compiler as per first line abobe). The tradeoff is that you lose possibility to use '-m32' to produce 32 bits from default compiler. 
- 
+Please see [here](https://github.com/philippe44/cross-compiling/blob/master/README.md#organizing-submodules--packages) to known how to rebuild my apps in general 

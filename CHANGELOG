@@ -1,3 +1,6 @@
+1.0.3
+ - update mdnssd that was binding queries to a port for no reason causing a race failure on freebsd
+ 
 1.0.2
  - mips is usually bigendian
  

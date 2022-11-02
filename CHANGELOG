@@ -1,3 +1,6 @@
+1.0.6
+ - request specific libcrypto & libssl version for MacOS
+ 
 1.0.5
  - remove UPnP IPv6 support
  

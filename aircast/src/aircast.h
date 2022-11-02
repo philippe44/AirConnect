@@ -18,7 +18,7 @@
 #include "raop_server.h"
 #include "cast_util.h"
 
-#define VERSION "v1.0.5"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.0.6"" ("__DATE__" @ "__TIME__")"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */

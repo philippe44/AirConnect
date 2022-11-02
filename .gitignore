@@ -113,3 +113,4 @@ __recovery/
 *.sln
 build/
 air*/bin
+*.bat

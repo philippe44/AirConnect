@@ -2,7 +2,7 @@
 
 list="x86_64-linux-gnu-gcc x86-linux-gnu-gcc arm-linux-gnueabi-gcc aarch64-linux-gnu-gcc \
       sparc64-linux-gnu-gcc mips-linux-gnu-gcc powerpc-linux-gnu-gcc x86_64-macos-darwin-gcc \
-	  x86_64-freebsd-gnu-gcc x86_64-solaris-gnu-gcc"
+      arm64-macos-darwin-cc x86_64-freebsd-gnu-gcc x86_64-solaris-gnu-gcc"
 
 declare -A alias=( [x86-linux-gnu-gcc]=i686-stretch-linux-gnu-gcc \
                    [x86_64-linux-gnu-gcc]=x86_64-stretch-linux-gnu-gcc \
@@ -12,6 +12,7 @@ declare -A alias=( [x86-linux-gnu-gcc]=i686-stretch-linux-gnu-gcc \
                    [mips-linux-gnu-gcc]=mips64-stretch-linux-gnu-gcc \
                    [powerpc-linux-gnu-gcc]=powerpc64-stretch-linux-gnu-gcc \
                    [x86_64-macos-darwin-gcc]=x86_64-apple-darwin19-gcc \
+                   [arm64-macos-darwin-cc]=arm64-apple-darwin20.4-cc \
                    [x86_64-freebsd-gnu-gcc]=x86_64-cross-freebsd12.3-gcc \
                    [x86_64-solaris-gnu-gcc]=x86_64-cross-solaris2.x-gcc )
 
@@ -58,7 +59,14 @@ do
 	IFS=- read -r platform host dummy <<< $cc
 	
 	export CFLAGS=${cflags[$cc]}
-	make CC=${alias[$cc]:-$cc} HOST=$host PLATFORM=$platform $clean
+	export CC=${alias[$cc]:-$cc} 
+	
+	# don't let clang create temp files
+	if [[ $CC =~ -cc ]]; then
+		CFLAGS+="-fno-temp-file"
+	fi	
+	
+	make CC=$CC HOST=$host PLATFORM=$platform $clean
 	
 	if [[ -n $clean ]]; then
 		continue

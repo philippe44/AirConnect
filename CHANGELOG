@@ -1,3 +1,9 @@
+1.0.5
+ - remove UPnP IPv6 support
+ 
+1.0.4
+ - update mdnssd for unicast  
+ 
 1.0.3
  - update mdnssd that was binding queries to a port for no reason causing a race failure on freebsd
  

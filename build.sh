@@ -66,7 +66,7 @@ do
 		CFLAGS+="-fno-temp-file"
 	fi	
 	
-	make CC=$CC HOST=$host PLATFORM=$platform $clean
+	make CC=$CC HOST=$host PLATFORM=$platform $clean -j8
 	
 	if [[ -n $clean ]]; then
 		continue

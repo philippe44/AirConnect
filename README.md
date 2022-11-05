@@ -1,10 +1,7 @@
 # AirConnect: Send audio to UPnP/Sonos/Chromecast players using AirPlay
-
-**NOTE** For now, I've built with glibc's which are "too" recent, so likely the non-static version will not run on your system. Please use the `-static`version or update your system or wait till I find a solution.
-
 Use these applications to add AirPlay capabilities to Chromecast and UPnP (like Sonos) players, to make them appear as AirPlay devices.
 
-AirConnect can run on any machine that has access to your local network (Windows, MacOS, Linux -x86, x64 and ARM, Solaris and FreeBSD). It does not need to be on your main computer. (For example, a Raspberry Pi works well). It will detect UPnP/Sonos/Chromecast players, create as many virtual AirPlay devices as needed, and act as a bridge/proxy between AirPlay clients (iPhone, iPad, iTunes, MacOS, AirFoil ...) and the real UPnP/Sonos/Chromecast players.
+AirConnect can run on any machine that has access to your local network (Windows, MacOS x86 and arm64, Linux x86, x86_64, arm, aarch64, sparc, mips, powerpc, Solaris and FreeBSD). It does not need to be on your main computer. (For example, a Raspberry Pi works well). It will detect UPnP/Sonos/Chromecast players, create as many virtual AirPlay devices as needed, and act as a bridge/proxy between AirPlay clients (iPhone, iPad, iTunes, MacOS, AirFoil ...) and the real UPnP/Sonos/Chromecast players.
 
 The audio, after being decoded from alac, can be sent in plain, or re-encoded using mp3 or flac. Most players will not display metadata (artist, title, album ...) except when mp3 re-encoding is used and for UPnP/DLNA devices that support icy protocol. Chromecast players do not support this (yet).
 
@@ -12,12 +9,20 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 1. Pre-built binaries are in bin/ directory of this repository. You can download the whole repository as a zip file, clone it using git, or go to the [bin/ folder in the web interface](https://github.com/philippe44/AirConnect/tree/master/bin) and download the version that matches your OS. It's also possible to download files manually in a terminal by typing (e.g. for aircast arm version)<br/>`wget https://raw.githubusercontent.com/philippe44/AirConnect/master/bin/aircast-arm` 
 
-	* For **Chromecast**, the file is `aircast-<platform>` (so `aircast-osx-multi` for Chromecast on OS X.) 
-	* For **UPnP/Sonos**, the file is `airupnp-<platform>` (so `airupnp-osx-multi` for UPnP/Sonos on OS X.) 
+	* For **Chromecast**, the file is `aircast-<platform>` (so `aircast-macos-x86_64` for Chromecast on MacOS + Intel CPU) 
+	* For **UPnP/Sonos**, the file is `airupnp-<platform>` (so `airupnp-macos-arm64` for UPnP/Sonos on MacOS + arm CPU) 
 
-2. For Windows, download all the .dll as well.
+2. There is a "-static" version of each application that has all static libraries built-in. Use of these is (really) not recommended unless the regular version fails. For MacOS users, you need to install openSSL and do the following steps to use the dynamic load library version:
+	- install openssl: `brew install openssl`. This creates libraries (or at least links) into `/usr/local/opt/openssl/x.y.z/lib` where 'x.y.z' is a version number
+	- create links to these libraries: 
+	```
+	ln -s /usr/local/opt/openssl/x.y.z/lib/libcrypto.dylib /usr/local/lib/libcrypto.dylib 
+	ln -s /usr/local/opt/openssl/x.y.z/lib/libssl.dylib /usr/local/lib/libssl.dylib 
+	```
 
-3. Store the \<executable\> (e.g. `airupnp-osx-multi`) in any directory. 
+3. For Windows, download all the .dll as well if you want to use the non-static version
+
+4. Store the \<executable\> (e.g. `airupnp-linux-aarch64multi`) in any directory. 
 
 4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
@@ -54,7 +59,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Chromecast groups are supported. Use `-v` to set the media volume factor for all devices (0.5 by default)
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
-- Use `-b [ip|iface][:port]`to set network interface (ip or name) to use and, for airupnp only, UPnP port to listen to (must be above the default 49152)
+- Use `-b [ip|iface][:port]`to set network interface (ip@ or interface name as reported by ifconfig/ipconfig) to use and, for airupnp only, UPnP port to listen to (must be above the default 49152)
 - Use `-a <port>[:<count>]`to specify a port range (default count is 128)
 - Use `-g -3|-1|0|` to tweak http transfer mode where -3 = chunked, -1 = no content-length and 0 = fixed (dummy) length (see "HTTP content-length" below)"
 - Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 

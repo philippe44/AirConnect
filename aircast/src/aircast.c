@@ -75,7 +75,7 @@ static log_level 			*loglevel = &main_loglevel;
 static bool					glDaemonize = false;
 #endif
 static bool					glMainRunning = true;
-static struct mDNShandle_s	*glmDNSsearchHandle;
+static struct mdnssd_handle_s	*glmDNSsearchHandle;
 static struct in_addr 		glHost;
 static pthread_t 			glMainThread, glmDNSsearchThread;
 static char					*glLogFile;
@@ -89,7 +89,6 @@ static char					glConfigName[STR_LEN] = "./config.xml";
 static struct mdnsd*		glmDNSServer = NULL;
 
 static char usage[] =
-
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
@@ -346,7 +345,7 @@ static void *MRThread(void *args) {
 }
 
 /*----------------------------------------------------------------------------*/
-char *GetmDNSAttribute(txt_attr_t *p, int count, char *name) {
+char *GetmDNSAttribute(mdnssd_txt_attr_t *p, int count, char *name) {
 	for (int j = 0; j < count; j++)
 		if (!strcasecmp(p[j].name, name))
 			return strdup(p[j].value);
@@ -374,9 +373,9 @@ static bool isMember(struct in_addr host) {
 }
 
 /*----------------------------------------------------------------------------*/
-bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop) {
+bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 	struct sMR *Device;
-	mDNSservice_t *s;
+	mdnssd_service_t *s;
 
 	if (*loglevel == lDEBUG) {
 		LOG_DEBUG("----------------- round ------------------", NULL);
@@ -525,7 +524,7 @@ bool mDNSsearchCallback(mDNSservice_t *slist, void *cookie, bool *stop) {
 /*----------------------------------------------------------------------------*/
 static void *mDNSsearchThread(void *args) {
 	// launch the query,
-	query_mDNS(glmDNSsearchHandle, "_googlecast._tcp.local", 120,
+	mdnssd_query(glmDNSsearchHandle, "_googlecast._tcp.local", false,
 			   glDiscovery ? DISCOVERY_TIME : 0, &mDNSsearchCallback, NULL);
 	return NULL;
 }
@@ -688,7 +687,7 @@ static bool Start(bool cold) {
 	mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
 	// start the mDNS devices discovery thread
-	glmDNSsearchHandle = init_mDNS(false, glHost);
+	glmDNSsearchHandle = mdnssd_init(false, glHost, true);
 	pthread_create(&glmDNSsearchThread, NULL, &mDNSsearchThread, NULL);
 
 	return true;
@@ -701,7 +700,7 @@ static bool Stop(bool exit) {
 	if (glHost.s_addr != INADDR_ANY) {
 		LOG_DEBUG("terminate search thread ...", NULL);
 		// this forces an ongoing search to end
-		close_mDNS(glmDNSsearchHandle);
+		mdnssd_close(glmDNSsearchHandle);
 		pthread_join(glmDNSsearchThread, NULL);
 
 		LOG_DEBUG("flush renderers ...", NULL);

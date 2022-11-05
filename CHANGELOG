@@ -1,3 +1,6 @@
+1.0.7
+ - update libmdns (no unicast and compliant mode)
+ 
 1.0.6
  - request specific libcrypto & libssl version for MacOS
  

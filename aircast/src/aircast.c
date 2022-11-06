@@ -881,15 +881,14 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	LOG_ERROR("Starting aircast version: %s", VERSION);
+	LOG_WARN("Starting aircast version: %s", VERSION);
 
 	if (strtod("0.30", NULL) != 0.30) {
-		LOG_ERROR("Wrong GLIBC version, use -static build", NULL);
-		exit(1);
+		LOG_WARN("weird GLIBC, try -static build in case of failure");
 	}
 
 	if (!glConfigID) {
-		LOG_WARN("no config file, using defaults", NULL);
+		LOG_WARN("no config file, using defaults");
 	}
 
 	// just do device discovery and exit

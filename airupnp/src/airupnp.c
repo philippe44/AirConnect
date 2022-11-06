@@ -1352,11 +1352,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	LOG_ERROR("Starting airupnp version: %s", VERSION);
+	LOG_WARN("Starting airupnp version: %s", VERSION);
 
 	if (strtod("0.30", NULL) != 0.30) {
-		LOG_ERROR("Wrong GLIBC version, use -static build", NULL);
-		exit(1);
+		LOG_WARN("weird GLIBC, try -static build in case of failure");
 	}
 
 	if (!glConfigID) {

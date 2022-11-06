@@ -13,11 +13,11 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 	* For **UPnP/Sonos**, the file is `airupnp-<platform>` (so `airupnp-macos-arm64` for UPnP/Sonos on MacOS + arm CPU) 
 
 2. There is a "-static" version of each application that has all static libraries built-in. Use of these is (really) not recommended unless the regular version fails. For MacOS users, you need to install openSSL and do the following steps to use the dynamic load library version:
-	- install openssl: `brew install openssl`. This creates libraries (or at least links) into `/usr/local/opt/openssl/x.y.z/lib` where 'x.y.z' is a version number
+	- install openssl: `brew install openssl`. This creates libraries (or at least links) into `/usr/local/opt/openssl[/x.y.z]/lib` where optional 'x.y.z' is a version number
 	- create links to these libraries: 
 	```
-	ln -s /usr/local/opt/openssl/x.y.z/lib/libcrypto.dylib /usr/local/lib/libcrypto.dylib 
-	ln -s /usr/local/opt/openssl/x.y.z/lib/libssl.dylib /usr/local/lib/libssl.dylib 
+	ln -s /usr/local/opt/openssl[/x.y.z]/lib/libcrypto.dylib /usr/local/lib/libcrypto.dylib 
+	ln -s /usr/local/opt/openssl[/x.y.z]/lib/libssl.dylib /usr/local/lib/libssl.dylib 
 	```
 
 3. For Windows, download all the .dll as well if you want to use the non-static version

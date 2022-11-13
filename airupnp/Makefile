@@ -20,13 +20,13 @@ LDFLAGS += -lssp
 endif
 endif
 
-BASE		= ..
+BASE              = ..
+CORE              = $(BASE)/bin/airupnp-$(HOST)
+BUILDDIR          = $(dir $(CORE))$(HOST)/$(PLATFORM)
+EXECUTABLE        = $(CORE)-$(PLATFORM)
+EXECUTABLE_STATIC = $(EXECUTABLE)-static
 
-BUILDDIR	= bin/$(HOST)/$(PLATFORM)
-EXECUTABLE 	= $(BASE)/bin/airupnp-$(HOST)-$(PLATFORM)
-EXECUTABLE_STATIC	= $(BASE)/bin/airupnp-$(HOST)-$(PLATFORM)-static
-
-SRC			= src
+SRC             = src
 COMMON		= $(BASE)/common
 TOOLS		= $(COMMON)/crosstools/src
 RAOP		= $(COMMON)/libraop/targets
@@ -70,17 +70,24 @@ LIBRARY_STATIC = $(LIBRARY) $(OPENSSL)/libopenssl.a
 
 all: directory $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
-$(EXECUTABLE): $(OBJECTS) $(DEPS)
+$(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) $(LIBRARY) $(CFLAGS) $(LDFLAGS) -o $@
+ifeq ($(HOST),macos)
+	rm -f $(CORE)
+	lipo -create -output $(CORE) $$(ls $(CORE)* | grep -v '\-static')
+endif
 
-$(EXECUTABLE_STATIC): $(OBJECTS_STATIC) $(DEPS)
+$(EXECUTABLE_STATIC): $(OBJECTS_STATIC)
 	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(CFLAGS) $(LDFLAGS) $(LINKSTATIC) -o $@
+ifeq ($(HOST),macos)
+	rm -f $(CORE)-static
+	lipo -create -output $(CORE)-static $(CORE)-*-static
+endif
 
 $(OBJECTS) $(OBJECTS_STATIC): $(DEPS)
 
 directory:
 	@mkdir -p $(BUILDDIR)
-	@mkdir -p bin
 
 $(BUILDDIR)/%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
@@ -89,4 +96,4 @@ $(BUILDDIR)/%-static.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_STATIC_LIB $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o
 
 clean:
-	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC)
+	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) $(CORE) $(CORE)-static

@@ -683,7 +683,7 @@ static bool Start(bool cold) {
 	gethostname(hostname, sizeof(hostname));
 	strcat(hostname, ".local");
 
-	if ((glmDNSServer = mdnsd_start(glHost)) == NULL) return false;
+	if ((glmDNSServer = mdnsd_start(glHost, false)) == NULL) return false;
 	mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
 	// start the mDNS devices discovery thread

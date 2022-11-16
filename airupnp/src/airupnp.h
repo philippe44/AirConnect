@@ -21,7 +21,7 @@
 #include "cross_util.h"
 #include "metadata.h"
 
-#define VERSION "v1.0.10"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.0.11"" ("__DATE__" @ "__TIME__")"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */

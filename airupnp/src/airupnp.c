@@ -1115,7 +1115,7 @@ static bool Start(bool cold) {
 	char hostname[STR_LEN];
 	gethostname(hostname, sizeof(hostname));
 	strcat(hostname, ".local");
-	if ((glmDNSServer = mdnsd_start(glHost)) == NULL) goto Error;
+	if ((glmDNSServer = mdnsd_start(glHost, false)) == NULL) goto Error;
 	mdnsd_set_hostname(glmDNSServer, hostname, glHost);
 
 	for (int i = 0; i < glMRConfig.UPnPMax; i++) {

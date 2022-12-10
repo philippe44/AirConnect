@@ -1,3 +1,6 @@
+1.0.13
+ - don't use debug libs for Windows
+ 
 1.0.12
  - update libraop (no functional change)
  

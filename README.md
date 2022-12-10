@@ -20,7 +20,7 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 	ln -s /usr/local/opt/openssl[/x.y.z]/lib/libssl.dylib /usr/local/lib/libssl.dylib 
 	```
 
-3. For Windows, download all the .dll as well if you want to use the non-static version
+3. For Windows, install the Microsoft VC++ redistributable found [here](https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist?view=msvc-170)
 
 4. Store the \<executable\> (e.g. `airupnp-linux-aarch64multi`) in any directory. 
 

@@ -1,3 +1,6 @@
+1.0.14
+ - change network binding for UPnP: get name
+ 
 1.0.13
  - don't use debug libs for Windows
  

@@ -92,7 +92,7 @@ static char usage[] =
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -b <ip>\t\tnetwork address to bind to\n"
+		   "  -b <ip|iface>\t\tnetwork address or interface to bind to\n"
 		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
 		   "  -c <mp3[:<rate>]|flc[:0..9]|wav>\taudio format send to player\n"
    		   "  -v <0..1>\t\t group MediaVolume factor\n"
@@ -563,7 +563,7 @@ static void *MainThread(void *args) {
 		// try to detect IP change when not forced
 		if (inet_addr(glBinding) == INADDR_NONE) {
 			struct in_addr host;
-			host = get_interface(!strchr(glBinding, '?') ? glBinding : NULL);
+			host = get_interface(!strchr(glBinding, '?') ? glBinding : NULL, NULL, NULL);
 			if (host.s_addr != INADDR_NONE && host.s_addr != glHost.s_addr) {
 				LOG_INFO("IP change detected %s", inet_ntoa(glHost));
 				Stop(false);
@@ -658,7 +658,7 @@ void RemoveCastDevice(struct sMR *Device) {
 /*----------------------------------------------------------------------------*/
 static bool Start(bool cold) {
 	// must bind to an address
-	glHost = get_interface(!strchr(glBinding, '?') ? glBinding : NULL);
+	glHost = get_interface(!strchr(glBinding, '?') ? glBinding : NULL, NULL, NULL);
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
 
 	// can't find a suitable interface

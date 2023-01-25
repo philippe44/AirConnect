@@ -55,7 +55,6 @@ struct sMR *GetMaster(struct sMR *Device, char **Name)
 
 	if (!*Service->ControlURL) return NULL;
 
-
 	ActionNode = UpnpMakeAction("GetZoneGroupState", Service->Type, 0, NULL);
 
 	UpnpSendAction(glControlPointHandle, Service->ControlURL, Service->Type,

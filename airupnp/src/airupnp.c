@@ -141,7 +141,7 @@ static char usage[] =
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -b <ip>[:<port>]\tnetwork interface and UPnP port to use\n"
+		   "  -b <ip|iface>[:<port>]\tnetwork interface or interface and UPnP port to use\n"
 		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
 		   "  -c <mp3[:<rate>]|flc[:0..9]|wav|pcm>\taudio format send to player\n"
 		   "  -g <-3|-1|0>\t\tHTTP content-length mode (-3:chunked, -1:none, 0:fixed)\n"
@@ -882,7 +882,7 @@ static void *MainThread(void *args) {
 		// try to detect IP change when not forced
 		if (inet_addr(glBinding) == INADDR_NONE) {
 			struct in_addr host;
-			host = get_interface(!strchr(glBinding, '?') ? glBinding : NULL);
+			host = get_interface(!strchr(glBinding, '?') ? glBinding : NULL, NULL, NULL);
 			if (host.s_addr != INADDR_NONE && host.s_addr != glHost.s_addr) {
 				LOG_INFO("IP change detected %s", inet_ntoa(glHost));
 				Stop(false);
@@ -906,9 +906,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	if (!Device->Config.Enabled) return false;
 
-	// Read key elements from description document
+	// Read key elements from description document (NB: glMRConfig is fully initialized, including strings)
 	friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
-	if (friendlyName) strcpy(Device->friendlyName, friendlyName);
 	if (!friendlyName || !*friendlyName) friendlyName = strdup(UDN);
 
 	LOG_SDEBUG("UDN:\t%s\nFriendlyName:\t%s", UDN,  friendlyName);
@@ -972,7 +971,8 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	if (*Device->Config.ArtWork) Device->MetaData.artwork = Device->Config.ArtWork;
 
 	Device->Running = true;
-	if (friendlyName) strcpy(Device->friendlyName, friendlyName);
+	// string is already zero-terminated
+	if (friendlyName) strncpy(Device->friendlyName, friendlyName, sizeof(Device->friendlyName) - 1);
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", friendlyName);
 	queue_init(&Device->ActionQueue, false, NULL);
 
@@ -1067,14 +1067,21 @@ static bool Start(bool cold) {
 	// sscanf does not capture empty strings
 	if (!strchr(glBinding, '?') && !sscanf(glBinding, "%[^:]:%hu", addr, &glPort)) sscanf(glBinding, ":%hu", &glPort);
 	
-	glHost = get_interface(addr);
+	char* iface = NULL;
+	glHost = get_interface(addr, &iface, NULL);
 
 	// can't find a suitable interface
-	if (glHost.s_addr == INADDR_NONE) return false;
+	if (glHost.s_addr == INADDR_NONE) {
+		NFREE(iface);
+		return false;
+	}
 
 	UpnpSetLogLevel(UPNP_CRITICAL);
 	// only set iface name if it's a name
-	int rc = UpnpInit2((*addr && inet_addr(addr) == INADDR_NONE) ? addr : NULL, glPort);
+	int rc = UpnpInit2(iface, glPort);
+
+	LOG_INFO("Binding to iface %s@%s:%hu", iface, inet_ntoa(glHost), glPort);
+	NFREE(iface);
 	
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("UPnP init in %s (%s) failed: %d", inet_ntoa(glHost), addr, rc);
@@ -1083,8 +1090,6 @@ static bool Start(bool cold) {
 
 	UpnpSetMaxContentLength(60000);
 	glPort = UpnpGetServerPort();
-
-	LOG_INFO("Binding to %s:%hu", inet_ntoa(glHost), glPort);
 
 	if (cold) {
 		// manually load openSSL symbols to accept multiple versions

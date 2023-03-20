@@ -34,7 +34,7 @@
 #define TOPOLOGY				"urn:schemas-upnp-org:service:ZoneGroupTopology"
 #define GROUP_RENDERING_CTRL	"urn:schemas-upnp-org:service:GroupRenderingControl"
 
-#define DISCOVERY_TIME 		20
+#define DISCOVERY_TIME 		30
 #define PRESENCE_TIMEOUT	(DISCOVERY_TIME * 6)
 
 #define MAX_DEVICES			32
@@ -103,7 +103,7 @@ static const struct cSearchedSRV_s
  int	idx;
  uint32_t  TimeOut;
 } cSearchedSRV[NB_SRV] = {	{AV_TRANSPORT, AVT_SRV_IDX, 0},
-						{RENDERING_CTRL, REND_SRV_IDX, 30},
+						{RENDERING_CTRL, REND_SRV_IDX, 120},
 						{CONNECTION_MGR, CNX_MGR_IDX, 0},
 						{TOPOLOGY, TOPOLOGY_IDX, 0},
 						{GROUP_RENDERING_CTRL, GRP_REND_SRV_IDX, 0},
@@ -997,7 +997,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	// make sure MAC is unique	
 	for (int i = 0; i < glMaxDevices; i++) {
 		if (glMRDevices[i].Running && Device != glMRDevices + i && !memcmp(&glMRDevices[i].Config.mac, &Device->Config.mac, 6)) {
-			memset(Device->Config.mac, 0xcc, 2);
+			memset(Device->Config.mac, 0xbb, 2);
 			*(uint32_t*)(Device->Config.mac + 2) = hash32(Device->UDN);
 			LOG_INFO("[%p]: duplicated mac ... updating", Device);
 		}

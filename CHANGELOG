@@ -1,3 +1,7 @@
+1.0.16
+ - bring back armv5 build
+ - fixes big memory leak in upnp
+
 1.0.14
  - change network binding for UPnP: get name
  

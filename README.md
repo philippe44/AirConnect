@@ -46,6 +46,8 @@ You should start to see lots of log messages on screen. Using your iOS/Mac/iTune
 
 If it works, type `exit`, which terminates the executable, and then, on non-Windows/MacOS machines, relaunch it with `-z` so that it can run in the background and you can close the command line window. You can also start it automatically using any startup script or a Linux service as explained below. Nothing else should be required, no library or anything to install.
 
+You can see that for each platform, there is a normal and a '-static' version. This one includes all libraries directly inside the application, so normally there is no dependence to 3rd party shared libraries, including SSL. You can try it if the normal fails to load (especially on old systems), but static linkage is a blessing a curse (exact reasons out of scope of this README). Now, if the static version still does not work, there are other solutons that are pretty technical, see [here](https://github.com/philippe44/cross-compiling#running-an-application-by-forcing-glibc-and-glibcxx). Best is that you open an issue if you want help with that.
+
 ## Common information:
 
 <strong>Use `-h` for command line details</strong>

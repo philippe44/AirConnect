@@ -61,8 +61,8 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Chromecast groups are supported. Use `-v` to set the media volume factor for all devices (0.5 by default)
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
-- Use `-b [ip|iface][:port]`to set network interface (ip@ or interface name as reported by ifconfig/ipconfig) to use and, for airupnp only, UPnP port to listen to (must be above the default 49152)
-- Use `-a <port>[:<count>]`to specify a port range (default count is 128)
+- Use `-b [ip|iface][:port]` to set network interface (ip@ or interface name as reported by ifconfig/ipconfig) to use and, for airupnp only, UPnP port to listen to (must be above the default 49152)
+- Use `-a <port>[:<count>]` to specify a port range (default count is 128)
 - Use `-g -3|-1|0|` to tweak http transfer mode where -3 = chunked, -1 = no content-length and 0 = fixed (dummy) length (see "HTTP content-length" below)"
 - Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 
 - <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`), otherwise it will consume all CPU. On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
@@ -77,22 +77,22 @@ The default configuration file is `config.xml`, stored in the same directory as 
 	* [rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay. A negative value force sending of silence frames when no AirPlay audio has been received after 'RTP' ms, to force a continuous stream. If not, the UPnP/CC player will be not receive audio and some might close the connection after a while, although most players will simply be silent until stream restarts. This shall not be necessary in most of the case.
 	* [http]	: ms of buffering silence for HTTP audio (not needed normaly, except for Sonos)
 	* [f]		: when network congestion happens, source frames will not be received at all. Set this parameter to force sending silence frame then. Otherwise, no HTTP data will be sent and player might close the connection
-- `drift <0|1>`	: enable adding or dropping a frame when case source frames producion is too fast or too slow
-- `enabled <0|1>`	: in common section, enables new discovered players by default. In a dedicated section, enables the player
-- `name` 		: The name that will appear for the device in AirPlay. You can change the default name.
-- `upnp_max`		: set the maximum UPnP version use to search players (default 1)
-- `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
-- `http_length`		: same as `-g` command line parameter
-- `metadata <0|1>`	: send metadata to player (only for mp3 codec and if player supports ICY protocol)
+- `drift <0|1>`	   : enable adding or dropping a frame when case source frames producion is too fast or too slow
+- `enabled <0|1>`  : in common section, enables new discovered players by default. In a dedicated section, enables the player
+- `name`           : The name that will appear for the device in AirPlay. You can change the default name.
+- `upnp_max`       : set the maximum UPnP version use to search players (default 1)
+- `http_length`    : same as `-g` command line parameter
+- `metadata <0|1>` : send metadata to player (only for mp3 codec and if player supports ICY protocol)
+- `artwork`        : an URL to an artwork to be displayed on player
+- `flush <0|1>`    : (default 1) set AirPlay *FLUSH* commands response (see also --noflush in "**Misc tips**" section)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
-- `artwork`		: an URL to an artwork to be displayed on player
-- `flush <0|1>`		: (default 1) set AirPlay *FLUSH* commands response (see also --noflush in "**Misc tips**" section)
+- `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
 
 These are the global parameters
 
-- `log_limit <-1 | n>` 		: (default -1) when using log file, limits its size to 'n' MB (-1 = no limit)
-- `max_players`			: set the maximum of players (default 32)
-- `ports <port>[:<count>]` 	: set port range to use (see -a)
+- `max_players`            : set the maximum of players (default 32)
+- `log_limit <-1 | n>`     : (default -1) when using log file, limits its size to 'n' MB (-1 = no limit)
+- `ports <port>[:<count>]` : set port range to use (see -a)
 
 ## Start automatically in Linux
 

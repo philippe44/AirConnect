@@ -9,8 +9,8 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 1. Pre-built binaries are in bin/ directory of this repository. You can download the whole repository as a zip file, clone it using git, or go to the [bin/ folder in the web interface](https://github.com/philippe44/AirConnect/tree/master/bin) and download the version that matches your OS. It's also possible to download files manually in a terminal by typing (e.g. for aircast arm version)<br/>`wget https://raw.githubusercontent.com/philippe44/AirConnect/master/bin/aircast-arm` 
 
-	* For **Chromecast**, the file is `aircast-<platform>` (so `aircast-macos-x86_64` for Chromecast on MacOS + Intel CPU) 
-	* For **UPnP/Sonos**, the file is `airupnp-<platform>` (so `airupnp-macos-arm64` for UPnP/Sonos on MacOS + arm CPU) 
+	* For **Chromecast**, the file is `aircast-<os>-<cpu>` (so `aircast-macos-x86_64` for Chromecast on MacOS + Intel CPU) 
+	* For **UPnP/Sonos**, the file is `airupnp-<os>-<cpu>` (so `airupnp-macos-arm64` for UPnP/Sonos on MacOS + arm CPU) 
 
 2. There is a "-static" version of each application that has all static libraries built-in. Use of these is (really) not recommended unless the regular version fails. For MacOS users, you need to install openSSL and do the following steps to use the dynamic load library version:
 	- install openssl: `brew install openssl`. This creates libraries (or at least links) into `/usr/local/opt/openssl[/x.y.z]/lib` where optional 'x.y.z' is a version number
@@ -22,9 +22,9 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 3. For Windows, install the Microsoft VC++ redistributable found [here](https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist?view=msvc-170)
 
-4. Store the \<executable\> (e.g. `airupnp-linux-aarch64multi`) in any directory. 
+4. Store the \<executable\> (e.g. `airupnp-linux-aarch64`) in any directory. 
 
-4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>`. (Example: `chmod +x airupnp-osx-multi`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
+4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>`. (Example: `chmod +x airupnp-macos`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
 
 5. Don't use firewall or set ports using options below and open them. 
 	- Port 5353 (UDP) is needed to listen to mDNS messages
@@ -40,13 +40,13 @@ ter)
 
 Double click the \<executable\> or launch it by typing `./<executable>` in the same command line window. 
 
-<strong>For Sonos & Heos players, set latency by adding `-l 1000:2000` on the command line.</strong> (Example: `./airupnp-osx-multi -l 1000:2000`) 
+<strong>For Sonos & Heos players, set latency by adding `-l 1000:2000` on the command line.</strong> (Example: `./airupnp-macos -l 1000:2000`) 
 
 You should start to see lots of log messages on screen. Using your iOS/Mac/iTunes/Airfoil/other client, you should now see new AirPlay devices and can try to play audio to them. 
 
 If it works, type `exit`, which terminates the executable, and then, on non-Windows/MacOS machines, relaunch it with `-z` so that it can run in the background and you can close the command line window. You can also start it automatically using any startup script or a Linux service as explained below. Nothing else should be required, no library or anything to install.
 
-*You can see that for each platform, there is a normal and a '-static' version. This one includes all libraries directly inside the application, so normally there is no dependence to 3rd party shared libraries, including SSL. You can try it if the normal fails to load (especially on old systems), but static linkage is a blessing a curse (exact reasons out of scope of this README). Now, if the static version still does not work, there are other solutons that are pretty technical, see [here](https://github.com/philippe44/cross-compiling#running-an-application-by-forcing-glibc-and-glibcxx). Best is that you open an issue if you want help with that.*
+*For each platform, there is a normal and a '-static' version. This one includes all libraries directly inside the application, so normally there is no dependence to 3rd party shared libraries, including SSL. You can try it if the normal fails to load (especially on old systems), but static linkage is a blessing a curse (exact reasons out of scope of this README). Now, if the static version still does not work, there are other solutons that are pretty technical, see [here](https://github.com/philippe44/cross-compiling#running-an-application-by-forcing-glibc-and-glibcxx). Best is that you open an issue if you want help with that.*
 
 ## Common information:
 
@@ -105,7 +105,7 @@ After=network-online.target
 Wants=network-online.target  
 
 [Service]  
-ExecStart=/var/lib/airconnect/airupnp-arm -l 1000:2000 -Z -x /var/lib/airconnect/airupnp.xml   
+ExecStart=/var/lib/airconnect/airupnp-linux-arm -l 1000:2000 -Z -x /var/lib/airconnect/airupnp.xml   
 Restart=on-failure  
 RestartSec=30  
 
@@ -141,7 +141,7 @@ Create the file com.aircast.bridge.plist in ~/Library/LaunchAgents/
     <string>com.aircast.bridge</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/[path]/aircast-osx-multi</string>
+        <string>/[path]/aircast-macos</string>
 	<string>-Z</string>
         <string>-x</string>
         <string>/[path]/aircast.xml</string>
@@ -251,4 +251,6 @@ When [f] is set, silence frames will be inserted as soon as no RTP frames have b
 Many have asked for a way to do video/audio synchronisation so that UPnP (Sonos) players can be used as speakers when playing video on a computer or tablet (YouTube for example). Due to this RTP-to-HTTP bridging, this cannot be done as the exact time when an audio frame is played cannot be controlled on the HTTP client. AirPlay speakers can achieve that because the iPhone/iPad/MAC player will  "delay" the video by a known amount, send the audio in advance (usually 2 sec) and then control the exact time when this audio is output by the speaker. But although AirConnect has the exact request timing and maintains synchronization with the player, it cannot "relay" that synchronization to the speakers. UPnP protocol does not allow this and Sonos has not made their protocol public. Sometimes you might get lucky because the video-to-audio delay will almost match the HTTP player delay, but it is not reproductible and will not be stable over time.
 
 ## Compiling from source
+It's a Makefile-oriented build, and there is a bash script (built.sh) and Windows one (build.cmd). The bash script is intended for cross-platform build and you might be able to call directly your native compiler, but have a look at the command line in the build.sh to make sure it can work. 
+
 Please see [here](https://github.com/philippe44/cross-compiling/blob/master/README.md#organizing-submodules--packages) to know how to rebuild my apps in general 

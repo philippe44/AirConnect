@@ -4,7 +4,7 @@ After=network-online.target
 Wants=network-online.target  
 
 [Service]  
-ExecStart=/var/lib/airconnect/airupnp-arm -l 1000:2000 -Z -x /var/lib/airconnect/airupnp.xml   
+ExecStart=/var/lib/airconnect/airupnp-linux-arm -l 1000:2000 -Z -x /var/lib/airconnect/airupnp.xml   
 Restart=on-failure  
 RestartSec=30  
 

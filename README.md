@@ -46,7 +46,7 @@ You should start to see lots of log messages on screen. Using your iOS/Mac/iTune
 
 If it works, type `exit`, which terminates the executable, and then, on non-Windows/MacOS machines, relaunch it with `-z` so that it can run in the background and you can close the command line window. You can also start it automatically using any startup script or a Linux service as explained below. Nothing else should be required, no library or anything to install.
 
-*For each platform, there is a normal and a '-static' version. This one includes all libraries directly inside the application, so normally there is no dependence to 3rd party shared libraries, including SSL. You can try it if the normal fails to load (especially on old systems), but static linkage is a blessing a curse (exact reasons out of scope of this README). Now, if the static version still does not work, there are other solutons that are pretty technical, see [here](https://github.com/philippe44/cross-compiling#running-an-application-by-forcing-glibc-and-glibcxx). Best is that you open an issue if you want help with that.*
+*For each platform, there is a normal and a '-static' version. This one includes all libraries directly inside the application, so normally there is no dependence to 3rd party shared libraries, including SSL. You can try it if the normal fails to load (especially on old systems), but static linkage is a blessing a curse (exact reasons out of scope of this README). Now, if the static version still does not work, there are other solutions that are pretty technical, see [here](https://github.com/philippe44/cross-compiling#running-an-application-by-forcing-glibc-and-glibcxx). Best is that you open an issue if you want help with that.*
 
 ## Common information:
 
@@ -59,6 +59,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Re-scan for new / lost players happens every 30s
 - A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i <file>` command line)
 - Chromecast groups are supported. Use `-v` to set the media volume factor for all devices (0.5 by default)
+- use `-c mp3[:<rate>]|flc[:0..9]|wav|pcm` to set codec use for re-encoding audio 
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
 - Use `-b [ip|iface][:port]` to set network interface (ip@ or interface name as reported by ifconfig/ipconfig) to use and, for airupnp only, UPnP port to listen to (must be above the default 49152)

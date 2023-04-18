@@ -20,7 +20,7 @@ typedef struct metadata_s {
 	char* artwork;
 	char *genre;
 	uint32_t track;
-	uint32_t duration;
+	uint32_t duration, live_duration;
 	uint32_t sample_rate;
 	uint8_t  sample_size;
 	uint8_t  channels;

@@ -26,9 +26,9 @@ void 	CastPowerOn(struct sCastCtx *Ctx);
 void 	CastRelease(struct sCastCtx *Ctx);
 
 void 	CastStop(struct sCastCtx *Ctx);
-#define CastPlay(Ctx)	CastSimple(Ctx, "PLAY")
+void    CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData);
 #define CastPause(Ctx)	CastSimple(Ctx, "PAUSE")
 void 	CastSimple(struct sCastCtx *Ctx, char *Type);
-bool	CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, struct metadata_s *MetaData);
+bool	CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, const char* Name, struct metadata_s *MetaData, uint64_t StartTime);
 void 	CastSetDeviceVolume(struct sCastCtx *p, double Volume, bool Queue);
 

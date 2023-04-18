@@ -49,7 +49,7 @@ typedef struct sCastCtx {
 	struct in_addr	ip;
 	uint16_t		port;
 	cross_queue_t	eventQueue, reqQueue;
-	double 			MediaVolume;
+	double 			mediaVolume;
 	uint32_t		lastPong;
 	bool			group;
 	bool			stopReceiver;
@@ -58,8 +58,9 @@ typedef struct sCastCtx {
 typedef struct {
 	char Type[32] ;
 	union {
-		json_t *msg;
-		double Volume;
+		json_t* msg;
+		json_t* customData;
+		double volume;
 	} data;
 } tReqItem;
 

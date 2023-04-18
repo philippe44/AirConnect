@@ -55,6 +55,7 @@ struct sMR			*glMRDevices;
 int					glMaxDevices = MAX_DEVICES;
 uint16_t			glPortBase, glPortRange;
 char				glBinding[128] = "?";
+uint16_t			glPicoPort;
 
 log_level	main_loglevel = lINFO;
 log_level	raop_loglevel = lINFO;
@@ -276,8 +277,10 @@ sleep:
 }
 
 /*----------------------------------------------------------------------------*/
-void HandleRAOP(void *owner, raopsr_event_t event, void *param) {
+void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 	struct sMR *Device = (struct sMR*) owner;
+	va_list args;
+	va_start(args, event);
 
 	// this is async, so need to check context validity
 	if (!CheckAndLock(owner)) return;
@@ -310,12 +313,12 @@ void HandleRAOP(void *owner, raopsr_event_t event, void *param) {
 
 			if (Device->RaopState != RAOP_PLAY) {
 				static int count;
+				uint16_t port = va_arg(args, uint32_t);
 				if (strcasestr(Device->Config.Codec, "mp3") && *Device->Service[TOPOLOGY_IDX].ControlURL) {
 					mp3radio = "x-rincon-mp3radio://";
 					LOG_INFO("[%p]: Sonos live stream", Device);
 				}
-				(void)!asprintf(&uri, "%shttp://%s:%u/stream-%u.%s", mp3radio, inet_ntoa(glHost),
-								*((short unsigned*) param),	count++, Device->Config.Codec);
+				(void)!asprintf(&uri, "%shttp://%s:%u/stream-%u.%s", mp3radio, inet_ntoa(glHost), port,	count++, Device->Config.Codec);
 				AVTSetURI(Device, uri, &Device->MetaData, Device->ProtocolInfo);
 				NFREE(uri);
 			}
@@ -328,7 +331,7 @@ void HandleRAOP(void *owner, raopsr_event_t event, void *param) {
 		}
 		case RAOP_VOLUME: {
 			// Volume sent by raop is normalized 0..1
-			double RaopVolume = *(double*) param;
+			double RaopVolume = va_arg(args, double);
 			int GroupVolume, i;
 			uint32_t now = gettime_ms();
 
@@ -1116,6 +1119,10 @@ static bool Start(bool cold) {
 		LOG_ERROR("Error registering ControlPoint: %d", rc);
 		goto Error;
 	}
+
+	glPicoPort = glPortBase;
+	http_pico_init(glHost, &glPicoPort, glPicoPort ? glPortRange : 1);
+	LOG_INFO("Starting pico HTTP server on port %hu", glPicoPort);
 
 	char hostname[STR_LEN];
 	gethostname(hostname, sizeof(hostname));

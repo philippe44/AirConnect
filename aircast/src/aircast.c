@@ -37,7 +37,7 @@
 /* globals */
 /*----------------------------------------------------------------------------*/
 struct sMR	*glMRDevices;
-uint16_t	glPortBase, glPortRange;
+uint16_t	glPortBase, glPortRange, glPicoPort;
 int32_t		glLogLimit = -1;
 int			glMaxDevices = 32;
 char		glBinding[16] = "?";
@@ -160,8 +160,10 @@ static bool	 Start(bool cold);
 static bool	 Stop(bool exit);
 
 /*----------------------------------------------------------------------------*/
-void raop_cb(void *owner, raopsr_event_t event, void *param) {
+void raop_cb(void *owner, raopsr_event_t event, ...) {
 	struct sMR *Device = (struct sMR*) owner;
+	va_list args;
+	va_start(args, event);
 
 	pthread_mutex_lock(&Device->Mutex);
 
@@ -202,16 +204,17 @@ void raop_cb(void *owner, raopsr_event_t event, void *param) {
 			if (Device->RaopState != RAOP_PLAY) {
 				static int count;
 				char *uri, *ContentType;
+				uint16_t port = va_arg(args, uint32_t);
 
-				(void)!asprintf(&uri, "http://%s:%u/stream-%u", inet_ntoa(glHost), *((short unsigned*) param), count++);
+				(void)!asprintf(&uri, "http://%s:%u/stream-%u", inet_ntoa(glHost), port, count++);
 				if (!strcasecmp(Device->Config.Codec, "mp3")) ContentType = "audio/mpeg";
 				else if (!strcasecmp(Device->Config.Codec, "wav")) ContentType = "audio/wav";
 				else ContentType = "audio/flac";
-				CastLoad(Device->CastCtx, uri, ContentType, &MetaData);
+				CastLoad(Device->CastCtx, uri, ContentType, Device->Name, &MetaData, 0);
 				free(uri);
 			}
 
-			CastPlay(Device->CastCtx);
+			CastPlay(Device->CastCtx, NULL);
 
 			CastSetDeviceVolume(Device->CastCtx, Device->Volume, true);
 			Device->RaopState = event;
@@ -221,17 +224,29 @@ void raop_cb(void *owner, raopsr_event_t event, void *param) {
 			uint32_t now = gettime_ms();
 
 			if (now > Device->VolumeStampRx + 1000) {
-				Device->Volume = *((double*) param);
+				Device->Volume = va_arg(args, double);
 				Device->VolumeStampTx = now;
 				CastSetDeviceVolume(Device->CastCtx, Device->Volume, false);
 				LOG_INFO("[%p]: Volume[0..1] %0.4lf", Device, Device->Volume);
 			}
 			break;
 		}
+		case RAOP_ARTWORK:
+			// the body and len are sent as well but we don't use them
+		case RAOP_METADATA: {
+			raopsr_metadata_t* raopMetaData = va_arg(args, raopsr_metadata_t*);
+			struct metadata_s MetaData = { .title = raopMetaData->title,
+										   .album = raopMetaData->album,
+										   .artist = raopMetaData->artist,
+										   .artwork = raopMetaData->artwork };
+			CastPlay(Device->CastCtx, &MetaData);
+			break;
+		}
 		default:
 			break;
 	}
 
+	va_end(args);
 	pthread_mutex_unlock(&Device->Mutex);
 }
 
@@ -679,6 +694,11 @@ static bool Start(bool cold) {
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
 	}
 
+	// init pico httpserver
+	glPicoPort = glPortBase;
+	http_pico_init(glHost, &glPicoPort, glPicoPort ? glPortRange : 1);
+	LOG_INFO("Starting pico HTTP server on port %hu", glPicoPort);
+
 	char hostname[STR_LEN];
 	gethostname(hostname, sizeof(hostname));
 	strcat(hostname, ".local");
@@ -715,6 +735,9 @@ static bool Stop(bool exit) {
 		crossthreads_wake();
 		pthread_join(glMainThread, NULL);
 		for (int i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
+
+		// terminate pico http server
+		http_pico_close();
 
 		if (glConfigID) ixmlDocument_free(glConfigID);
 		netsock_close();

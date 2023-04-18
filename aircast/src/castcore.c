@@ -38,7 +38,8 @@ static void *CastPingThread(void *args);
 extern log_level cast_loglevel;
 static log_level *loglevel = &cast_loglevel;
 
-#define DEFAULT_RECEIVER	"CC1AD845"
+//#define DEFAULT_RECEIVER	"CC1AD845"
+#define DEFAULT_RECEIVER	"46C1A819"
 
 /*----------------------------------------------------------------------------*/
 static void CastExit(void) {
@@ -312,7 +313,7 @@ void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_add
 	Ctx->Status 	= CAST_DISCONNECTED;
 	Ctx->ip 		= ip;
 	Ctx->port		= port;
-	Ctx->MediaVolume  = MediaVolume;
+	Ctx->mediaVolume  = MediaVolume;
 	Ctx->group 		= group;
 	Ctx->stopReceiver = stopReceiver;
 	Ctx->ssl  		= SSL_new(glSSLctx);
@@ -406,6 +407,7 @@ void ProcessQueue(tCastCtx *Ctx) {
 		SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"LAUNCH\",\"requestId\":%d,\"appId\":\"%s\"}", Ctx->waitId, DEFAULT_RECEIVER);
 	}
 
+#if 0
 	if (!strcasecmp(item->Type, "GET_MEDIA_STATUS") && Ctx->mediaSessionId) {
 		Ctx->waitId = Ctx->reqId++;
 
@@ -423,13 +425,14 @@ void ProcessQueue(tCastCtx *Ctx) {
 
 		SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"GET_STATUS\",\"requestId\":%d}", Ctx->waitId);
 	}
+#endif
 
 	if (!strcasecmp(item->Type, "SET_VOLUME")) {
 
-		if (item->data.Volume) {
+		if (item->data.volume) {
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
 							"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"level\":%0.4lf}}",
-							Ctx->reqId++, item->data.Volume);
+							Ctx->reqId++, item->data.volume);
 
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
 							"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":false}}",
@@ -452,11 +455,22 @@ void ProcessQueue(tCastCtx *Ctx) {
 
 			LOG_INFO("[%p]: Processing %s (id:%u)", Ctx->owner, item->Type, Ctx->waitId);
 
-			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId,
-							"{\"type\":\"%s\",\"requestId\":%d,\"mediaSessionId\":%d}",
-							item->Type, Ctx->waitId, Ctx->mediaSessionId);
+			json_t* msg = json_pack("{ss,si,si}", "type", "PLAY", "requestId", Ctx->waitId,
+												  "mediaSessionId", Ctx->mediaSessionId);
+
+			json_t* customData = json_pack("{so}", "customData", item->data.customData);
+			json_object_update(msg, customData);
+			json_decref(customData);
+
+			char* str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
+			json_decref(item->data.customData);
+			json_decref(msg);
+
+			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str);
+			NFREE(str);
 		}
 		else {
+			if (item->data.customData) json_decref(item->data.customData);
 			LOG_WARN("[%p]: PLAY un-queued but no media session", Ctx->owner);
 		}
 	}
@@ -659,7 +673,7 @@ static void *CastSocketThread(void *args) {
 						Ctx->mediaSessionId = id;
 						LOG_INFO("[%p]: Media session id %d", Ctx->owner, Ctx->mediaSessionId);
 						// set media volume when session is re-connected
-						SetMediaVolume(Ctx, Ctx->MediaVolume);
+						SetMediaVolume(Ctx, Ctx->mediaVolume);
 					} else {
 						LOG_ERROR("[%p]: waitMedia match but no session %u", Ctx->owner, Ctx->waitMedia);
 					}

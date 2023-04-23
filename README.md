@@ -3,7 +3,7 @@ Use these applications to add AirPlay capabilities to Chromecast and UPnP (like 
 
 AirConnect can run on any machine that has access to your local network (Windows, MacOS x86 and arm64, Linux x86, x86_64, arm, aarch64, sparc, mips, powerpc, Solaris and FreeBSD). It does not need to be on your main computer. (For example, a Raspberry Pi works well). It will detect UPnP/Sonos/Chromecast players, create as many virtual AirPlay devices as needed, and act as a bridge/proxy between AirPlay clients (iPhone, iPad, iTunes, MacOS, AirFoil ...) and the real UPnP/Sonos/Chromecast players.
 
-The audio, after being decoded from alac, can be sent in plain, or re-encoded using mp3 or flac. Most players will not display metadata (artist, title, album ...) except when mp3 re-encoding is used and for UPnP/DLNA devices that support icy protocol. Chromecast players do not support this (yet).
+The audio, after being decoded from alac, can be sent in plain, or re-encoded using mp3 or flac. Most players will not display metadata (artist, title, album, artwork ...) except when mp3 re-encoding is used and for UPnP/DLNA devices that support icy protocol. Chromecast players support this after version 1.1.x
 
 ## Installing
 

@@ -339,11 +339,9 @@ void CastRelease(struct sCastCtx *Ctx) {
 
 /*----------------------------------------------------------------------------*/
 void CastSetDeviceVolume(struct sCastCtx *Ctx, double Volume, bool Queue) {
-	if (Ctx->group) Volume = Volume * Ctx->mediaVolume;
-
-	if (Volume > 1.0) Volume = 1.0;
-
 	pthread_mutex_lock(&Ctx->Mutex);
+	
+	if (Volume > 1.0) Volume = 1.0;
 
 	if (Ctx->Status == CAST_LAUNCHED && (!Ctx->waitId || !Queue)) {
 

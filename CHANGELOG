@@ -1,3 +1,6 @@
+1.1.1
+  - remove group volume scaling on SetVolume
+  
 1.1.0
  - airupnp : add artwork in mp3 mode
  - aircast : add metadata (including artwork)

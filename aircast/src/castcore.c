@@ -169,7 +169,6 @@ json_t *GetTimedEvent(struct sCastCtx *Ctx, uint32_t msWait) {
 bool LaunchReceiver(tCastCtx *Ctx) {
 	// try to reconnect if SSL connection is lost
 	if (!CastConnect(Ctx)) {
-		pthread_mutex_unlock(&Ctx->Mutex);
 		return false;
 	}
 
@@ -349,7 +348,7 @@ bool UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, uint16_t port) {
 }
 
 /*----------------------------------------------------------------------------*/
-struct in_addr GetAddr(struct sCastCtx *Ctx) {
+struct in_addr CastGetAddr(struct sCastCtx *Ctx) {
 	return Ctx->ip;
 }
 

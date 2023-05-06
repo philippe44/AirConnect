@@ -87,6 +87,8 @@ static bool					glGracefullShutdown = true;
 static void					*glConfigID = NULL;
 static char					glConfigName[STR_LEN] = "./config.xml";
 static struct mdnsd*		glmDNSServer = NULL;
+static pthread_mutex_t		glMainMutex;
+uint32_t					glNetmask;
 
 static char usage[] =
 			VERSION "\n"
@@ -264,16 +266,12 @@ static void *MRThread(void *args) {
 
 		// context is valid until this thread ends, no deletion issue
 		data = GetTimedEvent(p->CastCtx, wakeTimer);
+		if (!p->Running) break;
+
 		elapsed = gettime_ms() - last;
 
 		// need to protect against events from CC threads, not from deletion
 		pthread_mutex_lock(&p->Mutex);
-
-		// need to check status there, protected
-		if (!p->Running) {
-			pthread_mutex_unlock(&p->Mutex);
-			break;
-		}
 
 		wakeTimer = (p->State != STOPPED) ? TRACK_POLL : TRACK_POLL * 10;
 		LOG_SDEBUG("[%p]: Cast thread timer %d %d", p, elapsed, wakeTimer);
@@ -379,12 +377,27 @@ static struct sMR *SearchUDN(char *UDN) {
 }
 
 /*----------------------------------------------------------------------------*/
-static bool isMember(struct in_addr host) { 
+static void UpdateDevices(void) {
+	bool Updated = false;
+
+	pthread_mutex_lock(&glMainMutex);
+
 	for (int i = 0; i < glMaxDevices; i++) {
-		 if (glMRDevices[i].Running && GetAddr(glMRDevices[i].CastCtx).s_addr == host.s_addr)
-			return true;
+		struct sMR *Device = glMRDevices + i;
+		if (Device->Running && Device->Remove && !CastIsConnected(Device->CastCtx)) {
+			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
+			raopsr_delete(Device->Raop);
+			RemoveCastDevice(Device);
+			Updated = true;
+		}
 	}
-	return false;
+
+	if ((glAutoSaveConfigFile && Updated) || glDiscovery) {
+		LOG_DEBUG("Updating configuration %s", glConfigName);
+		SaveConfig(glConfigName, glConfigID, false);
+	}
+
+	pthread_mutex_unlock(&glMainMutex);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -401,7 +414,7 @@ bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 			free(host);
 		}
 	}
-
+	
 	/*
 	cast groups creation is difficult - as storm of mDNS message is sent during
 	master's election and many masters will claim the group then will "retract"
@@ -421,7 +434,7 @@ bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 
 		// is the mDNS record usable or announce made on behalf
 		if ((UDN = GetmDNSAttribute(s->attr, s->attr_count, "id")) == NULL ||
-			(s->host.s_addr != s->addr.s_addr && isMember(s->host))) continue;
+			(s->host.s_addr != s->addr.s_addr && (s->host.s_addr & glNetmask) == (s->addr.s_addr & glNetmask))) continue;
 
 		// is that device already here
 		if ((Device = SearchUDN(UDN)) != NULL) {
@@ -517,20 +530,7 @@ bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 		NFREE(Name);
 	}
 
-	// look for devices to be removed
-	for (int i = 0; i < glMaxDevices; i++) {
-		Device = glMRDevices + i;
-		if (Device->Running && Device->Remove && !CastIsConnected(Device->CastCtx)) {
-			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
-			raopsr_delete(Device->Raop);
-			RemoveCastDevice(Device);
-		}
-	}
-
-	if (glAutoSaveConfigFile || glDiscovery) {
-		LOG_DEBUG("Updating configuration %s", glConfigName);
-		SaveConfig(glConfigName, glConfigID, false);
-	}
+	UpdateDevices();
 
 	// we have not released the slist
 	return false;
@@ -578,7 +578,7 @@ static void *MainThread(void *args) {
 		// try to detect IP change when not forced
 		if (inet_addr(glBinding) == INADDR_NONE) {
 			struct in_addr host;
-			host = get_interface(!strchr(glBinding, '?') ? glBinding : NULL, NULL, NULL);
+			host = get_interface(!strchr(glBinding, '?') ? glBinding : NULL, NULL, &glNetmask);
 			if (host.s_addr != INADDR_NONE && host.s_addr != glHost.s_addr) {
 				LOG_INFO("IP change detected %s", inet_ntoa(glHost));
 				Stop(false);
@@ -586,6 +586,8 @@ static void *MainThread(void *args) {
 				Start(false);
 			}
 		}
+
+		UpdateDevices();
 	}
 
 	return NULL;
@@ -663,7 +665,7 @@ void RemoveCastDevice(struct sMR *Device) {
 	pthread_mutex_lock(&Device->Mutex);
 	Device->Running = false;
 	pthread_mutex_unlock(&Device->Mutex);
-
+	
 	// device's thread can still be running but this will wake it up and end it
 	DeleteCastDevice(Device->CastCtx);
 
@@ -673,7 +675,7 @@ void RemoveCastDevice(struct sMR *Device) {
 /*----------------------------------------------------------------------------*/
 static bool Start(bool cold) {
 	// must bind to an address
-	glHost = get_interface(!strchr(glBinding, '?') ? glBinding : NULL, NULL, NULL);
+	glHost = get_interface(!strchr(glBinding, '?') ? glBinding : NULL, NULL, &glNetmask);
 	LOG_INFO("Binding to %s", inet_ntoa(glHost));
 
 	// can't find a suitable interface
@@ -689,6 +691,8 @@ static bool Start(bool cold) {
 		// mutexes must always be valid
 		glMRDevices = calloc(glMaxDevices, sizeof(struct sMR));
 		for (int i = 0; i < glMaxDevices; i++) pthread_mutex_init(&glMRDevices[i].Mutex, 0);
+
+		pthread_mutex_init(&glMainMutex, 0);
 
 		// start the main thread
 		pthread_create(&glMainThread, NULL, &MainThread, NULL);
@@ -735,6 +739,7 @@ static bool Stop(bool exit) {
 		crossthreads_wake();
 		pthread_join(glMainThread, NULL);
 		for (int i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
+		pthread_mutex_destroy(&glMainMutex);
 
 		// terminate pico http server
 		http_pico_close();

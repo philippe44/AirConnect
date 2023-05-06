@@ -21,5 +21,5 @@ bool 	UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, uint16_t port);
 void 	DeleteCastDevice(struct sCastCtx *Ctx);
 bool	CastIsConnected(struct sCastCtx *Ctx);
 bool 	CastIsMediaSession(struct sCastCtx *Ctx);
-struct in_addr GetAddr(struct sCastCtx *Ctx);
+struct in_addr CastGetAddr(struct sCastCtx *Ctx);
 

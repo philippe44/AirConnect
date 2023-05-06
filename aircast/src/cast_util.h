@@ -22,7 +22,7 @@ void	CastGetStatus(struct sCastCtx *Ctx);
 void	CastGetMediaStatus(struct sCastCtx *Ctx);
 
 void 	CastPowerOff(struct sCastCtx *Ctx);
-void 	CastPowerOn(struct sCastCtx *Ctx);
+bool 	CastPowerOn(struct sCastCtx *Ctx);
 void 	CastRelease(struct sCastCtx *Ctx);
 
 void 	CastStop(struct sCastCtx *Ctx);

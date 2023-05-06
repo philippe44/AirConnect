@@ -321,8 +321,8 @@ void CastPowerOff(struct sCastCtx *Ctx) {
 }
 
 /*----------------------------------------------------------------------------*/
-void CastPowerOn(struct sCastCtx *Ctx) {
-	CastConnect(Ctx);
+bool CastPowerOn(struct sCastCtx *Ctx) {
+	return CastConnect(Ctx);
 }
 
 /*----------------------------------------------------------------------------*/

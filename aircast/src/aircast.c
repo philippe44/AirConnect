@@ -162,7 +162,7 @@ static bool	 Start(bool cold);
 static bool	 Stop(bool exit);
 
 /*----------------------------------------------------------------------------*/
-void raop_cb(void *owner, raopsr_event_t event, ...) {
+static void raop_cb(void *owner, raopsr_event_t event, ...) {
 	struct sMR *Device = (struct sMR*) owner;
 	va_list args;
 	va_start(args, event);
@@ -358,7 +358,7 @@ static void *MRThread(void *args) {
 }
 
 /*----------------------------------------------------------------------------*/
-char *GetmDNSAttribute(mdnssd_txt_attr_t *p, int count, char *name) {
+static char *GetmDNSAttribute(mdnssd_txt_attr_t *p, int count, char *name) {
 	for (int j = 0; j < count; j++)
 		if (!strcasecmp(p[j].name, name))
 			return strdup(p[j].value);
@@ -377,9 +377,7 @@ static struct sMR *SearchUDN(char *UDN) {
 }
 
 /*----------------------------------------------------------------------------*/
-static void UpdateDevices(void) {
-	bool Updated = false;
-
+static void UpdateDevices(bool Updated) {
 	pthread_mutex_lock(&glMainMutex);
 
 	for (int i = 0; i < glMaxDevices; i++) {
@@ -392,7 +390,7 @@ static void UpdateDevices(void) {
 		}
 	}
 
-	if ((glAutoSaveConfigFile && Updated) || glDiscovery) {
+	if ((Updated && glAutoSaveConfigFile) || glDiscovery) {
 		LOG_DEBUG("Updating configuration %s", glConfigName);
 		SaveConfig(glConfigName, glConfigID, false);
 	}
@@ -401,9 +399,10 @@ static void UpdateDevices(void) {
 }
 
 /*----------------------------------------------------------------------------*/
-bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
+static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 	struct sMR *Device;
 	mdnssd_service_t *s;
+	bool Updated = false;
 
 	if (*loglevel == lDEBUG) {
 		LOG_DEBUG("----------------- round ------------------", NULL);
@@ -510,7 +509,6 @@ bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 		else Group = true;
 		NFREE(Model);
 
-
 		Name = GetmDNSAttribute(s->attr, s->attr_count, "fn");
 		if (!Name) Name = strdup(s->hostname);
 		
@@ -523,6 +521,8 @@ bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 			if (!Device->Raop) {
 				LOG_ERROR("[%p]: cannot create RAOP instance (%s)", Device, Device->Config.Name);
 				RemoveCastDevice(Device);
+			} else {
+				Updated = true;
 			}
 		}
 
@@ -530,7 +530,7 @@ bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 		NFREE(Name);
 	}
 
-	UpdateDevices();
+	UpdateDevices(Updated);
 
 	// we have not released the slist
 	return false;
@@ -587,7 +587,7 @@ static void *MainThread(void *args) {
 			}
 		}
 
-		UpdateDevices();
+		UpdateDevices(false);
 	}
 
 	return NULL;
@@ -650,7 +650,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 }
 
 /*----------------------------------------------------------------------------*/
-void FlushCastDevices(void) {
+static void FlushCastDevices(void) {
 	for (int i = 0; i < glMaxDevices; i++) {
 		struct sMR *p = &glMRDevices[i];
 		if (p->Running) {
@@ -661,7 +661,7 @@ void FlushCastDevices(void) {
 }
 
 /*----------------------------------------------------------------------------*/
-void RemoveCastDevice(struct sMR *Device) {
+static void RemoveCastDevice(struct sMR *Device) {
 	pthread_mutex_lock(&Device->Mutex);
 	Device->Running = false;
 	pthread_mutex_unlock(&Device->Mutex);
@@ -768,7 +768,7 @@ static void sighandler(int signum) {
 }
 
 /*---------------------------------------------------------------------------*/
-bool ParseArgs(int argc, char **argv) {
+static bool ParseArgs(int argc, char **argv) {
 	char *optarg = NULL;
 	int optind = 1;
 	char cmdline[256] = "";

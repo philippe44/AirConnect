@@ -377,7 +377,7 @@ static struct sMR *SearchUDN(char *UDN) {
 }
 
 /*----------------------------------------------------------------------------*/
-static void UpdateDevices(bool Updated) {
+static void UpdateDevices() {
 	pthread_mutex_lock(&glMainMutex);
 
 	for (int i = 0; i < glMaxDevices; i++) {
@@ -386,13 +386,7 @@ static void UpdateDevices(bool Updated) {
 			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
 			raopsr_delete(Device->Raop);
 			RemoveCastDevice(Device);
-			Updated = true;
 		}
-	}
-
-	if ((Updated && glAutoSaveConfigFile) || glDiscovery) {
-		LOG_DEBUG("Updating configuration %s", glConfigName);
-		SaveConfig(glConfigName, glConfigID, false);
 	}
 
 	pthread_mutex_unlock(&glMainMutex);
@@ -478,6 +472,7 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 					raopsr_update(Device->Raop, Name, "aircast");
 					strcpy(Device->Name, Name);
 					sprintf(Device->Config.Name, "%s+", Name);
+					Updated = true;
 				}
 				NFREE(Name);
 			}
@@ -530,7 +525,12 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 		NFREE(Name);
 	}
 
-	UpdateDevices(Updated);
+	UpdateDevices();
+
+	if ((Updated && glAutoSaveConfigFile) || glDiscovery) {
+		LOG_INFO("Updating configuration %s", glConfigName);
+		SaveConfig(glConfigName, glConfigID, false);
+	}
 
 	// we have not released the slist
 	return false;
@@ -587,7 +587,7 @@ static void *MainThread(void *args) {
 			}
 		}
 
-		UpdateDevices(false);
+		UpdateDevices();
 	}
 
 	return NULL;

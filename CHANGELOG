@@ -1,3 +1,6 @@
+1.1.6
+ - update openssl to 1.1.1u
+
 1.1.5
  - use shutdown instead of close in picohttp server when source has not been found or HEAD was used
  

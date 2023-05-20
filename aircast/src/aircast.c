@@ -236,12 +236,14 @@ static void raop_cb(void *owner, raopsr_event_t event, ...) {
 		case RAOP_ARTWORK:
 			// the body and len are sent as well but we don't use them
 		case RAOP_METADATA: {
-			raopsr_metadata_t* raopMetaData = va_arg(args, raopsr_metadata_t*);
-			struct metadata_s MetaData = { .title = raopMetaData->title,
-										   .album = raopMetaData->album,
-										   .artist = raopMetaData->artist,
-										   .artwork = raopMetaData->artwork };
-			CastPlay(Device->CastCtx, &MetaData);
+			if (Device->RaopState == RAOP_PLAY) {
+				raopsr_metadata_t* raopMetaData = va_arg(args, raopsr_metadata_t*);
+				struct metadata_s MetaData = { .title = raopMetaData->title,
+											   .album = raopMetaData->album,
+											   .artist = raopMetaData->artist,
+											   .artwork = raopMetaData->artwork };
+				CastPlay(Device->CastCtx, &MetaData);
+			}
 			break;
 		}
 		default:

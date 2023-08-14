@@ -242,7 +242,6 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 			json_decref(item);
 
 			char* str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
-			json_decref(customData);
 			json_decref(msg);
 
 			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str);
@@ -255,8 +254,7 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 			LOG_WARN("[%p]: PLAY req w/o a session", Ctx->owner);
 		}
 
-	}
-	else {
+	} else {
 		tReqItem* req = malloc(sizeof(tReqItem));
 		req->data.customData = customData;
 		strcpy(req->Type, "PLAY");

@@ -387,6 +387,7 @@ void CastQueueFlush(cross_queue_t *Queue) {
 
 	while ((item = queue_extract(Queue)) != NULL) {
 		if (!strcasecmp(item->Type,"LOAD")) json_decref(item->data.msg);
+		else if (!strcasecmp(item->Type, "PLAY") && item->data.customData) json_decref(item->data.customData);
 		free(item);
 	}
 }
@@ -436,8 +437,7 @@ void ProcessQueue(tCastCtx *Ctx) {
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
 							"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":false}}",
 							Ctx->reqId);
-		}
-		else {
+		} else {
 			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
 							"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":true}}",
 							Ctx->reqId);
@@ -462,13 +462,11 @@ void ProcessQueue(tCastCtx *Ctx) {
 			json_decref(customData);
 
 			char* str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
-			json_decref(item->data.customData);
 			json_decref(msg);
 
 			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str);
 			NFREE(str);
-		}
-		else {
+		} else {
 			if (item->data.customData) json_decref(item->data.customData);
 			LOG_WARN("[%p]: PLAY un-queued but no media session", Ctx->owner);
 		}
@@ -506,8 +504,7 @@ void ProcessQueue(tCastCtx *Ctx) {
 						"{\"type\":\"STOP\",\"requestId\":%d}", Ctx->waitId);
 			Ctx->Status = CAST_CONNECTED;
 
-		}
-		else if (Ctx->mediaSessionId) {
+		} else if (Ctx->mediaSessionId) {
 			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId,
 							"{\"type\":\"STOP\",\"requestId\":%d,\"mediaSessionId\":%d}",
 							Ctx->waitId, Ctx->mediaSessionId);

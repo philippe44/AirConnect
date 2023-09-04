@@ -1,3 +1,6 @@
+1.1.9
+ - HTTP exec function should not crash on error when there is no token returned
+ 
 1.1.8
  - json_pack with "so" does not require object's ref to be decremented
  

@@ -1,3 +1,7 @@
+1.2.0
+ - use libraop version that re-sends HTTP when *explictely* request a range 0-XXX to try to cope with player that don't understand what HTTP protocol is and keep askign for a small "chunk"
+ - aircast display iface name upon startup
+ 
 1.1.9
  - HTTP exec function should not crash on error when there is no token returned
  

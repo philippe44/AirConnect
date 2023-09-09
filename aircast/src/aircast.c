@@ -677,8 +677,10 @@ static void RemoveCastDevice(struct sMR *Device) {
 /*----------------------------------------------------------------------------*/
 static bool Start(bool cold) {
 	// must bind to an address
-	glHost = get_interface(!strchr(glBinding, '?') ? glBinding : NULL, NULL, &glNetmask);
-	LOG_INFO("Binding to %s", inet_ntoa(glHost));
+	char* iface = NULL;
+	glHost = get_interface(!strchr(glBinding, '?') ? glBinding : NULL, &iface, &glNetmask);
+	LOG_INFO("Binding to %s@%s", iface, inet_ntoa(glHost));
+	NFREE(iface);
 
 	// can't find a suitable interface
 	if (glHost.s_addr == INADDR_NONE) return false;

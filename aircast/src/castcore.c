@@ -393,7 +393,7 @@ void CastQueueFlush(cross_queue_t *Queue) {
 }
 
 /*----------------------------------------------------------------------------*/
-void ProcessQueue(tCastCtx *Ctx) {
+static void ProcessQueue(tCastCtx *Ctx) {
 	tReqItem *item;
 
 	if ((item = queue_extract(&Ctx->reqQueue)) == NULL) return;

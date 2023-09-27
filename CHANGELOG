@@ -1,5 +1,6 @@
 1.2.1
  - (airupnp) unified source with spotconnect
+ - (aircast) revert exclusion of devices based on netmask
  - display iface and network at start
  - update XML_UpdateNode bug
  

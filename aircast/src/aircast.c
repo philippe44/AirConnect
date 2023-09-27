@@ -395,6 +395,14 @@ static void UpdateDevices() {
 }
 
 /*----------------------------------------------------------------------------*/
+static bool isMember(struct in_addr host) {
+	for (int i = 0; i < MAX_RENDERERS; i++) {
+		if (glMRDevices[i].Running && CastGetAddr(glMRDevices[i].CastCtx).s_addr == host.s_addr) return true;
+	}
+	return false;
+}
+
+/*----------------------------------------------------------------------------*/
 static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop) {
 	struct sMR *Device;
 	mdnssd_service_t *s;
@@ -428,8 +436,7 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 		bool Group;
 
 		// is the mDNS record usable or announce made on behalf
-		if ((UDN = GetmDNSAttribute(s->attr, s->attr_count, "id")) == NULL ||
-			(s->host.s_addr != s->addr.s_addr && (s->host.s_addr & glNetmask) == (s->addr.s_addr & glNetmask))) continue;
+		if ((UDN = GetmDNSAttribute(s->attr, s->attr_count, "id")) == NULL || (s->host.s_addr != s->addr.s_addr && isMember(s->host))) continue;
 
 		// is that device already here
 		if ((Device = SearchUDN(UDN)) != NULL) {

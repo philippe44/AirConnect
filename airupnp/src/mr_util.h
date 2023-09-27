@@ -1,5 +1,5 @@
 /*
- *  AirUPnP - AirPlay to UPnP Bridge
+ *  UPnP renderer utils
  *
  *	(c) Philippe, philippe_44@outlook.com
  *

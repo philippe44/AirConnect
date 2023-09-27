@@ -1,3 +1,8 @@
+1.2.1
+ - (airupnp) unified source with spotconnect
+ - display iface and network at start
+ - update XML_UpdateNode bug
+ 
 1.2.0
  - use libraop version that re-sends HTTP when *explictely* request a range 0-XXX to try to cope with player that don't understand what HTTP protocol is and keep askign for a small "chunk"
  - aircast display iface name upon startup

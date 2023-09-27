@@ -1,5 +1,5 @@
 /*
- * AirUPnP - Renderer utils
+ * UPnP renderer utils
  *
  * (c) Philippe, philippe_44@outlook.com
  *
@@ -12,11 +12,10 @@
 #include "platform.h"
 #include "ixml.h"
 #include "ixmlextra.h"
-#include "airupnp.h"
-#include "avt_util.h"
 #include "upnptools.h"
 #include "cross_thread.h"
 #include "cross_log.h"
+#include "avt_util.h"
 #include "mr_util.h"
 
 extern log_level	util_loglevel;
@@ -122,11 +121,8 @@ struct sMR *GetMaster(struct sMR *Device, char **Name)
 }
 
 /*----------------------------------------------------------------------------*/
-void FlushMRDevices(void)
-{
-	int i;
-
-	for (i = 0; i < glMaxDevices; i++) {
+void FlushMRDevices(void) {
+	for (int i = 0; i < glMaxDevices; i++) {
 		struct sMR *p = &glMRDevices[i];
 		pthread_mutex_lock(&p->Mutex);
 		if (p->Running) {
@@ -140,11 +136,7 @@ void FlushMRDevices(void)
 }
 
 /*----------------------------------------------------------------------------*/
-void DelMRDevice(struct sMR *p)
-{
-	// already locked expect for failed creation which means a trylock is fine
-	pthread_mutex_trylock(&p->Mutex);
-
+void DelMRDevice(struct sMR *p) {
 	// try to unsubscribe but missing players will not succeed and as a result
 	// terminating the libupnp takes a while ...
 	for (int i = 0; i < NB_SRV; i++) {
@@ -155,7 +147,7 @@ void DelMRDevice(struct sMR *p)
 
 	p->Running = false;
 
-	// kick-up all sleepers
+	// kick-up all sleepers and join player's thread
 	crossthreads_wake();
 
 	pthread_mutex_unlock(&p->Mutex);
@@ -163,8 +155,7 @@ void DelMRDevice(struct sMR *p)
 }
 
 /*----------------------------------------------------------------------------*/
-struct sMR* CURL2Device(const UpnpString *CtrlURL)
-{
+struct sMR* CURL2Device(const UpnpString *CtrlURL) {
 	for (int i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running) continue;
 		for (int j = 0; j < NB_SRV; j++) {
@@ -178,8 +169,7 @@ struct sMR* CURL2Device(const UpnpString *CtrlURL)
 }
 
 /*----------------------------------------------------------------------------*/
-struct sMR* SID2Device(const UpnpString *SID)
-{
+struct sMR* SID2Device(const UpnpString *SID) {
 	for (int i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running) continue;
 		for (int j = 0; j < NB_SRV; j++) {
@@ -193,8 +183,7 @@ struct sMR* SID2Device(const UpnpString *SID)
 }
 
 /*----------------------------------------------------------------------------*/
-struct sService *EventURL2Service(const UpnpString *URL, struct sService *s)
-{
+struct sService *EventURL2Service(const UpnpString *URL, struct sService *s) {
 	for (int i = 0; i < NB_SRV; s++, i++) {
 		if (strcmp(s->EventURL, UpnpString_get_String(URL))) continue;
 		return s;
@@ -204,8 +193,7 @@ struct sService *EventURL2Service(const UpnpString *URL, struct sService *s)
 }
 
 /*----------------------------------------------------------------------------*/
-struct sMR* UDN2Device(const char *UDN)
-{
+struct sMR* UDN2Device(const char *UDN) {
 	for (int i = 0; i < glMaxDevices; i++) {
 		if (!glMRDevices[i].Running) continue;
 		if (!strcmp(glMRDevices[i].UDN, UDN)) {
@@ -217,8 +205,7 @@ struct sMR* UDN2Device(const char *UDN)
 }
 
 /*----------------------------------------------------------------------------*/
-bool CheckAndLock(struct sMR *Device)
-{
+bool CheckAndLock(struct sMR *Device) {
 	if (!Device) {
 		LOG_INFO("device is NULL");
 		return false;
@@ -242,11 +229,8 @@ bool CheckAndLock(struct sMR *Device)
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
-static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, bool *contd)
-{
+static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, bool *contd) {
 	IXML_NodeList *ServiceList = NULL;
-	IXML_NodeList *servlistnodelist = NULL;
-	IXML_Node *servlistnode = NULL;
 	*contd = false;
 
 	/*  ixmlDocument_getElementsByTagName()
@@ -257,7 +241,7 @@ static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, b
 	 *  return (NodeList*) A pointer to a NodeList containing the
 	 *                      matching items or NULL on an error. 	 */
 	LOG_SDEBUG("GetNthServiceList called : n = %d", n);
-	servlistnodelist = ixmlDocument_getElementsByTagName(doc, "serviceList");
+	IXML_NodeList* servlistnodelist = ixmlDocument_getElementsByTagName(doc, "serviceList");
 	if (servlistnodelist &&
 		ixmlNodeList_length(servlistnodelist) &&
 		n < ixmlNodeList_length(servlistnodelist)) {
@@ -266,7 +250,7 @@ static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, b
 		 *
 		 *  return (Node*) A pointer to a Node or NULL if there was an
 		 *                  error. */
-		servlistnode = ixmlNodeList_item(servlistnodelist, n);
+		IXML_Node* servlistnode = ixmlNodeList_item(servlistnodelist, n);
 		if (servlistnode) {
 			/* create as list of DOM nodes */
 			ServiceList = ixmlElement_getElementsByTagName(
@@ -285,33 +269,25 @@ static IXML_NodeList *XMLGetNthServiceList(IXML_Document *doc, unsigned int n, b
 int XMLFindAndParseService(IXML_Document* DescDoc, const char* location,
 	const char* serviceTypeBase, char** serviceType, char** serviceId, 
 	char** eventURL, char** controlURL, char** serviceURL) {
-	unsigned int i;
-	unsigned long length;
 	int found = 0;
 	int ret;
-	unsigned int sindex = 0;
-	char* tempServiceType = NULL;
-	char* baseURL = NULL;
 	const char* base = NULL;
-	char* relcontrolURL = NULL;
-	char* releventURL = NULL;
-	IXML_NodeList* serviceList = NULL;
-	IXML_Element* service = NULL;
 	bool contd = true;
 
-	baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase", true);
+	char* baseURL = XMLGetFirstDocumentItem(DescDoc, "URLBase", true);
 	if (baseURL) base = baseURL;
 	else base = location;
 
-	for (sindex = 0; contd; sindex++) {
-		tempServiceType = NULL;
-		relcontrolURL = NULL;
-		releventURL = NULL;
-		service = NULL;
+	for (unsigned int sindex = 0; contd; sindex++) {
+		char* tempServiceType = NULL;
+		char* relcontrolURL = NULL;
+		char* releventURL = NULL;
+		IXML_Element* service = NULL;
+		IXML_NodeList* serviceList = NULL;
 
 		if ((serviceList = XMLGetNthServiceList(DescDoc, sindex, &contd)) == NULL) continue;
-		length = ixmlNodeList_length(serviceList);
-		for (i = 0; i < length; i++) {
+		unsigned long length = ixmlNodeList_length(serviceList);
+		for (int i = 0; i < length; i++) {
 			service = (IXML_Element*)ixmlNodeList_item(serviceList, i);
 			tempServiceType = XMLGetFirstElementItem((IXML_Element*)service, "serviceType");
 			LOG_SDEBUG("serviceType %s", tempServiceType);
@@ -342,8 +318,6 @@ int XMLFindAndParseService(IXML_Document* DescDoc, const char* location,
 				}
 				free(relcontrolURL);
 				free(releventURL);
-				relcontrolURL = NULL;
-				releventURL = NULL;
 				found = 1;
 				break;
 			}
@@ -351,13 +325,10 @@ int XMLFindAndParseService(IXML_Document* DescDoc, const char* location,
 			tempServiceType = NULL;
 		}
 		free(tempServiceType);
-		tempServiceType = NULL;
 		if (serviceList) ixmlNodeList_free(serviceList);
-		serviceList = NULL;
 	}
 
 	free(baseURL);
-
 	return found;
 }
 
@@ -372,14 +343,12 @@ bool XMLFindAction(const char* base, char* service, char* action) {
 	if (UpnpDownloadXmlDoc(url, &AVTDoc) == UPNP_E_SUCCESS) {
 		IXML_Element* actions = ixmlDocument_getElementById(AVTDoc, "actionList");
 		IXML_NodeList* actionList = ixmlDocument_getElementsByTagName((IXML_Document*)actions, "action");
-		int i;
 
-		for (i = 0; actionList && i < (int)ixmlNodeList_length(actionList); i++) {
+		for (int i = 0; actionList && i < (int)ixmlNodeList_length(actionList); i++) {
 			IXML_Node* node = ixmlNodeList_item(actionList, i);
-			const char* name;
 			node = (IXML_Node*)ixmlDocument_getElementById((IXML_Document*)node, "name");
 			node = ixmlNode_getFirstChild(node);
-			name = ixmlNode_getNodeValue(node);
+			const char* name = ixmlNode_getNodeValue(node);
 			if (name && !strcasecmp(name, action)) {
 				res = true;
 				break;
@@ -395,34 +364,28 @@ bool XMLFindAction(const char* base, char* service, char* action) {
 }
 
 /*----------------------------------------------------------------------------*/
-char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr)
-{
-	IXML_Node *node;
-	IXML_Document *ItemDoc;
-	IXML_Element *LastChange;
-	IXML_NodeList *List;
-	char *buf, *ret = NULL;
-	uint32_t i;
+char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *SearchVal, char *RetAttr) {
+	char *ret = NULL;
 
-	LastChange = ixmlDocument_getElementById(doc, "LastChange");
+	IXML_Element* LastChange = ixmlDocument_getElementById(doc, "LastChange");
 	if (!LastChange) return NULL;
 
-	node = ixmlNode_getFirstChild((IXML_Node*) LastChange);
+	IXML_Node* node = ixmlNode_getFirstChild((IXML_Node*) LastChange);
 	if (!node) return NULL;
 
-	buf = (char*) ixmlNode_getNodeValue(node);
+	char* buf = (char*) ixmlNode_getNodeValue(node);
 	if (!buf) return NULL;
 
-	ItemDoc = ixmlParseBuffer(buf);
+	IXML_Document* ItemDoc = ixmlParseBuffer(buf);
 	if (!ItemDoc) return NULL;
 
-	List = ixmlDocument_getElementsByTagName(ItemDoc, Tag);
+	IXML_NodeList* List = ixmlDocument_getElementsByTagName(ItemDoc, Tag);
 	if (!List) {
 		ixmlDocument_free(ItemDoc);
 		return NULL;
 	}
 
-	for (i = 0; i < ixmlNodeList_length(List); i++) {
+	for (unsigned i = 0; i < ixmlNodeList_length(List); i++) {
 		IXML_Node *node = ixmlNodeList_item(List, i);
 		IXML_Node *attr = _getAttributeNode(node, SearchAttr);
 
@@ -445,18 +408,16 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 }
 
 /*----------------------------------------------------------------------------*/
-static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
-{
+static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr) {
 	IXML_Node *ret = NULL;
 	IXML_NamedNodeMap *map = ixmlNode_getAttributes(node);
-	int i;
-
+	
 	/*
 	supposed to act like but case insensitive
 	ixmlElement_getAttributeNode((IXML_Element*) node, SearchAttr);
 	*/
 
-	for (i = 0; i < ixmlNamedNodeMap_getLength(map); i++) {
+	for (int i = 0; i < ixmlNamedNodeMap_getLength(map); i++) {
 		ret = ixmlNamedNodeMap_item(map, i);
 		if (strcasecmp(ixmlNode_getNodeName(ret), SearchAttr)) ret = NULL;
 		else break;
@@ -468,8 +429,7 @@ static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr)
 }
 
 /*----------------------------------------------------------------------------*/
-char *uPNPEvent2String(Upnp_EventType S)
-{
+char *uPNPEvent2String(Upnp_EventType S) {
 	switch (S) {
 	/* Discovery */
 	case UPNP_DISCOVERY_ADVERTISEMENT_ALIVE:

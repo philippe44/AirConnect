@@ -272,6 +272,7 @@ sleep:
 
 	// clean our stuff before exiting
 	AVTActionFlush(&p->ActionQueue);
+	LOG_INFO("[%p] player thread exited", p);
 
 	return NULL;
 }
@@ -1083,7 +1084,7 @@ static bool Start(bool cold) {
 	// only set iface name if it's a name
 	int rc = UpnpInit2(iface, glPort);
 
-	LOG_INFO("Binding to iface %s@%s:%hu", iface, inet_ntoa(glHost), glPort);
+	LOG_INFO("Binding to iface %s:%hu [%s]", inet_ntoa(glHost), glPort, iface);
 	NFREE(iface);
 	
 	if (rc != UPNP_E_SUCCESS) {
@@ -1457,9 +1458,10 @@ int main(int argc, char *argv[]) {
 
 			for (int i = 0; i < glMaxDevices; i++) {
 				struct sMR *p = &glMRDevices[i];
-				bool Locked = pthread_mutex_trylock(&p->Mutex);
 
+				bool Locked = pthread_mutex_trylock(&p->Mutex);
 				if (!Locked) pthread_mutex_unlock(&p->Mutex);
+
 				if (!p->Running && !all) continue;
 				printf("%20.20s [r:%u] [l:%u] [s:%u] Last:%u eCnt:%u\n",
 						p->Config.Name, p->Running, Locked, p->State,

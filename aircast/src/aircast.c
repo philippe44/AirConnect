@@ -643,7 +643,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 		}
 	}
 
-	LOG_INFO("[%p]: adding renderer (%s) with mac %hX%X", Device, Name, *(uint16_t*) Device->Config.mac, *(uint32_t*) (Device->Config.mac + 2));
+	LOG_INFO("[%p]: adding renderer (%s - %s:%hu) with mac %hX%X", Device, Name, inet_ntoa(ip), port, *(uint16_t*) Device->Config.mac, *(uint32_t*) (Device->Config.mac + 2));
 
 	Device->CastCtx = CreateCastDevice(Device, Device->Group, Device->Config.StopReceiver, ip, port, Device->Config.MediaVolume);
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
@@ -679,7 +679,7 @@ static bool Start(bool cold) {
 	// must bind to an address
 	char* iface = NULL;
 	glHost = get_interface(!strchr(glBinding, '?') ? glBinding : NULL, &iface, &glNetmask);
-	LOG_INFO("Binding to %s@%s", iface, inet_ntoa(glHost));
+	LOG_INFO("Binding to %s [%s] with mask 0x%08x", inet_ntoa(glHost), iface, ntohl(glNetmask));
 	NFREE(iface);
 
 	// can't find a suitable interface

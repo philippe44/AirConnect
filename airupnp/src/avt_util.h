@@ -1,5 +1,5 @@
 /*
- *  UPnP Control util
+ *  UPnP control util
  *
  *	(c) Philippe, philippe_44@outlook.comom
  *
@@ -10,6 +10,7 @@
 #pragma once
 
 #include "ixml.h"
+#include "airupnp.h"
 
 struct sMRConfig;
 struct sMR;

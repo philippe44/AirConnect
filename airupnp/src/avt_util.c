@@ -1,5 +1,5 @@
 /*
- * AirUPnP - UPnP control utils
+ * UPnP control utils
  *
  * (c) Philippe, philippe_44@outlook.com
  *
@@ -12,7 +12,6 @@
 #include "platform.h"
 #include "ixmlextra.h"
 #include "upnptools.h"
-#include "airupnp.h"
 #include "cross_log.h"
 #include "avt_util.h"
 
@@ -167,7 +166,7 @@ bool AVTSeek(struct sMR *Device, unsigned Interval)
 	IXML_Document *ActionNode = NULL;
 	char	params[128];
 
-	LOG_INFO("[%p]: uPNP seek (%ds) (cookie %p)", Device, Interval, Device->seqN);
+	LOG_INFO("[%p]: uPNP seek (%.2lf sec) (cookie %p)", Device, Interval / 1000.0, Device->seqN);
 
 	if ((ActionNode =  UpnpMakeAction("Seek", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "Seek", Service->Type, "InstanceID", "0");

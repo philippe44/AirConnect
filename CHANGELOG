@@ -1,3 +1,6 @@
+1.2.2
+ - (airupnp) fix upnp socket error deteection
+ 
 1.2.1
  - (airupnp) unified source with spotconnect
  - (aircast) revert exclusion of devices based on netmask

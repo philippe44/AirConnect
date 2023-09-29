@@ -21,7 +21,7 @@
 #include "cross_util.h"
 #include "metadata.h"
 
-#define VERSION "v1.2.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.2.2"" ("__DATE__" @ "__TIME__")"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
@@ -96,7 +96,7 @@ struct sMR {
 	pthread_t 		Thread;
 	double			Volume;		// to avoid int volume being stuck at 0
 	uint32_t		VolumeStampRx, VolumeStampTx;
-	uint16_t		ErrorCount;
+	int				ErrorCount;
 	bool			TimeOut;
 	char 			*ProtocolInfo;
 };

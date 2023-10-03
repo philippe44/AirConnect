@@ -85,7 +85,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `http_length`    : same as `-g` command line parameter
 - `metadata <0|1>` : send metadata to player (only for mp3 codec and if player supports ICY protocol)
 - `artwork`        : an URL to an artwork to be displayed on player
-- `flush <0|1>`    : (default 1) set AirPlay *FLUSH* commands response (see also --noflush in "**Misc tips**" section)
+- `flush <0|1>`    : (default 1) set AirPlay *FLUSH* commands response (see also --noflush in [Misc tips]("misc-tips) section)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
 - `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
 
@@ -197,6 +197,8 @@ Note: you can use the `-i config.xml` to generate a config file if you do not ha
 - Some AirPlay controller send a FLUSH and immediately start sending new audio when skipping track. This causes AirConnect to issue a STOP and almost immediately a PLAY command which seems to be a problem for certain players (Sonos in some cases). A possible workaround is to ignore FLUSH request (see config file or use --noflush on the command line) but this has side effect on pause as silence frames are sent. At best restart is delayed and worse case it might not work with some codec (flac)
 
 - Some older Avahi distributions grab the port mDNS port 5353 for exclusive use, preventing AirConnect to respond to queries. Please set `disallow-other-stacks=no`in `/etc/avahi/avahi-daemon.conf`
+
+- If that non-static version fails to load complaining that GLIBCXX_3.4.29 is missing, please have a look [there](https://github.com/philippe44/cross-compiling#running-an-application-by-forcing-glibc-and-glibcxx) and use the existing libraries I've provided in that repository. You can simply copy the right `libstdc++.so.6.0.29` in the directory where AirConnect is and create symlink for `libstdc++.so` and `libstdc++.so.6`, then use the `LD_LIBRARY_PATH='$ORIGIN' <app>` trick, it will work without messing anything in your system.
 
 ## HTTP & UPnP specificities
 ### HTTP content-length and transfer modes

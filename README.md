@@ -198,7 +198,7 @@ Note: you can use the `-i config.xml` to generate a config file if you do not ha
 
 - Some older Avahi distributions grab the port mDNS port 5353 for exclusive use, preventing AirConnect to respond to queries. Please set `disallow-other-stacks=no`in `/etc/avahi/avahi-daemon.conf`
 
-- If that non-static version fails to load complaining that GLIBCXX_3.4.29 is missing, please have a look [there](https://github.com/philippe44/cross-compiling#running-an-application-by-forcing-glibc-and-glibcxx) and use the existing libraries I've provided in that repository. You can simply copy the right `libstdc++.so.6.0.29` in the directory where AirConnect is and create symlink for `libstdc++.so` and `libstdc++.so.6`, then use the `LD_LIBRARY_PATH='$ORIGIN' <app>` trick, it will work without messing anything in your system.
+- If the non-static version fails to load complaining that GLIBCXX_3.4.29 is missing, please have a look [there](https://github.com/philippe44/cross-compiling#running-an-application-by-forcing-glibc-and-glibcxx) and use the existing libraries I've provided in that repository. You can simply copy the right `libstdc++.so.6.0.29` in the directory where AirConnect is and create symlink for `libstdc++.so` and `libstdc++.so.6`, then use the `LD_LIBRARY_PATH='$ORIGIN' <app>` trick, it will work without messing anything in your system.
 
 ## HTTP & UPnP specificities
 ### HTTP content-length and transfer modes

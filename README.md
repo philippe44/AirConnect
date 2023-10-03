@@ -85,7 +85,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `http_length`    : same as `-g` command line parameter
 - `metadata <0|1>` : send metadata to player (only for mp3 codec and if player supports ICY protocol)
 - `artwork`        : an URL to an artwork to be displayed on player
-- `flush <0|1>`    : (default 1) set AirPlay *FLUSH* commands response (see also --noflush in [Misc tips]("misc-tips) section)
+- `flush <0|1>`    : (default 1) set AirPlay *FLUSH* commands response (see also --noflush in [Misc tips](#misc-tips) section)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
 - `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
 

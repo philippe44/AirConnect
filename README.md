@@ -21,6 +21,7 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 	```
 
 3. For Windows, install the Microsoft VC++ redistributable found [here](https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist?view=msvc-170)
+	You will also need to grab the 2 dlls files and put them in the same directory as the exe file https://github.com/philippe44/AirConnect/blob/master/bin/libcrypto-1_1.dll  https://github.com/philippe44/AirConnect/blob/master/bin/libssl-1_1.dll
 
 4. Store the \<executable\> (e.g. `airupnp-linux-aarch64`) in any directory. 
 

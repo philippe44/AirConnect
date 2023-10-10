@@ -249,7 +249,7 @@ static void *MRThread(void *args) {
 		for an action to be performed or slave
 		*/
 		if (p->Master || (p->RaopState != RAOP_PLAY && p->State == STOPPED) ||
-			p->ErrorCount == -1 || p->ErrorCount > MAX_ACTION_ERRORS || p->WaitCookie) goto sleep;
+			p->ErrorCount < 0 || p->ErrorCount > MAX_ACTION_ERRORS || p->WaitCookie) goto sleep;
 
 		// get track position & CurrentURI
 		if (p->TrackPoll > TRACK_POLL) {
@@ -700,7 +700,7 @@ static void *UpdateThread(void *args) {
 					Device = glMRDevices + i;
 					if (Device->Running && (((Device->State != PLAYING || Device->RaopState != RAOP_PLAY) &&
 						(now - Device->LastSeen > PRESENCE_TIMEOUT || Device->ErrorCount > MAX_ACTION_ERRORS)) ||
-						Device->ErrorCount == -1)) {
+						Device->ErrorCount < 0)) {
 
 						pthread_mutex_lock(&Device->Mutex);
 						LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->Config.Name);

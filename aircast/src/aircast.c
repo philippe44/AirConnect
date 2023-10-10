@@ -556,7 +556,6 @@ static void *mDNSsearchThread(void *args) {
 /*----------------------------------------------------------------------------*/
 static void *MainThread(void *args) {
 	while (glMainRunning) {
-
 		crossthreads_sleep(30*1000);
 		if (!glMainRunning) break;
 
@@ -881,7 +880,6 @@ static bool ParseArgs(int argc, char **argv) {
 
 	return true;
 }
-
 
 /*----------------------------------------------------------------------------*/
 /*																			  */

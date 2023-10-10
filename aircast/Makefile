@@ -39,7 +39,7 @@ NANOPB		= nanopb
 JANSSON		= libjansson/targets/$(HOST)/$(PLATFORM)
 
 DEFINES 	+= -D_FILE_OFFSET_BITS=64 -DPB_FIELD_16BIT -DNDEBUG -D_GNU_SOURCE -DUPNP_STATIC_LIB
-CFLAGS  	+= -Wall -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
+CFLAGS  	+= -Wall -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections -std=gnu11
 LDFLAGS 	+= -lpthread -ldl -lm -L. 
 
 vpath %.c $(TOOLS):$(SRC):$(NANOPB):$(COMMON)

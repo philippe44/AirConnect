@@ -1,5 +1,6 @@
-1.2.3 (NOT RELEASED)
+1.2.3
  - (airupnp) test errorcoutn for < 0, not just -1
+ - (aircast) must increase number of clients for a source
  
 1.2.2
  - (airupnp) fix upnp socket error deteection

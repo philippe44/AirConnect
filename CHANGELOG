@@ -1,3 +1,6 @@
+1.2.4
+ - use fixed libraop for unknown RTSP queries that should return no headers
+ 
 1.2.3
  - (airupnp) test errorcoutn for < 0, not just -1
  - (aircast) must increase number of clients for a source

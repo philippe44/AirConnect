@@ -257,13 +257,13 @@ Many have asked for a way to do video/audio synchronisation so that UPnP (Sonos)
 ## Compiling from source
 It's a Makefile-oriented build, and there is a bash script (built.sh) and Windows one (build.cmd). The bash script is intended for cross-platform build and you might be able to call directly your native compiler, but have a look at the command line in the build.sh to make sure it can work. 
 
-Please see [here](https://github.com/philippe44/cross-compiling/blob/master/README.md#organizing-submodules--packages) to know how to rebuild my apps in general<;
+Please see [here](https://github.com/philippe44/cross-compiling/blob/master/README.md#organizing-submodules--packages) to know how to rebuild my apps in general:
 
 Otherwise, you can just get the source code and pre-built binaries:
 ```
 cd ~
 git clone http://github.com/philippe44/airconnect
-cd airconnect
+cd ~/airconnect
 git submodule update --init
 ```
 and build doing:

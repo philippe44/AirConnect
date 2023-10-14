@@ -114,3 +114,5 @@ __recovery/
 build/
 air*/bin
 *.bat
+bin/
+!AirConnect*.zip

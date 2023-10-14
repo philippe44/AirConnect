@@ -7,7 +7,7 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 ## Installing
 
-1. Pre-built binaries are in bin/ directory of this repository. You can download the whole repository as a zip file, clone it using git, or go to the [bin/ folder in the web interface](https://github.com/philippe44/AirConnect/tree/master/bin) and download the version that matches your OS. It's also possible to download files manually in a terminal by typing (e.g. for aircast arm version)<br/>`wget https://raw.githubusercontent.com/philippe44/AirConnect/master/bin/aircast-arm` 
+1. Pre-built binaries are in `AirConnect<version>.zip`. It can be downloaded manually in a terminal by typing `wget https://raw.githubusercontent.com/philippe44/AirConnect/master/airconnect.zip`. Unzip the file an select the bianry that works for your system.
 
 	* For **Chromecast**, the file is `aircast-<os>-<cpu>` (so `aircast-macos-x86_64` for Chromecast on MacOS + Intel CPU) 
 	* For **UPnP/Sonos**, the file is `airupnp-<os>-<cpu>` (so `airupnp-macos-arm64` for UPnP/Sonos on MacOS + arm CPU) 
@@ -21,11 +21,11 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 	```
 
 3. For Windows, install the Microsoft VC++ redistributable found [here](https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist?view=msvc-170)
-	You will also need to grab the 2 dlls files and put them in the same directory as the exe file https://github.com/philippe44/AirConnect/blob/master/bin/libcrypto-1_1.dll  https://github.com/philippe44/AirConnect/blob/master/bin/libssl-1_1.dll
+	You will also need to grab the 2 dlls files and put them in the same directory as the exe file
 
 4. Store the \<executable\> (e.g. `airupnp-linux-aarch64`) in any directory. 
 
-4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>`. (Example: `chmod +x airupnp-macos`). Note that if you choose to download the whole repository (instead of individual files) from you web browser and then unzip it, then in the bin/ sub-directory, file permissions should be already set.
+4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>` (Example: `chmod +x airupnp-macos`). File permissions might need to be set.
 
 5. Don't use firewall or set ports using options below and open them. 
 	- Port 5353 (UDP) is needed to listen to mDNS messages

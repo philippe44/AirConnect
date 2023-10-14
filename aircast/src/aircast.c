@@ -835,6 +835,7 @@ static bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'N':
 			glNameFormat = optarg;
+			break;
 		case 'Z':
 			glInteractive = false;
 			break;

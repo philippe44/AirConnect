@@ -1272,6 +1272,7 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'N':
 			glNameFormat = optarg;
+			break;
 		case 'k':
 			glGracefullShutdown = false;
 			break;

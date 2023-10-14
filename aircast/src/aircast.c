@@ -893,6 +893,9 @@ int main(int argc, char *argv[]) {
 #if defined(SIGHUP)
 	signal(SIGHUP, sighandler);
 #endif
+#if defined(SIGPIPE)
+	signal(SIGPIPE, SIG_IGN);
+#endif
 
 	netsock_init();
 

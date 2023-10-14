@@ -1,3 +1,7 @@
+1.2.5
+ - (aircast) ignore SIGPIPE (picohttp)
+ - (aircast) fix queue walker
+ 
 1.2.4
  - use fixed libraop for unknown RTSP queries that should return no headers
  

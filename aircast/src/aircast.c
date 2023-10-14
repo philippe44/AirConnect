@@ -478,7 +478,7 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 				// update Device name if needed
 				if (Name && strcmp(Name, Device->Name)) {
 					char* autoName = NULL;
-					(void)!asprintf(&autoName, glNameFormat, Name);
+					(void)!asprintf(&autoName, glNameFormat, Device->Name);
 					if (!strcmp(autoName, Device->Config.Name)) {
 						LOG_INFO("[%p]: Device name change %s %s", Device, Name, Device->Name);
 						raopsr_update(Device->Raop, Name, "aircast");

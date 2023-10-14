@@ -123,19 +123,20 @@ static struct mdnsd*	glmDNSServer = NULL;
 static char*			glExcluded = NULL;
 static char*			glExcludedModelNumber = NULL;
 static char*			glIncludedModelNumbers = NULL;
-static char				*glPidFile = NULL;
+static char*			glPidFile = NULL;
 static bool	 			glAutoSaveConfigFile = false;
 static bool				glGracefullShutdown = true;
 static bool				glDiscovery = false;
 static pthread_mutex_t 	glUpdateMutex;
 static pthread_cond_t  	glUpdateCond;
 static pthread_t 		glMainThread, glUpdateThread;
-static cross_queue_t			glUpdateQueue;
+static cross_queue_t	glUpdateQueue;
 static bool				glInteractive = true;
-static char				*glLogFile;
+static char*			glLogFile;
 static uint16_t			glPort;
-static void				*glConfigID = NULL;
+static void*			glConfigID = NULL;
 static char				glConfigName[STR_LEN] = "./config.xml";
+static char*			glNameFormat = "%s+";
 
 static char usage[] =
 
@@ -154,6 +155,7 @@ static char usage[] =
 		   "  -r \t\t\tlet timing reference drift (no click)\n"
 		   "  -f <logfile>\t\twrite debug to logfile\n"
 		   "  -p <pid file>\t\twrite PID in file\n"
+		   "  -N <format>\t\ttransform device name using C format (%s=name)\n"
 		   "  -m <n1,n2...>\t\texclude devices whose model include tokens\n"
 		   "  -n <m1,m2,...>\texclude devices whose name includes tokens\n"
 		   "  -o <m1,m2,...>\tinclude only listed models; overrides -m and -n (use <NULL> if player don't return a model)\n"
@@ -752,14 +754,17 @@ static void *UpdateThread(void *args) {
 						UpnpDownloadXmlDoc(Update->Data, &DescDoc);
 						if (!friendlyName) friendlyName = XMLGetFirstDocumentItem(DescDoc, "friendlyName", true);
 
-						if (friendlyName && strcmp(friendlyName, Device->friendlyName) &&
-							!strncmp(Device->friendlyName, Device->Config.Name, strlen(Device->friendlyName)) &&
-							Device->Config.Name[strlen(Device->Config.Name) - 1] == '+') {
-							LOG_INFO("[%p]: Device name change %s %s", Device, friendlyName, Device->friendlyName);
-							strcpy(Device->friendlyName, friendlyName);
-							sprintf(Device->Config.Name, "%s+", friendlyName);
-							raopsr_update(Device->Raop, Device->Config.Name, "airupnp");
-							Updated = true;
+						if (friendlyName && strcmp(friendlyName, Device->friendlyName)) {
+							char* autoName = NULL;
+							(void)!asprintf(&autoName, glNameFormat, Device->friendlyName);
+							if (!strcmp(autoName, Device->Config.Name)) {
+								LOG_INFO("[%p]: Device name change %s %s", Device, friendlyName, Device->friendlyName);
+								strcpy(Device->friendlyName, friendlyName);
+								sprintf(Device->Config.Name, glNameFormat, friendlyName);
+								raopsr_update(Device->Raop, Device->Config.Name, "airupnp");
+								Updated = true;
+							}
+							NFREE(autoName);
 						}
 
 						// we are a master (or not a Sonos)
@@ -979,7 +984,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Running = true;
 	// string is already zero-terminated
 	if (friendlyName) strncpy(Device->friendlyName, friendlyName, sizeof(Device->friendlyName) - 1);
-	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", friendlyName);
+	if (!*Device->Config.Name) sprintf(Device->Config.Name, glNameFormat, friendlyName);
 	queue_init(&Device->ActionQueue, false, NULL);
 
 	// set protocolinfo (will be used for some HTTP response)
@@ -1225,7 +1230,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("abxdpifmnolcug", opt) && optind < argc - 1) {
+		if (strstr("abxdpifmnolcugN", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt) || opt[0] == '-') {
@@ -1265,6 +1270,8 @@ bool ParseArgs(int argc, char **argv) {
 		case 'Z':
 			glInteractive = false;
 			break;
+		case 'N':
+			glNameFormat = optarg;
 		case 'k':
 			glGracefullShutdown = false;
 			break;

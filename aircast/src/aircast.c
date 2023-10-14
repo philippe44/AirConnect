@@ -70,25 +70,26 @@ tMRConfig			glMRConfig = {
 /*----------------------------------------------------------------------------*/
 /* locals */
 /*----------------------------------------------------------------------------*/
-static log_level 			*loglevel = &main_loglevel;
+static log_level*			loglevel = &main_loglevel;
 #if LINUX || FREEBSD || SUNOS
 static bool					glDaemonize = false;
 #endif
 static bool					glMainRunning = true;
-static struct mdnssd_handle_s	*glmDNSsearchHandle;
+static struct mdnssd_handle_s* glmDNSsearchHandle;
 static struct in_addr 		glHost;
 static pthread_t 			glMainThread, glmDNSsearchThread;
-static char					*glLogFile;
+static char*				glLogFile;
 static bool					glDiscovery = false;
 static bool					glInteractive = true;
-static char					*glPidFile = NULL;
+static char*				glPidFile = NULL;
 static bool					glAutoSaveConfigFile = false;
 static bool					glGracefullShutdown = true;
-static void					*glConfigID = NULL;
+static void*				glConfigID = NULL;
 static char					glConfigName[STR_LEN] = "./config.xml";
 static struct mdnsd*		glmDNSServer = NULL;
 static pthread_mutex_t		glMainMutex;
-uint32_t					glNetmask;
+static uint32_t				glNetmask;
+static char*				glNameFormat = "%s+";
 
 static char usage[] =
 			VERSION "\n"
@@ -101,6 +102,7 @@ static char usage[] =
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
 		   "  -I \t\t\tauto save config at every network scan\n"
+		   "  -N <format>\t\ttransform device name using C format (%s=name)\n"
 		   "  -l <[rtp][:http][:f]>\tRTP and HTTP latency (ms), ':f' forces silence fill\n"
 		   "  -r \t\t\tlet timing reference drift (no click)\n"
 		   "  -f <logfile>\t\tWrite debug to logfile\n"
@@ -474,14 +476,17 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 				UpdateCastDevice(Device->CastCtx, s->addr, s->port);
 				
 				// update Device name if needed
-				if (Name && strcmp(Name, Device->Name) && 
-					!strncmp(Device->Name, Device->Config.Name, strlen(Device->Name)) &&
-					Device->Config.Name[strlen(Device->Config.Name) - 1] == '+') {
-					LOG_INFO("[%p]: Device name change %s %s", Device, Name, Device->Name);
-					raopsr_update(Device->Raop, Name, "aircast");
-					strcpy(Device->Name, Name);
-					sprintf(Device->Config.Name, "%s+", Name);
-					Updated = true;
+				if (Name && strcmp(Name, Device->Name)) {
+					char* autoName = NULL;
+					(void)!asprintf(&autoName, glNameFormat, Name);
+					if (!strcmp(autoName, Device->Config.Name)) {
+						LOG_INFO("[%p]: Device name change %s %s", Device, Name, Device->Name);
+						raopsr_update(Device->Raop, Name, "aircast");
+						strcpy(Device->Name, Name);
+						sprintf(Device->Config.Name, glNameFormat, Name);
+						Updated = true;
+					}
+					NFREE(autoName);
 				}
 				NFREE(Name);
 			}
@@ -628,7 +633,7 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 		Device->GroupMaster->Port = port;
 	} else Device->GroupMaster = NULL;
 
-	if (!*Device->Config.Name) sprintf(Device->Config.Name, "%s+", Name);
+	if (!*Device->Config.Name) sprintf(Device->Config.Name, glNameFormat, Name);
 	strcpy(Device->Name, Name);
 
 	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", 6)) {
@@ -790,7 +795,7 @@ static bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("abxdpiflcv", opt) && optind < argc - 1) {
+		if (strstr("abxdpiflcvN", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt) || opt[0] == '-') {
@@ -828,6 +833,8 @@ static bool ParseArgs(int argc, char **argv) {
 		case 'p':
 			glPidFile = optarg;
 			break;
+		case 'N':
+			glNameFormat = optarg;
 		case 'Z':
 			glInteractive = false;
 			break;

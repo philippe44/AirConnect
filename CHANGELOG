@@ -1,3 +1,6 @@
+1.3.2
+ - fix http_fill
+
 1.3.1
  - updated libraop allows subsequent GET, even with no range, to restart from 0 for players that open, close and re-open (for no reason)
  

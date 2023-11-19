@@ -1,3 +1,6 @@
+1.3.4
+ - libraop was sending 1 instead of 0 on icy retransmit since day one ... can't believe it
+ 
 1.3.3
  - RTP and NTP order was not fixed either
  

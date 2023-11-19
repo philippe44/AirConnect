@@ -31,11 +31,11 @@
     <ClCompile Include="src\mr_util.c" />
   </ItemGroup>
   <ItemGroup>
+    <Library Include="..\common\libraop\targets\win32\$(PlatformTarget)\libraop.lib" />
     <Library Include="..\common\libcodecs\targets\win32\$(PlatformTarget)\libcodecs.lib" />
     <Library Include="..\common\libmdns\targets\win32\$(PlatformTarget)\libmdns.lib" />
     <Library Include="..\common\libpthreads4w\targets\win32\$(PlatformTarget)\libpthreadVC3d.lib" />
     <Library Include="..\common\libpupnp\targets\win32\$(PlatformTarget)\libpupnp.lib" />
-    <Library Include="..\common\libraop\targets\win32\x86\libraop.lib" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

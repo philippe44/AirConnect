@@ -3,7 +3,7 @@ Use these applications to add AirPlay capabilities to Chromecast and UPnP (like 
 
 AirConnect can run on any machine that has access to your local network (Windows, MacOS x86 and arm64, Linux x86, x86_64, arm, aarch64, sparc, mips, powerpc, Solaris and FreeBSD). It does not need to be on your main computer. (For example, a Raspberry Pi works well). It will detect UPnP/Sonos/Chromecast players, create as many virtual AirPlay devices as needed, and act as a bridge/proxy between AirPlay clients (iPhone, iPad, iTunes, MacOS, AirFoil ...) and the real UPnP/Sonos/Chromecast players.
 
-The audio, after being decoded from alac, can be sent in plain, or re-encoded using mp3 or flac. Most players will not display metadata (artist, title, album, artwork ...) except when mp3 re-encoding is used and for UPnP/DLNA devices that support icy protocol. Chromecast players support this after version 1.1.x
+The audio, after being decoded from alac, can be sent in plain, or re-encoded using mp3, aac or flac. Most players will not display metadata (artist, title, album, artwork ...) except when mp3 or aac re-encoding are used and for UPnP/DLNA devices that support icy protocol. Chromecast players support this after version 1.1.x
 
 ## Installing
 
@@ -60,7 +60,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Re-scan for new / lost players happens every 30s
 - A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i <file>` command line)
 - Chromecast groups are supported. Use `-v` to set the media volume factor for all devices (0.5 by default)
-- use `-c mp3[:<rate>]|flc[:0..9]|wav|pcm` to set codec use for re-encoding audio 
+- use `-c mp3[:<rate>]|aac[:<rate>]|flc[:0..9]|wav|pcm` to set codec use for re-encoding audio 
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
 - Use `-b [ip|iface][:port]` to set network interface (ip@ or interface name as reported by ifconfig/ipconfig) to use and, for airupnp only, UPnP port to listen to (must be above the default 49152)
@@ -85,11 +85,11 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `name`           : The name that will appear for the device in AirPlay. You can change the default name.
 - `upnp_max`       : set the maximum UPnP version use to search players (default 1)
 - `http_length`    : same as `-g` command line parameter
-- `metadata <0|1>` : send metadata to player (only for mp3 codec and if player supports ICY protocol)
+- `metadata <0|1>` : send metadata to player (only for mp3 and aac codecs and if player supports ICY protocol)
 - `artwork`        : an URL to an artwork to be displayed on player
 - `flush <0|1>`    : (default 1) set AirPlay *FLUSH* commands response (see also --noflush in [Misc tips](#misc-tips) section)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
-- `codec <mp3[:<bitrate>] | flc[:0..9] | wav | pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
+- `codec <mp3[:<bitrate>]|aac[:<bitrate>]|flc[:0..9]|wav|pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
 
 These are the global parameters
 
@@ -213,7 +213,7 @@ The default mode of AirUPnP is "no content-length" (\<http_length\> = -1) but un
 This might still not work as some players do not understand that the source is not a randomly accessible (searchable) file and want to get the first(e.g.) 128kB to try to do some smart guess on the length, close the connection, re-open it from the beginning and expect to have the same content. I'm trying to keep a buffer of last recently sent bytes to be able to resend-it, but that does not always works. Normally, players should understand that when they ask for a range and the response is 200 (full content), it *means* the source does not support range request but some don't (I've tried to add a header "accept: no-range but that makes things worse most of the time).
 
 ### UPnP/DLNA ProtocolInfo
-When sending DLNA/UPnP content, there is a special parameter named `ProtocolInfo` that is found in the UPnP command (DIDL-lite header) and can be also explicitly requested by the player during a GET. That field is automatically built but is subject to a lot of intepretations, so it might be helpful to manually define it and you can do that for pcm, wav, flac and mp3 format using the field in the section \<protocol_info\> in your config file.
+When sending DLNA/UPnP content, there is a special parameter named `ProtocolInfo` that is found in the UPnP command (DIDL-lite header) and can be also explicitly requested by the player during a GET. That field is automatically built but is subject to a lot of intepretations, so it might be helpful to manually define it and you can do that for pcm, wav, flac, aac and mp3 format using the field in the section \<protocol_info\> in your config file.
 
 The description of DIDL-lite, ProtocolInfo and DLNA is way beyond the scope of this README, so you should seek for information before tweaking these.
 

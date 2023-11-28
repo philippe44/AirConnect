@@ -82,6 +82,7 @@ tMRConfig			glMRConfig = {
 								"http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
 								"http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
 								"http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
+								"http-get:*:audio/aac:DLNA.ORG_PN=AAC_ADTS;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
 							},
 					};
 
@@ -321,7 +322,7 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 					mp3radio = "x-rincon-mp3radio://";
 					LOG_INFO("[%p]: Sonos live stream", Device);
 				}
-				(void)!asprintf(&uri, "%shttp://%s:%u/stream-%u.%s", mp3radio, inet_ntoa(glHost), port,	count++, Device->Config.Codec);
+				(void)!asprintf(&uri, "%shttp://%s:%u/stream-%u.flac", mp3radio, inet_ntoa(glHost), port, count++);
 				AVTSetURI(Device, uri, &Device->MetaData, Device->ProtocolInfo);
 				NFREE(uri);
 			}

@@ -31,7 +31,8 @@
     <ClCompile Include="src\mr_util.c" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="..\common\libraop\targets\win32\$(PlatformTarget)\libraop.lib" />
+    <!-- <Library Include="..\..\libraop\lib\win32\x86\libraop_d.lib" /> -->
+	<Library Include="..\common\libraop\targets\win32\$(PlatformTarget)\libraop.lib" />
     <Library Include="..\common\libcodecs\targets\win32\$(PlatformTarget)\libcodecs.lib" />
     <Library Include="..\common\libmdns\targets\win32\$(PlatformTarget)\libmdns.lib" />
     <Library Include="..\common\libpthreads4w\targets\win32\$(PlatformTarget)\libpthreadVC3d.lib" />

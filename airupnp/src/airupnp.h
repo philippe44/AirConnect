@@ -21,7 +21,7 @@
 #include "cross_util.h"
 #include "metadata.h"
 
-#define VERSION "v1.4.0"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.5.0"" ("__DATE__" @ "__TIME__")"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
@@ -68,6 +68,7 @@ typedef struct sMRConfig
 		char wav[STR_LEN];
 		char flac[STR_LEN];
 		char mp3[STR_LEN];
+		char aac[STR_LEN];
 	} ProtocolInfo;
 } tMRConfig;
 

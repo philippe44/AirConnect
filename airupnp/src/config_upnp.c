@@ -76,6 +76,7 @@ void SaveConfig(char *name, void *ref, bool full) {
 	XMLUpdateNode(doc, proto, false, "pcm", glMRConfig.ProtocolInfo.pcm);
 	XMLUpdateNode(doc, proto, false, "wav", glMRConfig.ProtocolInfo.wav);
 	XMLUpdateNode(doc, proto, false, "flac", glMRConfig.ProtocolInfo.flac);
+	XMLUpdateNode(doc, proto, false, "aac", glMRConfig.ProtocolInfo.aac);
 	XMLUpdateNode(doc, proto, false, "mp3", glMRConfig.ProtocolInfo.mp3);
 
 	// mutex is locked here so no risk of a player being destroyed in our back
@@ -148,6 +149,7 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val) {
 	if (!strcmp(name, "pcm")) strcpy(Conf->ProtocolInfo.pcm, val);
 	if (!strcmp(name, "wav")) strcpy(Conf->ProtocolInfo.wav, val);
 	if (!strcmp(name, "flac")) strcpy(Conf->ProtocolInfo.flac, val);
+	if (!strcmp(name, "aac")) strcpy(Conf->ProtocolInfo.aac, val);
 	if (!strcmp(name, "mp3")) strcpy(Conf->ProtocolInfo.mp3, val);
 }
 

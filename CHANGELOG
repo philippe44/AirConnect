@@ -1,3 +1,8 @@
+1.5.1
+ - (airupnp) call http_pico_close on exit
+ - fix all known memory leaks
+ - use updated libcodecs that fixes codec close crash (NULL ptr)
+ 
 1.5.0
  - add aac codec (use refactored libraop and move encoder to libcodecs
 

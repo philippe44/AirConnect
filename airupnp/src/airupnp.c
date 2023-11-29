@@ -1149,6 +1149,7 @@ static bool Start(bool cold) {
 
 Error:
 	UpnpFinish();
+	NFREE(glMRDevices);
 	return false;
 
 }
@@ -1195,11 +1196,15 @@ static bool Stop(bool exit) {
 		// these are for sure unused now that libupnp cannot signal anything
 		for (i = 0; i < glMaxDevices; i++) pthread_mutex_destroy(&glMRDevices[i].Mutex);
 
+		// terminate pico http server
+		http_pico_close();
+
 		if (glConfigID) ixmlDocument_free(glConfigID);
 		netsock_close();
 		cross_ssl_free();
 	}
 
+	free(glMRDevices);
 	return true;
 }
 

@@ -765,6 +765,7 @@ static bool Stop(bool exit) {
 		cross_ssl_free();
 	}
 
+	free(glMRDevices);
 	return true;
 }
 

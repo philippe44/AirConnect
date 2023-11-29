@@ -4,7 +4,7 @@ endif
 
 ifeq ($(findstring gcc,$(CC)),gcc)
 CFLAGS  += -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation 
-LDFLAGS += -s
+#LDFLAGS += -s
 else
 CFLAGS += -fno-temp-file
 endif
@@ -51,7 +51,7 @@ INCLUDE = -I$(OPENSSL)/include \
 		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
 		  -I$(MDNS)/include/mdnssvc -I$(MDNS)/include/mdnssd
 
-DEPS	= $(SRC)/airupnp.h
+DEPS	= $(SRC)/airupnp.h $(LIBRARY) $(LIBRARY_STATIC)
 
 SOURCES = avt_util.c airupnp.c mr_util.c config_upnp.c  \
 	  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c

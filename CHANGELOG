@@ -1,3 +1,6 @@
+1.5.2
+ - updated libraries with alac fixes (zero-initialized encoded buffer)
+ 
 1.5.1
  - (airupnp) call http_pico_close on exit
  - fix all known memory leaks

@@ -71,7 +71,7 @@ tMRConfig			glMRConfig = {
 							false,		// SendCoverArt
 							true,		// Flush
 							100,		// MaxVolume
-							"flc",	    // Codec
+							"flac",	    // Codec
 							true,		// Metadata
 							"",			// RTP:HTTP Latency (0 = use AirPlay requested)
 							false,		// drift
@@ -146,7 +146,7 @@ static char usage[] =
 		   "Usage: [options]\n"
 		   "  -b <ip|iface>[:<port>]\tnetwork interface or interface and UPnP port to use\n"
 		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
-		   "  -c <mp3[:<rate>]|flc[:0..9]|wav|pcm>\taudio format send to player\n"
+		   "  -c <mp3[:<rate>]|flac[:0..9]|wav|pcm>\taudio format send to player\n"
 		   "  -g <-3|-1|0>\t\tHTTP content-length mode (-3:chunked, -1:none, 0:fixed)\n"
 		   "  -u <version>\tset the maximum UPnP version for search (default 1)\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
@@ -313,18 +313,23 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
             }
 			break;
 		case RAOP_PLAY: {
-			char *uri, *mp3radio = "";
-
 			if (Device->RaopState != RAOP_PLAY) {
-				static int count;
 				uint16_t port = va_arg(args, uint32_t);
-				if (strcasestr(Device->Config.Codec, "mp3") && *Device->Service[TOPOLOGY_IDX].ControlURL) {
+				char* uri, * mp3radio = "";
+				static int count;
+
+				if ((strcasestr(Device->Config.Codec, "mp3") || strcasestr(Device->Config.Codec, "aac")) && *Device->Service[TOPOLOGY_IDX].ControlURL) {
 					mp3radio = "x-rincon-mp3radio://";
 					LOG_INFO("[%p]: Sonos live stream", Device);
 				}
-				(void)!asprintf(&uri, "%shttp://%s:%u/stream-%u.flac", mp3radio, inet_ntoa(glHost), port, count++);
+
+				char codec[16] = "flac";
+				(void) !sscanf(Device->Config.Codec, "%15[^:]", codec);
+				(void) !asprintf(&uri, "%shttp://%s:%u/stream-%u.%s", mp3radio, inet_ntoa(glHost), port, count++, codec);
+
+				LOG_INFO("[%p]: uPNP setURI %s (cookie %p)", Device, uri, Device->seqN);
 				AVTSetURI(Device, uri, &Device->MetaData, Device->ProtocolInfo);
-				NFREE(uri);
+				free(uri);
 			}
 
 			AVTPlay(Device);
@@ -989,8 +994,9 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	queue_init(&Device->ActionQueue, false, NULL);
 
 	// set protocolinfo (will be used for some HTTP response)
-	if (!strcasecmp(Device->Config.Codec, "pcm")) Device->ProtocolInfo = Device->Config.ProtocolInfo.pcm;
-	else if (!strcasecmp(Device->Config.Codec, "wav")) Device->ProtocolInfo = Device->Config.ProtocolInfo.wav;
+	if (strcasestr(Device->Config.Codec, "pcm")) Device->ProtocolInfo = Device->Config.ProtocolInfo.pcm;
+	else if (strcasestr(Device->Config.Codec, "wav")) Device->ProtocolInfo = Device->Config.ProtocolInfo.wav;
+	else if (strcasestr(Device->Config.Codec, "aac")) Device->ProtocolInfo = Device->Config.ProtocolInfo.aac;
 	else if (strcasestr(Device->Config.Codec, "mp3")) Device->ProtocolInfo = Device->Config.ProtocolInfo.mp3;
 	else Device->ProtocolInfo = Device->Config.ProtocolInfo.flac;
 

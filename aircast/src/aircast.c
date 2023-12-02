@@ -51,7 +51,7 @@ tMRConfig			glMRConfig = {
 							true,	// enabled
 							false,	// stop_receiver
 							"",		// name
-							"flc",	// use_flac
+							"flac",	// use_flac
 							true,	// metadata
 							true,	// flush
 							MEDIA_VOLUME,	// media volume (0..1)
@@ -97,7 +97,7 @@ static char usage[] =
 		   "Usage: [options]\n"
 		   "  -b <ip|iface>\t\tnetwork address or interface to bind to\n"
 		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
-		   "  -c <mp3[:<rate>]|aac[:<rate>]|flc[:0..9]|wav>\taudio format send to player\n"
+		   "  -c <mp3[:<rate>]|aac[:<rate>]|flac[:0..9]|wav>\taudio format send to player\n"
    		   "  -v <0..1>\t\t group MediaVolume factor\n"
 		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
 		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
@@ -206,16 +206,22 @@ static void raop_cb(void *owner, raopsr_event_t event, ...) {
 
 			LOG_INFO("[%p]: Play", Device);
 			if (Device->RaopState != RAOP_PLAY) {
-				static int count;
-				char *uri, *ContentType;
 				uint16_t port = va_arg(args, uint32_t);
+				char *uri, *ContentType;
+				static int count;
 
-				(void)!asprintf(&uri, "http://%s:%u/stream-%u", inet_ntoa(glHost), port, count++);
-				if (!strcasecmp(Device->Config.Codec, "mp3")) ContentType = "audio/mpeg";
-				else if (!strcasecmp(Device->Config.Codec, "aac")) ContentType = "audio/aac";
-				else if (!strcasecmp(Device->Config.Codec, "wav")) ContentType = "audio/wav";
+				if (strcasestr(Device->Config.Codec, "mp3")) ContentType = "audio/mpeg";
+				else if (strcasestr(Device->Config.Codec, "aac")) ContentType = "audio/aac";
+				else if (strcasestr(Device->Config.Codec, "wav")) ContentType = "audio/wav";
 				else ContentType = "audio/flac";
+
+				// get codec extension only and format uri
+				char codec[16] = "flac";
+				(void) !sscanf(Device->Config.Codec, "%15[^:]", codec);
+				(void) !asprintf(&uri, "http://%s:%u/stream-%u.%s", inet_ntoa(glHost), port, count++, codec);
+
 				CastLoad(Device->CastCtx, uri, ContentType, Device->Name, &MetaData, 0);
+				LOG_INFO("[%p]: Cast setURI %s", Device, uri);
 				free(uri);
 			}
 

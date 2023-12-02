@@ -1,3 +1,9 @@
+1.5.3
+ - previous version had a miss build	
+ - fully add aac 
+ - add extension to stream's url 
+ - flc -> flac (but flc still works)
+ 
 1.5.2
  - updated libraries with alac fixes (zero-initialized encoded buffer)
  

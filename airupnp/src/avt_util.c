@@ -74,8 +74,6 @@ bool AVTSetURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char 
 	DIDLData = CreateDIDL(URI, ProtoInfo, MetaData, &Device->Config);
 	LOG_DEBUG("[%p]: DIDL header: %s", Device, DIDLData);
 
-	LOG_INFO("[%p]: uPNP setURI %s (cookie %p)", Device, URI, Device->seqN);
-
 	if ((ActionNode = UpnpMakeAction("SetAVTransportURI", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "SetAVTransportURI", Service->Type, "InstanceID", "0");
 	UpnpAddToAction(&ActionNode, "SetAVTransportURI", Service->Type, "CurrentURI", URI);

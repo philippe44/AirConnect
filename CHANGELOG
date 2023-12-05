@@ -1,3 +1,6 @@
+1.5.4
+ - use updated libcodec and libraop for alac
+ 
 1.5.3
  - previous version had a miss build	
  - fully add aac 

@@ -184,12 +184,7 @@ To identify your Sonos players, pick an identified IP address, and visit the Son
 [@chpusch](https://github.com/chpusch) has found that Bose SoundTouch work well including synchonisation (as for Sonos, you need to use Bose's native application for grouping / ungrouping). I don't have a SoundTouch system so I cannot do the level of slave/master detection I did for Sonos
 
 #### Pioneer/Phorus/Play-Fi
-Some of these speakers only support mp3 and require a modified `ProtocolInfo` to stream correctly. This can be done by editing the config file and changing `<codec>flc</codec>` to `<codec>mp3</codec>` and replacing the `<mp3>..</mp3>` line with: 
-```
-<mp3>http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000</mp3>
-```
-Note: you can use the `-i config.xml` to generate a config file if you do not have one.
-
+Some of these speakers only support mp3
 ## Misc tips
  
 - When players disappear regularly, it might be that your router is filtering out multicast packets. For example, for a Asus AC-RT68U, you have to login by ssh and run echo 0 > /sys/class/net/br0/bridge/multicast_snooping but it does not stay after a reboot.
@@ -211,11 +206,6 @@ The HTTP standard is clear that the "content-length" header is optional and can 
 The default mode of AirUPnP is "no content-length" (\<http_length\> = -1) but unfortunately, some players can't deal with that. You can then try "chunked-encoding" (\<http_length> = -3) but some players who claim to be HTTP 1.1 do not support it. There is a last resort option to add a large fake `content-length` (\<http_length\> = 0). It is set to 2^31-1, so around 5 hours of playback with flac re-encoding. Note that if player is HTTP 1.0 and http_header is set to -3, AirUPnP will fallback no content-length. The command line option `-g` has the same effect that \<http_length\> in the \<common\> section of a config file.
 
 This might still not work as some players do not understand that the source is not a randomly accessible (searchable) file and want to get the first(e.g.) 128kB to try to do some smart guess on the length, close the connection, re-open it from the beginning and expect to have the same content. I'm trying to keep a buffer of last recently sent bytes to be able to resend-it, but that does not always works. Normally, players should understand that when they ask for a range and the response is 200 (full content), it *means* the source does not support range request but some don't (I've tried to add a header "accept: no-range but that makes things worse most of the time).
-
-### UPnP/DLNA ProtocolInfo
-When sending DLNA/UPnP content, there is a special parameter named `ProtocolInfo` that is found in the UPnP command (DIDL-lite header) and can be also explicitly requested by the player during a GET. That field is automatically built but is subject to a lot of intepretations, so it might be helpful to manually define it and you can do that for pcm, wav, flac, aac and mp3 format using the field in the section \<protocol_info\> in your config file.
-
-The description of DIDL-lite, ProtocolInfo and DLNA is way beyond the scope of this README, so you should seek for information before tweaking these.
 
 ## Delay when switching track or source
 

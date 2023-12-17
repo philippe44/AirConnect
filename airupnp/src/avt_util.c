@@ -26,8 +26,7 @@ static log_level 	*loglevel = &upnp_loglevel;
 static char *CreateDIDL(char *URI, char *ProtInfo, struct metadata_s *MetaData, struct sMRConfig *Config);
 
 /*----------------------------------------------------------------------------*/
-bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
-{
+bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode) {
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	int rc = 0;
 
@@ -41,8 +40,7 @@ bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 		}
 
 		ixmlDocument_free(ActionNode);
-	}
-	else {
+	} else {
 		tAction *Action = malloc(sizeof(tAction));
 		Action->Device = Device;
 		Action->ActionNode = ActionNode;
@@ -52,10 +50,8 @@ bool SubmitTransportAction(struct sMR *Device, IXML_Document *ActionNode)
 	return (rc == 0);
 }
 
-
 /*----------------------------------------------------------------------------*/
-void AVTActionFlush(cross_queue_t *Queue)
-{
+void AVTActionFlush(cross_queue_t *Queue) {
 	tAction *Action;
 
 	while ((Action = queue_extract(Queue)) != NULL) {
@@ -65,13 +61,12 @@ void AVTActionFlush(cross_queue_t *Queue)
 
 /*----------------------------------------------------------------------------*/
 
-bool AVTSetURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char *ProtoInfo)
-{
+bool AVTSetURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char *ProtoInfo) {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
-	char *DIDLData;
-
-	DIDLData = CreateDIDL(URI, ProtoInfo, MetaData, &Device->Config);
+	
+	char *DIDLData = CreateDIDL(URI, ProtoInfo, MetaData, &Device->Config);
+	LOG_INFO("[%p]: uPNP setURI %s (cookie %p)", Device, URI, Device->seqN);
 	LOG_DEBUG("[%p]: DIDL header: %s", Device, DIDLData);
 
 	if ((ActionNode = UpnpMakeAction("SetAVTransportURI", Service->Type, 0, NULL)) == NULL) return false;
@@ -84,16 +79,13 @@ bool AVTSetURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char 
 }
 
 /*----------------------------------------------------------------------------*/
-bool AVTSetNextURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char *ProtoInfo)
-{
+bool AVTSetNextURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, char *ProtoInfo) {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
-	char *DIDLData;
 
-	DIDLData = CreateDIDL(URI, ProtoInfo, MetaData, &Device->Config);
-	LOG_DEBUG("[%p]: DIDL header: %s", Device, DIDLData);
-
+	char *DIDLData = CreateDIDL(URI, ProtoInfo, MetaData, &Device->Config);
 	LOG_INFO("[%p]: uPNP setNextURI %s (cookie %p)", Device, URI, Device->seqN);
+	LOG_DEBUG("[%p]: DIDL header: %s", Device, DIDLData);
 
 	if ((ActionNode = UpnpMakeAction("SetNextAVTransportURI", Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, "SetNextAVTransportURI", Service->Type, "InstanceID", "0");
@@ -105,18 +97,16 @@ bool AVTSetNextURI(struct sMR *Device, char *URI, struct metadata_s *MetaData, c
 }
 
 /*----------------------------------------------------------------------------*/
-int AVTCallAction(struct sMR *Device, char *Action, void *Cookie)
-{
+int AVTCallAction(struct sMR *Device, char *Action, void *Cookie) {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
-	int rc;
 
 	LOG_SDEBUG("[%p]: uPNP %s (cookie %p)", Device, Action, Cookie);
 
 	if ((ActionNode = UpnpMakeAction(Action, Service->Type, 0, NULL)) == NULL) return false;
 	UpnpAddToAction(&ActionNode, Action, Service->Type, "InstanceID", "0");
 
-	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
+	int rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
 							 ActionNode, ActionHandler, Cookie);
 
 	if (rc != UPNP_E_SUCCESS) LOG_ERROR("[%p]: Error in UpnpSendActionAsync -- %d", Device, rc);
@@ -125,10 +115,8 @@ int AVTCallAction(struct sMR *Device, char *Action, void *Cookie)
 	return rc;
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool AVTPlay(struct sMR *Device)
-{
+bool AVTPlay(struct sMR *Device) {
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	IXML_Document *ActionNode = NULL;
 
@@ -141,10 +129,8 @@ bool AVTPlay(struct sMR *Device)
 	return SubmitTransportAction(Device, ActionNode);
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool AVTSetPlayMode(struct sMR *Device)
-{
+bool AVTSetPlayMode(struct sMR *Device) {
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	IXML_Document *ActionNode = NULL;
 
@@ -156,10 +142,8 @@ bool AVTSetPlayMode(struct sMR *Device)
 	return SubmitTransportAction(Device, ActionNode);
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool AVTSeek(struct sMR *Device, unsigned Interval)
-{
+bool AVTSeek(struct sMR *Device, unsigned Interval) {
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	IXML_Document *ActionNode = NULL;
 	char	params[128];
@@ -175,10 +159,8 @@ bool AVTSeek(struct sMR *Device, unsigned Interval)
 	return SubmitTransportAction(Device, ActionNode);
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool AVTBasic(struct sMR *Device, char *Action)
-{
+bool AVTBasic(struct sMR *Device, char *Action) {
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	IXML_Document *ActionNode = NULL;
 
@@ -190,13 +172,10 @@ bool AVTBasic(struct sMR *Device, char *Action)
 	return SubmitTransportAction(Device, ActionNode);
 }
 
-
 /*----------------------------------------------------------------------------*/
-bool AVTStop(struct sMR *Device)
-{
+bool AVTStop(struct sMR *Device) {
 	struct sService *Service = &Device->Service[AVT_SRV_IDX];
 	IXML_Document *ActionNode = NULL;
-	int rc;
 
 	LOG_INFO("[%p]: uPNP stop (cookie %p)", Device, Device->seqN);
 
@@ -205,7 +184,7 @@ bool AVTStop(struct sMR *Device)
 	AVTActionFlush(&Device->ActionQueue);
 
 	Device->WaitCookie = Device->seqN++;
-	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type,
+	int rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type,
 							 NULL, ActionNode, ActionHandler, Device->WaitCookie);
 
 	ixmlDocument_free(ActionNode);
@@ -217,15 +196,12 @@ bool AVTStop(struct sMR *Device)
 	return (rc == 0);
 }
 
-
 /*----------------------------------------------------------------------------*/
-int CtrlSetVolume(struct sMR *Device, uint8_t Volume, void *Cookie)
-{
+int CtrlSetVolume(struct sMR *Device, uint8_t Volume, void *Cookie) {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[REND_SRV_IDX];
 	char params[8];
-	int rc;
-
+	
 	LOG_INFO("[%p]: uPNP volume %d (cookie %p)", Device, Volume, Cookie);
 
 	ActionNode =  UpnpMakeAction("SetVolume", Service->Type, 0, NULL);
@@ -234,7 +210,7 @@ int CtrlSetVolume(struct sMR *Device, uint8_t Volume, void *Cookie)
 	sprintf(params, "%d", (int) Volume);
 	UpnpAddToAction(&ActionNode, "SetVolume", Service->Type, "DesiredVolume", params);
 
-	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
+	int rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
 								 ActionNode, ActionHandler, Cookie);
 	if (rc != UPNP_E_SUCCESS) {
 		LOG_ERROR("[%p]: Error in UpnpSendActionAsync -- %d", Device, rc);
@@ -245,13 +221,10 @@ int CtrlSetVolume(struct sMR *Device, uint8_t Volume, void *Cookie)
 	return rc;
 }
 
-
 /*----------------------------------------------------------------------------*/
-int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie)
-{
+int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie) {
 	IXML_Document *ActionNode = NULL;
 	struct sService *Service = &Device->Service[REND_SRV_IDX];
-	int rc;
 
 	LOG_INFO("[%p]: uPNP mute %d (cookie %p)", Device, Mute, Cookie);
 	ActionNode =  UpnpMakeAction("SetMute", Service->Type, 0, NULL);
@@ -259,7 +232,7 @@ int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie)
 	UpnpAddToAction(&ActionNode, "SetMute", Service->Type, "Channel", "Master");
 	UpnpAddToAction(&ActionNode, "SetMute", Service->Type, "DesiredMute", Mute ? "1" : "0");
 
-	rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
+	int rc = UpnpSendActionAsync(glControlPointHandle, Service->ControlURL, Service->Type, NULL,
 							 ActionNode, ActionHandler, Cookie);
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
@@ -271,13 +244,10 @@ int CtrlSetMute(struct sMR *Device, bool Mute, void *Cookie)
 	return rc;
 }
 
-
 /*----------------------------------------------------------------------------*/
-int CtrlGetGroupVolume(struct sMR *Device)
-{
+int CtrlGetGroupVolume(struct sMR *Device) {
 	IXML_Document *ActionNode, *Response = NULL;
 	struct sService *Service = &Device->Service[GRP_REND_SRV_IDX];
-	char *Item;
 	int Volume = -1;
 
 	if (*Service->ControlURL) return Volume;
@@ -289,7 +259,7 @@ int CtrlGetGroupVolume(struct sMR *Device)
 
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
-	Item = XMLGetFirstDocumentItem(Response, "CurrentVolume", true);
+	char *Item = XMLGetFirstDocumentItem(Response, "CurrentVolume", true);
 	if (Response) ixmlDocument_free(Response);
 
 	// master / slave relation might not be set yet, so GetGroupVolume will fail
@@ -301,13 +271,10 @@ int CtrlGetGroupVolume(struct sMR *Device)
 	return Volume;
 }
 
-
 /*----------------------------------------------------------------------------*/
-int CtrlGetVolume(struct sMR *Device)
-{
+int CtrlGetVolume(struct sMR *Device) {
 	IXML_Document *ActionNode, *Response = NULL;
 	struct sService *Service = &Device->Service[REND_SRV_IDX];
-	char *Item;
 	int Volume = -1;
 
 	if (*Service->ControlURL) return Volume;
@@ -321,7 +288,7 @@ int CtrlGetVolume(struct sMR *Device)
 	if (ActionNode) ixmlDocument_free(ActionNode);
 
 	if (Response) {
-		Item = XMLGetFirstDocumentItem(Response, "CurrentVolume", true);
+		char *Item = XMLGetFirstDocumentItem(Response, "CurrentVolume", true);
 		if (Item) {
 			Volume = atoi(Item);
 			free(Item);
@@ -332,10 +299,8 @@ int CtrlGetVolume(struct sMR *Device)
 	return Volume;
 }
 
-
 /*----------------------------------------------------------------------------*/
-char *GetProtocolInfo(struct sMR *Device)
-{
+char *GetProtocolInfo(struct sMR *Device) {
 	IXML_Document *ActionNode, *Response = NULL;
 	struct sService *Service = &Device->Service[CNX_MGR_IDX];
 	char *ProtocolInfo = NULL;
@@ -357,15 +322,8 @@ char *GetProtocolInfo(struct sMR *Device)
 	return ProtocolInfo;
 }
 
-
-
 /*----------------------------------------------------------------------------*/
-
-char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct sMRConfig *Config)
-
-{
-	char *s;
-
+char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct sMRConfig *Config) {
 	IXML_Document *doc = ixmlDocument_createDocument();
 	IXML_Node	 *node, *root;
 
@@ -389,7 +347,8 @@ char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct
 			XMLAddNode(doc, node, "upnp:genre", MetaData->genre);
 			XMLAddNode(doc, node, "upnp:artist", MetaData->artist);
 			XMLAddNode(doc, node, "upnp:album", MetaData->album);
-			XMLAddNode(doc, node, "upnp:originalTrackNumber", "%d", MetaData->track);
+			if (MetaData->track) XMLAddNode(doc, node, "upnp:originalTrackNumber", "%d", MetaData->track);
+			if (MetaData->disc) XMLAddNode(doc, node, "upnp:originalDiscNumber", "%d", MetaData->disc);
 			if (MetaData->artwork) XMLAddNode(doc, node, "upnp:albumArtURI", "%s", MetaData->artwork);
 		}
 
@@ -398,8 +357,7 @@ char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct
 		XMLAddAttribute(doc, node, "duration", "%1d:%02d:%02d.%03d",
 						duration.quot/3600, (duration.quot % 3600) / 60,
 						duration.quot % 60, duration.rem);
-	}
-	else {
+	} else {
 		if (Config->SendMetaData) {
 			XMLAddNode(doc, node, "dc:title", MetaData->remote_title);
 			XMLAddNode(doc, node, "dc:creator", "");
@@ -426,8 +384,7 @@ char *CreateDIDL(char *URI, char *ProtoInfo, struct metadata_s *MetaData, struct
 							(uint64_t) MetaData->duration) / 1000));
 	}
 
-	s = ixmlNodetoString((IXML_Node*) doc);
-
+	char *s = ixmlNodetoString((IXML_Node*) doc);
 	ixmlDocument_free(doc);
 
 	return s;

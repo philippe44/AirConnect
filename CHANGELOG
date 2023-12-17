@@ -1,3 +1,8 @@
+1.6.0
+ - (airupnp) remove possibility to tweak ProtocolInfo, it's useless
+ - only send silence on first GET (after a flush) and close socket on flush
+ - close socket immediately on flush which should stop playback right away 
+ 
 1.5.4
  - use updated libcodec and libraop for alac
  

@@ -30,7 +30,7 @@ void SaveConfig(char *name, void *ref, bool full) {
 	struct sMR *p;
 	IXML_Document *doc = ixmlDocument_createDocument();
 	IXML_Document *old_doc = ref;
-	IXML_Node *root, *common, *proto;
+	IXML_Node *root, *common;
 	IXML_Element* old_root = ixmlDocument_getElementById(old_doc, "airupnp");
 
 	if (!full && old_doc) {
@@ -45,12 +45,9 @@ void SaveConfig(char *name, void *ref, bool full) {
 		}
 		if (list) ixmlNodeList_free(list);
 		common = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) root, "common");
-		proto = (IXML_Node*) ixmlDocument_getElementById((IXML_Document*) common, "protocolInfo");
-	}
-	else {
+	} else {
 		root = XMLAddNode(doc, NULL, "airupnp", NULL);
 		common = (IXML_Node*) XMLAddNode(doc, root, "common", NULL);
-		proto = (IXML_Node*) XMLAddNode(doc, common, "protocolInfo", NULL);
 	}
 
 	XMLUpdateNode(doc, root, false, "main_log",level2debug(main_loglevel));
@@ -72,12 +69,6 @@ void SaveConfig(char *name, void *ref, bool full) {
 	XMLUpdateNode(doc, common, false, "artwork", "%s", glMRConfig.ArtWork);
 	XMLUpdateNode(doc, common, false, "latency", glMRConfig.Latency);
 	XMLUpdateNode(doc, common, false, "drift", "%d", glMRConfig.Drift);
-
-	XMLUpdateNode(doc, proto, false, "pcm", glMRConfig.ProtocolInfo.pcm);
-	XMLUpdateNode(doc, proto, false, "wav", glMRConfig.ProtocolInfo.wav);
-	XMLUpdateNode(doc, proto, false, "flac", glMRConfig.ProtocolInfo.flac);
-	XMLUpdateNode(doc, proto, false, "aac", glMRConfig.ProtocolInfo.aac);
-	XMLUpdateNode(doc, proto, false, "mp3", glMRConfig.ProtocolInfo.mp3);
 
 	// mutex is locked here so no risk of a player being destroyed in our back
 	for (int i = 0; i < glMaxDevices; i++) {
@@ -146,11 +137,6 @@ static void LoadConfigItem(tMRConfig *Conf, char *name, char *val) {
 		sscanf(val,"%2x:%2x:%2x:%2x:%2x:%2x", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
 		for (i = 0; i < 6; i++) Conf->mac[i] = mac[i];
 	}
-	if (!strcmp(name, "pcm")) strcpy(Conf->ProtocolInfo.pcm, val);
-	if (!strcmp(name, "wav")) strcpy(Conf->ProtocolInfo.wav, val);
-	if (!strcmp(name, "flac")) strcpy(Conf->ProtocolInfo.flac, val);
-	if (!strcmp(name, "aac")) strcpy(Conf->ProtocolInfo.aac, val);
-	if (!strcmp(name, "mp3")) strcpy(Conf->ProtocolInfo.mp3, val);
 }
 
 /*----------------------------------------------------------------------------*/

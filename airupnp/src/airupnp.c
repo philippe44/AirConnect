@@ -77,13 +77,6 @@ tMRConfig			glMRConfig = {
 							false,		// drift
 							{0, 0, 0, 0, 0, 0 }, // MAC
 							"",			// artwork
-							{   		// protocolInfo
-								"http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
-								"http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
-								"http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
-								"http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
-								"http-get:*:audio/aac:DLNA.ORG_PN=AAC_ADTS;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
-							},
 					};
 
 /*----------------------------------------------------------------------------*/
@@ -994,11 +987,11 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	queue_init(&Device->ActionQueue, false, NULL);
 
 	// set protocolinfo (will be used for some HTTP response)
-	if (strcasestr(Device->Config.Codec, "pcm")) Device->ProtocolInfo = Device->Config.ProtocolInfo.pcm;
-	else if (strcasestr(Device->Config.Codec, "wav")) Device->ProtocolInfo = Device->Config.ProtocolInfo.wav;
-	else if (strcasestr(Device->Config.Codec, "aac")) Device->ProtocolInfo = Device->Config.ProtocolInfo.aac;
-	else if (strcasestr(Device->Config.Codec, "mp3")) Device->ProtocolInfo = Device->Config.ProtocolInfo.mp3;
-	else Device->ProtocolInfo = Device->Config.ProtocolInfo.flac;
+	if (strcasestr(Device->Config.Codec, "pcm")) Device->ProtocolInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+	else if (strcasestr(Device->Config.Codec, "wav")) Device->ProtocolInfo = "http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+	else if (strcasestr(Device->Config.Codec, "aac")) Device->ProtocolInfo = "http-get:*:audio/aac:DLNA.ORG_PN=AAC_ADTS;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+	else if (strcasestr(Device->Config.Codec, "mp3")) Device->ProtocolInfo = "http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+	else Device->ProtocolInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
 
 	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", 6)) {
 		char ip[32];

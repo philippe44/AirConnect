@@ -699,15 +699,22 @@ static void *UpdateThread(void *args) {
 
 				for (int i = 0; i < glMaxDevices; i++) {
 					Device = glMRDevices + i;
-					if (Device->Running && (((Device->State != PLAYING || Device->RaopState != RAOP_PLAY) &&
-						(now - Device->LastSeen > PRESENCE_TIMEOUT || Device->ErrorCount > MAX_ACTION_ERRORS)) ||
-						Device->ErrorCount < 0)) {
-
-						pthread_mutex_lock(&Device->Mutex);
-						LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->Config.Name);
-						raopsr_delete(Device->Raop);
-						// device's mutex returns unlocked
-						DelMRDevice(Device);
+					if (Device->Running && (Device->ErrorCount < 0 || Device->ErrorCount > MAX_ACTION_ERRORS ||
+						(Device->State == STOPPED && now - Device->LastSeen > PRESENCE_TIMEOUT))) {
+						// if device does not answer, try to download its DescDoc
+						IXML_Document* DescDoc = NULL;
+						if (UpnpDownloadXmlDoc(Update->Data, &DescDoc) != UPNP_E_SUCCESS) {
+							pthread_mutex_lock(&Device->Mutex);
+							LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->Config.Name);
+							raopsr_delete(Device->Raop);
+							// device's mutex returns unlocked
+							DelMRDevice(Device);
+						} else {
+							// device is in trouble, but let's renew grace period
+							Device->LastSeen = now;
+							LOG_INFO("[%p]: %s mute to discovery, but answers UPnP, so keep it", Device, Device->Config.Name);
+						}
+						if (DescDoc) ixmlDocument_free(DescDoc);
 					}
 				}
 

@@ -394,9 +394,14 @@ static void UpdateDevices() {
 	for (int i = 0; i < glMaxDevices; i++) {
 		struct sMR *Device = glMRDevices + i;
 		if (Device->Running && Device->Remove && !CastIsConnected(Device->CastCtx)) {
-			LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
-			raopsr_delete(Device->Raop);
-			RemoveCastDevice(Device);
+			struct in_addr addr = CastGetAddr(glMRDevices[i].CastCtx);
+			if (!ping_host(addr, 100)) {
+				LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
+				raopsr_delete(Device->Raop);
+				RemoveCastDevice(Device);
+			} else {
+				LOG_DEBUG("[%p]: %s mute to mDNS search, but answers ping, so keep it", Device, Device->Config.Name);
+			}
 		}
 	}
 
@@ -467,6 +472,9 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 							if (Member) free(list_remove((cross_list_t*) Member, (cross_list_t**) &Device->GroupMaster));
 						}
 					}
+				}
+				if (Device->Remove && ping_host(s->addr, 100)) {
+					LOG_INFO("[%p]: %s mute to mDNS search, but answers ping, so keep it", Device, Device->Config.Name);
 				}
 			// device update - when playing ChromeCast update their TXT records
 			} else {

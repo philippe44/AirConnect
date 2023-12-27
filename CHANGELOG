@@ -1,3 +1,6 @@
+1.6.2
+ - (airupnp) when player timeout's, use its DescDocURL, not the UpdateData which is NULL...
+ 
 1.6.1
  - be more relax wrt player deletion and verify with either failed doc download (airupnp) or no response to ping (aircast)
  

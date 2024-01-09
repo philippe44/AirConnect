@@ -396,11 +396,11 @@ static void UpdateDevices() {
 		if (Device->Running && Device->Remove && !CastIsConnected(Device->CastCtx)) {
 			struct in_addr addr = CastGetAddr(glMRDevices[i].CastCtx);
 			if (!ping_host(addr, 100)) {
-				LOG_INFO("[%p]: removing renderer (%s) %d", Device, Device->Config.Name);
+				LOG_INFO("[%p]: removing renderer (%s)", Device, Device->Config.Name);
 				raopsr_delete(Device->Raop);
 				RemoveCastDevice(Device);
 			} else {
-				LOG_DEBUG("[%p]: %s mute to mDNS search, but answers ping, so keep it", Device, Device->Config.Name);
+				LOG_DEBUG("[%p]: (%s) mute to mDNS search, but answers ping, so keep it", Device, Device->Config.Name);
 			}
 		}
 	}

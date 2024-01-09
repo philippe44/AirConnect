@@ -712,6 +712,7 @@ static void *UpdateThread(void *args) {
 						} else {
 							// device is in trouble, but let's renew grace period
 							Device->LastSeen = now;
+							Device->ErrorCount = 0;
 							LOG_INFO("[%p]: %s mute to discovery, but answers UPnP, so keep it", Device, Device->Config.Name);
 						}
 						if (DescDoc) ixmlDocument_free(DescDoc);

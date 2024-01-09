@@ -1,3 +1,6 @@
+1.6.3
+ - (airupnp) on error, reset counter to 0 if player responds
+ 
 1.6.2
  - (airupnp) when player timeout's, use its DescDocURL, not the UpdateData which is NULL...
  

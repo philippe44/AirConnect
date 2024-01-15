@@ -488,17 +488,12 @@ int ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie) {
 				p->StartCookie = p->WaitCookie;
 				_ProcessQueue(p);
 
-				/*
-				when certain waited action has been completed, the state need
-				to be re-acquired because a 'stop' state might be missed when
-				(eg) repositionning where two consecutive status update will
-				give 'playing', the 'stop' in the middle being unseen
-				*/
-				if (Resp && (!strcasecmp(Resp, "StopResponse") ||
-							 !strcasecmp(Resp, "PlayResponse") ||
-							 !strcasecmp(Resp, "PauseResponse"))) {
-					p->State = UNKNOWN;
-				}
+				/* when play action has been completed, the state need to be re-acquired because we
+				 * might have missed a state in-between. For example, while seeking there is a very
+				 * stop/play so the STOPPED state will be missed and the PLAYING event will be as
+				 * well. This should not be done for stop/pause actions otherwise we might create a fake STOPPED event state and think
+				 * we stopped when in fact it's just the re-acquisition of current state */
+				if (Resp && !strcasecmp(Resp, "PlayResponse") && p->State == PLAYING) p->State = UNKNOWN;
 
 				break;
 			}

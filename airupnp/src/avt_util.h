@@ -1,5 +1,5 @@
 /*
- *  UPnP control util
+ *  UPnP Control util
  *
  *	(c) Philippe, philippe_44@outlook.comom
  *

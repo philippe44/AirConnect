@@ -185,8 +185,7 @@ struct sMR* SID2Device(const UpnpString *SID) {
 /*----------------------------------------------------------------------------*/
 struct sService *EventURL2Service(const UpnpString *URL, struct sService *s) {
 	for (int i = 0; i < NB_SRV; s++, i++) {
-		if (strcmp(s->EventURL, UpnpString_get_String(URL))) continue;
-		return s;
+		if (!strcmp(s->EventURL, UpnpString_get_String(URL))) return s;
 	}
 
 	return NULL;
@@ -195,10 +194,7 @@ struct sService *EventURL2Service(const UpnpString *URL, struct sService *s) {
 /*----------------------------------------------------------------------------*/
 struct sMR* UDN2Device(const char *UDN) {
 	for (int i = 0; i < glMaxDevices; i++) {
-		if (!glMRDevices[i].Running) continue;
-		if (!strcmp(glMRDevices[i].UDN, UDN)) {
-			return &glMRDevices[i];
-		}
+		if (glMRDevices[i].Running && !strcmp(glMRDevices[i].UDN, UDN)) return &glMRDevices[i];
 	}
 
 	return NULL;

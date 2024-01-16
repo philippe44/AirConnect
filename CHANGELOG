@@ -1,3 +1,7 @@
+1.7.1
+ - alternate getting of TransportInfo and PositionInfo (increase polling speed)
+ - ignore any frame seq below or equal flush seqno, even after a record
+ 
 1.7.0
  - allow icy on every codec, just provide interval, let user config and requesting player decide
  - (airupnp) only re-acquire state on play action completion. This is not needed on stop/pause and will create issues like fake stops

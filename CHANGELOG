@@ -1,3 +1,6 @@
+1.8.0
+ - refactor raop flush/first packet
+ 
 1.7.1
  - alternate getting of TransportInfo and PositionInfo (increase polling speed)
  - ignore any frame seq below or equal flush seqno, even after a record

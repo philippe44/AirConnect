@@ -60,7 +60,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Re-scan for new / lost players happens every 30s
 - A config file (default `config.xml`) can be created for advanced tweaking (a reference version can be generated using  the `-i <file>` command line)
 - Chromecast groups are supported. Use `-v` to set the media volume factor for all devices (0.5 by default)
-- use `-c mp3[:<rate>]|aac[:<rate>]|flc[:0..9]|wav|pcm` to set codec use for re-encoding audio 
+- use `-c mp3[:<rate>]|aac[:<rate>]|flac[:0..9]|wav|pcm` to set codec use for re-encoding audio 
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
 - Use `-b [ip|iface][:port]` to set network interface (ip@ or interface name as reported by ifconfig/ipconfig) to use and, for airupnp only, UPnP port to listen to (must be above the default 49152)
@@ -89,7 +89,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 - `artwork`        : an URL to an artwork to be displayed on player
 - `flush <0|1>`    : (default 1) set AirPlay *FLUSH* commands response (see also --noflush in [Misc tips](#misc-tips) section)
 - `media_volume	<0..1>` : (default 0.5) Applies a scaling factor to device's hardware volume (chromecast only)
-- `codec <mp3[:<bitrate>]|aac[:<bitrate>]|flc[:0..9]|wav|pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
+- `codec <mp3[:<bitrate>]|aac[:<bitrate>]|flac[:0..9]|wav|pcm>`	: format used to send HTTP audio. FLAC is recommended but uses more CPU (pcm only available for UPnP). For example, `mp3:320` for 320Kb/s MP3 encoding.
 
 These are the global parameters
 

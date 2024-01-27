@@ -35,12 +35,6 @@ static json_t* BuildMetaData(struct metadata_s* MetaData) {
 		json_decref(artwork);
 	}
 
-	if (MetaData->duration) {
-		json_t* duration = json_pack("{sf}", "duration", (double)MetaData->duration / 1000);
-		json_object_update(json, duration);
-		json_decref(duration);
-	}
-
 	return json_pack("{so}", "metadata", json);
 }
 
@@ -117,8 +111,14 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, const char *Na
 		return false;
 	}
 
-	msg = json_pack("{ss,ss,ss}", "contentId", URI, "streamType", "BUFFERED",
-					"contentType", ContentType);
+	msg = json_pack("{ss,ss,ss}", "contentId", URI, "streamType", !MetaData->duration ? "LIVE" : "BUFFERED", 
+						          "contentType", ContentType);
+
+	if (MetaData->duration) {
+		json_t* duration = json_pack("{sf}", "duration", (double)MetaData->duration / 1000);
+		json_object_update(msg, duration);
+		json_decref(duration);
+	}
 
 	if (StartTime) customData = json_pack("{s{sssI}}", "customData", "deviceName", Name, "startTime", StartTime);
 	else customData = json_pack("{s{ss}}", "customData", "deviceName", Name);
@@ -219,7 +219,7 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 	pthread_mutex_lock(&Ctx->Mutex);
 
 	json_t* customData;
-	if (MetaData && MetaData->live_duration) customData = json_pack("{si}", "live_duration", MetaData->live_duration);
+	if (MetaData && MetaData->live_duration != -1) customData = json_pack("{si}", "liveDuration", MetaData->live_duration);
 	else customData = json_object();
 
 	json_t* item = BuildMetaData(MetaData);

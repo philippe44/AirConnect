@@ -1,3 +1,10 @@
+1.8.3 (NR)
+ - (aircast) stream type is LIVE and duration is not part of metadata
+ 
+1.8.2
+ - UpnpResolveURL needs one extra byte if RelURL parameters does not start with a '/'
+ - use setlocale() so that atof does not fail on '.'
+ 
 1.8.1
  - handle double resend from iOS and silence after flush
  

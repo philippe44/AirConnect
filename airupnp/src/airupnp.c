@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <locale.h>
 #ifdef _WIN32
 #include <process.h>
 #endif
@@ -137,31 +138,30 @@ static char usage[] =
 			VERSION "\n"
 		   "See -t for license terms\n"
 		   "Usage: [options]\n"
-		   "  -b <ip|iface>[:<port>]\tnetwork interface or interface and UPnP port to use\n"
-		   "  -a <port>[:<count>]\tset inbound port and range for RTP and HTTP\n"
-		   "  -c <mp3[:<rate>]|flac[:0..9]|wav|pcm>\taudio format send to player\n"
-		   "  -g <-3|-1|0>\t\tHTTP content-length mode (-3:chunked, -1:none, 0:fixed)\n"
-		   "  -u <version>\tset the maximum UPnP version for search (default 1)\n"
-		   "  -x <config file>\tread config from file (default is ./config.xml)\n"
-		   "  -i <config file>\tdiscover players, save <config file> and exit\n"
-		   "  -I \t\t\tauto save config at every network scan\n"
-		   "  -l <[rtp][:http][:f]>\tRTP and HTTP latency (ms), ':f' forces silence fill\n"
-		   "  -r \t\t\tlet timing reference drift (no click)\n"
-		   "  -f <logfile>\t\twrite debug to logfile\n"
-		   "  -p <pid file>\t\twrite PID in file\n"
-		   "  -N <format>\t\ttransform device name using C format (%s=name)\n"
-		   "  -m <n1,n2...>\t\texclude devices whose model include tokens\n"
-		   "  -n <m1,m2,...>\texclude devices whose name includes tokens\n"
-		   "  -o <m1,m2,...>\tinclude only listed models; overrides -m and -n (use <NULL> if player don't return a model)\n"
-		   "  -d <log>=<level>\tSet logging level, logs: all|raop|main|util|upnp, level: error|warn|info|debug|sdebug\n"
-
+		   "  -b <ip|iface>[:<port>] network interface or interface and UPnP port to use\n"
+		   "  -a <port>[:<count>]    set inbound port and range for RTP and HTTP\n"
+		   "  -c <mp3[:<rate>]|flac[:0..9]|wav|pcm>  audio format send to player\n"
+		   "  -g <-3|-1|0>           HTTP content-length mode (-3:chunked, -1:none, 0:fixed)\n"
+		   "  -u <version>           set the maximum UPnP version for search (default 1)\n"
+		   "  -x <config file>       read config from file (default is ./config.xml)\n"
+		   "  -i <config file>       discover players, save <config file> and exit\n"
+		   "  -I                     auto save config at every network scan\n"
+		   "  -l <[rtp][:http][:f]>  RTP and HTTP latency (ms), ':f' forces silence fill\n"
+		   "  -r                     let timing reference drift (no click)\n"
+		   "  -f <logfile>           write debug to logfile\n"
+		   "  -p <pid file>          write PID in file\n"
+		   "  -N <format>            transform device name using C format (%s=name)\n"
+		   "  -m <n1,n2...>          exclude devices whose model include tokens\n"
+		   "  -n <m1,m2,...>         exclude devices whose name includes tokens\n"
+		   "  -o <m1,m2,...>         include only listed models; overrides -m and -n (use <NULL> if player don't return a model)\n"
+		   "  -d <log>=<level>       set logging level, logs: all|raop|main|util|upnp, level: error|warn|info|debug|sdebug\n"
 #if LINUX || FREEBSD
-		   "  -z \t\t\tDaemonize\n"
+		   "  -z                     daemonize\n"
 #endif
-		   "  -Z \t\t\tNOT interactive\n"
-		   "  -k \t\t\tImmediate exit on SIGQUIT and SIGTERM\n"
-		   "  -t \t\t\tLicense terms\n"
-   		   "  --noflush\t\tignore flush command (wait for teardown to stop)\n"
+		   "  -Z                     NOT interactive\n"
+		   "  -k                     immediate exit on SIGQUIT and SIGTERM\n"
+		   "  -t                     license terms\n"
+   		   "  --noflush              ignore flush command (wait for teardown to stop)\n"
 		   "\n"
 		   "Build options:"
 #if LINUX
@@ -1355,6 +1355,9 @@ int main(int argc, char *argv[]) {
 #if defined(SIGPIPE)
 	signal(SIGPIPE, SIG_IGN);
 #endif
+
+	// otherwise some atof/strtod fail with '.'
+	setlocale(LC_NUMERIC, "C");
 
 	netsock_init();
 

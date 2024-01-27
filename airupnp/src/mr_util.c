@@ -301,13 +301,13 @@ int XMLFindAndParseService(IXML_Document* DescDoc, const char* location,
 				relcontrolURL = XMLGetFirstElementItem(service, "controlURL");
 				releventURL = XMLGetFirstElementItem(service, "eventSubURL");
 				NFREE(*controlURL);
-				*controlURL = (char*)malloc(strlen(base) + strlen(relcontrolURL) + 1);
+				*controlURL = (char*)malloc(strlen(base) + strlen(relcontrolURL) + 1 + 10);
 				if (*controlURL) {
 					ret = UpnpResolveURL(base, relcontrolURL, *controlURL);
 					if (ret != UPNP_E_SUCCESS) LOG_ERROR("Error generating controlURL from %s + %s", base, relcontrolURL);
 				}
 				NFREE(*eventURL);
-				*eventURL = (char*)malloc(strlen(base) + strlen(releventURL) + 1);
+				*eventURL = (char*)malloc(strlen(base) + strlen(releventURL) + 1 + 10);
 				if (*eventURL) {
 					ret = UpnpResolveURL(base, releventURL, *eventURL);
 					if (ret != UPNP_E_SUCCESS) LOG_ERROR("Error generating eventURL from %s + %s", base, releventURL);
@@ -330,7 +330,7 @@ int XMLFindAndParseService(IXML_Document* DescDoc, const char* location,
 
 /*----------------------------------------------------------------------------*/
 bool XMLFindAction(const char* base, char* service, char* action) {
-	char* url = malloc(strlen(base) + strlen(service) + 1);
+	char* url = malloc(strlen(base) + strlen(service) + 1 + 10);
 	IXML_Document* AVTDoc = NULL;
 	bool res = false;
 

@@ -111,10 +111,10 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, const char *Na
 		return false;
 	}
 
-	msg = json_pack("{ss,ss,ss}", "contentId", URI, "streamType", !MetaData->duration ? "LIVE" : "BUFFERED", 
+	msg = json_pack("{ss,ss,ss}", "contentId", URI, "streamType", (MetaData && !MetaData->duration) ? "LIVE" : "BUFFERED", 
 						          "contentType", ContentType);
 
-	if (MetaData->duration) {
+	if (MetaData && MetaData->duration) {
 		json_t* duration = json_pack("{sf}", "duration", (double)MetaData->duration / 1000);
 		json_object_update(msg, duration);
 		json_decref(duration);

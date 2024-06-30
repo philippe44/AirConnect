@@ -119,7 +119,7 @@ WantedBy=multi-user.target
 
 3. Start the service `sudo service airupnp start`
 
-To start or stop manually the service, type `sudo service airupnp start|stop` in a command line window
+To start or stop the service manually, type `sudo service airupnp start|stop` in a command line window
 
 To disable the service, type `sudo systemctl disable airupnp.service`
 

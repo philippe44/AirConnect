@@ -64,7 +64,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - When you have more than one ethernet card, you case use `-b [ip]` to set what card to bind to. Note that 0.0.0.0 is not authorized
 - Use `-u <version>` to set the maximum UPnP searched version
 - Use `-b [ip|iface][:port]` to set network interface (ip@ or interface name as reported by ifconfig/ipconfig) to use and, for airupnp only, UPnP port to listen to (must be above the default 49152)
-- Use `-a <port>[:<count>]` to specify a port range (default count is 128)
+- Use `-a <port>[:<count>]` to specify a port range (default count is 128, sets RTP and HTTP ports)
 - Use `-g -3|-1|0|` to tweak http transfer mode where -3 = chunked, -1 = no content-length and 0 = fixed (dummy) length (see "HTTP content-length" below)"
 - Use `-N "<format>"` to change the default name of AirPlay players (the player name followed by '+' by default). It's a C-string format where '%s' is the player's name, so default is "%s+"
 - Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 

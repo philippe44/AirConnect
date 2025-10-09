@@ -548,8 +548,10 @@ static void *CastPingThread(void *args) {
 		crossthreads_sleep(1500);
 	}
 
-	// clear SSL error allocated memorry
+#ifdef OPENSSL_NO_DEPRECATED_1_1_0
+	// clear SSL error allocated memory
 	ERR_remove_thread_state(NULL);
+#endif
 
 	return NULL;
 }
@@ -695,8 +697,10 @@ static void *CastSocketThread(void *args) {
 		}
 	}
 
+#ifdef OPENSSL_NO_DEPRECATED_1_1_0
 	// clear SSL error allocated memorry
 	ERR_remove_thread_state(NULL);
+#endif
 
 	return NULL;
 }

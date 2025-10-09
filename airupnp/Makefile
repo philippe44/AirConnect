@@ -4,7 +4,7 @@ endif
 
 ifeq ($(findstring gcc,$(CC)),gcc)
 CFLAGS  += -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation 
-LDFLAGS += -s
+LDFLAGS += -s -latomic
 else
 CFLAGS += -fno-temp-file
 endif

@@ -14,7 +14,7 @@ HOST ?= $(word 2, $(subst -, ,$(CC)))
 
 ifneq ($(HOST),macos)
 ifneq ($(HOST),solaris)
-LINKSTATIC = -static
+LINKSTATIC = -static -latomic
 else
 LDFLAGS += -lssp	
 endif

@@ -7,7 +7,7 @@ The audio, after being decoded from alac, can be sent in plain, or re-encoded us
 
 ## Installing
 
-1. Pre-built binaries are in `AirConnect-<X.Y.Z>.zip`. It can be downloaded manually in a terminal by typing `wget https://raw.githubusercontent.com/philippe44/AirConnect/master/AirConnect-<X.Y.Z>.zip`. Unzip the file an select the bianry that works for your system.
+1. Pre-built binaries are in `AirConnect-<X.Y.Z>.zip`. It can be downloaded manually in a terminal by typing `wget https://raw.githubusercontent.com/philippe44/AirConnect/master/AirConnect-<X.Y.Z>.zip`. Unzip the file an select the binary that works for your system.
 
 	* For **Chromecast**, the file is `aircast-<os>-<cpu>` (so `aircast-macos-x86_64` for Chromecast on MacOS + Intel CPU) 
 	* For **UPnP/Sonos**, the file is `airupnp-<os>-<cpu>` (so `airupnp-macos-arm64` for UPnP/Sonos on MacOS + arm CPU) 

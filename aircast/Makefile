@@ -20,13 +20,18 @@ LDFLAGS += -lssp
 endif
 endif
 
+#ifneq ($(or $(filter %mips% %powerpc%,$(CC)),$(if $(findstring 64,$(CC)),,)))
+#ifneq ($(or $(filter %mips% %powerpc%,$(HOST)),$(and $(findstring 64,$(PLATFORM)), $(findstring macos, $(PLATFORM)))),)
+#LDFLAGS += -latomic
+#endif	
+
 BASE              = ..
 CORE              = $(BASE)/bin/aircast-$(HOST)
 BUILDDIR          = $(dir $(CORE))$(HOST)/$(PLATFORM)
 EXECUTABLE        = $(CORE)-$(PLATFORM)
 EXECUTABLE_STATIC = $(EXECUTABLE)-static
 
-SRC			= src
+SRC		= src
 TOOLS		= $(COMMON)/crosstools/src
 COMMON		= $(BASE)/common
 MDNS		= $(COMMON)/libmdns/targets
@@ -77,6 +82,7 @@ LIBRARY_STATIC 	= $(LIBRARY) $(OPENSSL)/libopenssl.a
 all: directory $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
 $(EXECUTABLE): $(OBJECTS)
+	echo $(PLATFORM)
 	$(CC) $(OBJECTS) $(LIBRARY) $(CFLAGS) $(LDFLAGS) -o $@
 ifeq ($(HOST),macos)
 	rm -f $(CORE)

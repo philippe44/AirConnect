@@ -1,3 +1,6 @@
+1.9.2
+ - remove libatomic dependency
+ 
 1.9.1
  - forgot to update libraop
  

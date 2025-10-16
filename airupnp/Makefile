@@ -4,7 +4,7 @@ endif
 
 ifeq ($(findstring gcc,$(CC)),gcc)
 CFLAGS  += -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation 
-LDFLAGS += -s -latomic
+LDFLAGS += -s
 else
 CFLAGS += -fno-temp-file
 endif
@@ -14,7 +14,7 @@ HOST ?= $(word 2, $(subst -, ,$(CC)))
 
 ifneq ($(HOST),macos)
 ifneq ($(HOST),solaris)
-LINKSTATIC = -static
+LINKSTATIC = -static -latomic
 else
 LDFLAGS += -lssp
 endif

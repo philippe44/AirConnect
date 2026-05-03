@@ -292,6 +292,10 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 	switch (event) {
 		case RAOP_STREAM: {
 			LOG_INFO("[%p]: Stream", Device);
+			if (Device->RaopState == RAOP_STREAM) {
+				LOG_INFO("[%p]: already in RAOP_STREAM, skipping pre-stage", Device);
+				break;
+			}
 			Device->RaopState = event;
 
 			// pre-stage the URI so Sonos can pre-connect before PLAY arrives

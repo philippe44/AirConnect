@@ -992,6 +992,10 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	} else {
 		Device->MetaData.remote_title = "Streaming from AirConnect";
     }
+	// populate audio format metadata so DIDL includes sampleFrequency/bitsPerSample
+	if (!Device->MetaData.sample_rate) Device->MetaData.sample_rate = 44100;
+	if (!Device->MetaData.sample_size) Device->MetaData.sample_size = 16;
+	if (!Device->MetaData.channels) Device->MetaData.channels = 2;
 	if (*Device->Config.ArtWork) Device->MetaData.artwork = Device->Config.ArtWork;
 
 	// string is already zero-terminated
@@ -999,14 +1003,16 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, glNameFormat, friendlyName);
 	queue_init(&Device->ActionQueue, false, NULL);
 
-	// set protocolinfo (will be used for some HTTP response)
+	// set protocolinfo — flags modeled after swyh-rs for streaming compatibility
+	// OP=01: byte-seek supported, CI=0: not transcoded
+	// FLAGS=01700000: streaming-transfer + background-transfer + connection-stalling + DLNA v1.5
 	if (strcasestr(Device->Config.Codec, "pcm")) {
-		(void) !asprintf(&Device->ProtocolInfo, "http-get:*:audio/L16;rate=%u;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000",
+		(void) !asprintf(&Device->ProtocolInfo, "http-get:*:audio/L16;rate=%u;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000",
 			Device->MetaData.sample_rate ? Device->MetaData.sample_rate : 44100);
-	} else if (strcasestr(Device->Config.Codec, "wav")) Device->ProtocolInfo = strdup("http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000");
-	else if (strcasestr(Device->Config.Codec, "aac")) Device->ProtocolInfo = strdup("http-get:*:audio/aac:DLNA.ORG_PN=AAC_ADTS;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000");
-	else if (strcasestr(Device->Config.Codec, "mp3")) Device->ProtocolInfo = strdup("http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000");
-	else Device->ProtocolInfo = strdup("http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000");
+	} else if (strcasestr(Device->Config.Codec, "wav")) Device->ProtocolInfo = strdup("http-get:*:audio/wav:DLNA.ORG_PN=WAV;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+	else if (strcasestr(Device->Config.Codec, "aac")) Device->ProtocolInfo = strdup("http-get:*:audio/aac:DLNA.ORG_PN=AAC_ADTS;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+	else if (strcasestr(Device->Config.Codec, "mp3")) Device->ProtocolInfo = strdup("http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+	else Device->ProtocolInfo = strdup("http-get:*:audio/flac:DLNA.ORG_PN=FLAC;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
 
 	Device->Running = true;
 

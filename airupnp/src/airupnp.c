@@ -993,6 +993,12 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 		Device->MetaData.title = "Streaming from AirConnect";
 		// Sonos supports chunked transfer encoding for FLAC/WAV
 		if (!Device->Config.HTTPLength || Device->Config.HTTPLength == -1) Device->Config.HTTPLength = -3;
+		// Sonos buffers a fixed number of BYTES before playback starts; WAV's higher
+		// byte rate fills the buffer ~2-3x faster than FLAC, reducing startup latency
+		if (!strcasecmp(Device->Config.Codec, "flac")) {
+			LOG_INFO("[%p]: Sonos detected, switching codec from flac to wav for lower latency", Device);
+			strcpy(Device->Config.Codec, "wav");
+		}
 	} else {
 		Device->MetaData.remote_title = "Streaming from AirConnect";
     }

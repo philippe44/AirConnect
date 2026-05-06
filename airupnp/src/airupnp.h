@@ -83,6 +83,7 @@ struct sMR {
 	void			*WaitCookie, *StartCookie;
 	cross_queue_t	ActionQueue;
 	unsigned		TrackPoll, StatePoll;
+	unsigned		TransitionPoll;
 	struct sService Service[NB_SRV];
 	struct sAction	*Actions;
 	struct sMR		*Master;

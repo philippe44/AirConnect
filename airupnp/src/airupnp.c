@@ -75,7 +75,7 @@ tMRConfig			glMRConfig = {
 							"flac",	    // Codec
 							true,		// Metadata
 							"",			// RTP:HTTP Latency (0 = use AirPlay requested)
-							false,		// drift
+							true,		// drift
 							{0, 0, 0, 0, 0, 0 }, // MAC
 							"",			// artwork
 					};
@@ -221,6 +221,8 @@ static bool 	_ProcessQueue(struct sMR *Device);
 #define STATE_POLL  (500)
 #define MAX_ACTION_ERRORS (5)
 #define MIN_POLL (min(TRACK_POLL, STATE_POLL))
+#define FAST_POLL   (50)
+#define FAST_POLL_COUNT (8)
 static void *MRThread(void *args) {
 	int elapsed, wakeTimer = MIN_POLL;
 	unsigned last;
@@ -234,7 +236,12 @@ static void *MRThread(void *args) {
 		// context is valid as long as thread runs
 		pthread_mutex_lock(&p->Mutex);
 
-		wakeTimer = (p->State != STOPPED) ? MIN_POLL / 2: MIN_POLL * 10;
+		if (p->TransitionPoll) {
+			wakeTimer = FAST_POLL;
+			p->TransitionPoll--;
+		} else {
+			wakeTimer = (p->State != STOPPED) ? MIN_POLL / 2 : MIN_POLL * 10;
+		}
 		LOG_SDEBUG("[%p]: UPnP thread timer %d %d", p, elapsed, wakeTimer);
 
 		p->StatePoll += elapsed;
@@ -277,14 +284,39 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 	va_start(args, event);
 
 	// this is async, so need to check context validity
-	if (!CheckAndLock(owner)) return;
+	if (!CheckAndLock(owner)) {
+		va_end(args);
+		return;
+	}
 
 	switch (event) {
-		case RAOP_STREAM:
-			// a PLAY will come later, so we'll do the load at that time
+		case RAOP_STREAM: {
 			LOG_INFO("[%p]: Stream", Device);
+			if (Device->RaopState == RAOP_STREAM) {
+				LOG_INFO("[%p]: already in RAOP_STREAM, skipping pre-stage", Device);
+				break;
+			}
 			Device->RaopState = event;
+
+			// pre-stage the URI so Sonos can pre-connect before PLAY arrives
+			uint16_t port = va_arg(args, uint32_t);
+			char *uri, *mp3radio = "";
+			static int stream_count;
+
+			if ((strcasestr(Device->Config.Codec, "mp3") || strcasestr(Device->Config.Codec, "aac")) && *Device->Service[TOPOLOGY_IDX].ControlURL) {
+				mp3radio = "x-rincon-mp3radio://";
+				LOG_INFO("[%p]: Sonos live stream", Device);
+			}
+
+			char codec[16] = "flac";
+			(void) !sscanf(Device->Config.Codec, "%15[^:]", codec);
+			(void) !asprintf(&uri, "%shttp://%s:%u/stream-%u.%s", mp3radio, inet_ntoa(glHost), port, stream_count++, codec);
+
+			LOG_INFO("[%p]: uPNP pre-stage setURI %s", Device, uri);
+			AVTSetURI(Device, uri, &Device->MetaData, Device->ProtocolInfo);
+			free(uri);
 			break;
+		}
 		case RAOP_STOP:
 			// this is TEARDOWN, so far there is always a FLUSH before
 			LOG_INFO("[%p]: Stop", Device);
@@ -303,26 +335,8 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
             }
 			break;
 		case RAOP_PLAY: {
-			if (Device->RaopState != RAOP_PLAY) {
-				uint16_t port = va_arg(args, uint32_t);
-				char* uri, * mp3radio = "";
-				static int count;
-
-				if ((strcasestr(Device->Config.Codec, "mp3") || strcasestr(Device->Config.Codec, "aac")) && *Device->Service[TOPOLOGY_IDX].ControlURL) {
-					mp3radio = "x-rincon-mp3radio://";
-					LOG_INFO("[%p]: Sonos live stream", Device);
-				}
-
-				char codec[16] = "flac";
-				(void) !sscanf(Device->Config.Codec, "%15[^:]", codec);
-				(void) !asprintf(&uri, "%shttp://%s:%u/stream-%u.%s", mp3radio, inet_ntoa(glHost), port, count++, codec);
-
-				LOG_INFO("[%p]: uPNP setURI %s (cookie %p)", Device, uri, Device->seqN);
-				AVTSetURI(Device, uri, &Device->MetaData, Device->ProtocolInfo);
-				free(uri);
-			}
-
 			AVTPlay(Device);
+			Device->TransitionPoll = FAST_POLL_COUNT;
 
 			// don't set volume, a RAOP_VOLUME will be sent by the controller
 			Device->RaopState = event;
@@ -335,7 +349,7 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 			uint32_t now = gettime_ms();
 
 			// discard echo commands
-			if (now < Device->VolumeStampRx + 1000) break;
+			if (now < Device->VolumeStampRx + 500) break;
 			Device->VolumeStampTx = now;
 
 			// Sonos group volume API is unreliable, need to create our own
@@ -373,6 +387,7 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 			break;
 	}
 
+	va_end(args);
 	pthread_mutex_unlock(&Device->Mutex);
 }
 
@@ -440,7 +455,7 @@ static void ProcessEvent(Upnp_EventType EventType, const void *_Event, void *Coo
 		double Volume = atoi(r), GroupVolume;
 		uint32_t now = gettime_ms();
 
-		if (Volume != (int) Device->Volume && now > Master->VolumeStampTx + 1000) {
+		if (Volume != (int) Device->Volume && now > Master->VolumeStampTx + 500) {
 			Device->Volume = Volume;
 			Master->VolumeStampRx = now;
 			GroupVolume = CalcGroupVolume(Master);
@@ -933,6 +948,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Elapsed		= 0;
 	Device->seqN		= NULL;
 	Device->TrackPoll 	= Device->StatePoll = 0;
+	Device->TransitionPoll = 0;
 	Device->Volume 		= 0;
 	Device->Actions 	= NULL;
 	Device->Master		= NULL;
@@ -973,25 +989,42 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 
 	// set remaining items now that we are sure
 	if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
-		Device->MetaData.duration = 1;
+		Device->MetaData.duration = 86400000;
 		Device->MetaData.title = "Streaming from AirConnect";
+		// Sonos supports chunked transfer encoding for FLAC/WAV
+		if (!Device->Config.HTTPLength || Device->Config.HTTPLength == -1) Device->Config.HTTPLength = -3;
+		// Sonos buffers a fixed number of BYTES before playback starts; WAV's higher
+		// byte rate fills the buffer ~2-3x faster than FLAC, reducing startup latency
+		if (!strcasecmp(Device->Config.Codec, "flac")) {
+			LOG_INFO("[%p]: Sonos detected, switching codec from flac to wav for lower latency", Device);
+			strcpy(Device->Config.Codec, "wav");
+		}
 	} else {
 		Device->MetaData.remote_title = "Streaming from AirConnect";
     }
+	// populate audio format metadata so DIDL includes sampleFrequency/bitsPerSample
+	if (!Device->MetaData.sample_rate) Device->MetaData.sample_rate = 44100;
+	if (!Device->MetaData.sample_size) Device->MetaData.sample_size = 16;
+	if (!Device->MetaData.channels) Device->MetaData.channels = 2;
 	if (*Device->Config.ArtWork) Device->MetaData.artwork = Device->Config.ArtWork;
 
-	Device->Running = true;
 	// string is already zero-terminated
 	if (friendlyName) strncpy(Device->friendlyName, friendlyName, sizeof(Device->friendlyName) - 1);
 	if (!*Device->Config.Name) sprintf(Device->Config.Name, glNameFormat, friendlyName);
 	queue_init(&Device->ActionQueue, false, NULL);
 
-	// set protocolinfo (will be used for some HTTP response)
-	if (strcasestr(Device->Config.Codec, "pcm")) Device->ProtocolInfo = "http-get:*:audio/L16;rate=44100;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
-	else if (strcasestr(Device->Config.Codec, "wav")) Device->ProtocolInfo = "http-get:*:audio/wav:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
-	else if (strcasestr(Device->Config.Codec, "aac")) Device->ProtocolInfo = "http-get:*:audio/aac:DLNA.ORG_PN=AAC_ADTS;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
-	else if (strcasestr(Device->Config.Codec, "mp3")) Device->ProtocolInfo = "http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
-	else Device->ProtocolInfo = "http-get:*:audio/flac:DLNA.ORG_OP=00;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=0d500000000000000000000000000000";
+	// set protocolinfo — flags modeled after swyh-rs for streaming compatibility
+	// OP=01: byte-seek supported, CI=0: not transcoded
+	// FLAGS=01700000: streaming-transfer + background-transfer + connection-stalling + DLNA v1.5
+	if (strcasestr(Device->Config.Codec, "pcm")) {
+		(void) !asprintf(&Device->ProtocolInfo, "http-get:*:audio/L16;rate=%u;channels=2:DLNA.ORG_PN=LPCM;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000",
+			Device->MetaData.sample_rate ? Device->MetaData.sample_rate : 44100);
+	} else if (strcasestr(Device->Config.Codec, "wav")) Device->ProtocolInfo = strdup("http-get:*:audio/wav:DLNA.ORG_PN=WAV;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+	else if (strcasestr(Device->Config.Codec, "aac")) Device->ProtocolInfo = strdup("http-get:*:audio/aac:DLNA.ORG_PN=AAC_ADTS;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+	else if (strcasestr(Device->Config.Codec, "mp3")) Device->ProtocolInfo = strdup("http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+	else Device->ProtocolInfo = strdup("http-get:*:audio/flac:DLNA.ORG_PN=FLAC;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000");
+
+	Device->Running = true;
 
 	if (!memcmp(Device->Config.mac, "\0\0\0\0\0\0", 6)) {
 		char ip[32];

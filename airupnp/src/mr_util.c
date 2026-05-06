@@ -149,6 +149,8 @@ void DelMRDevice(struct sMR *p) {
 
 	// kick-up all sleepers and join player's thread
 	crossthreads_wake();
+	free(p->ProtocolInfo);
+	p->ProtocolInfo = NULL;
 
 	pthread_mutex_unlock(&p->Mutex);
 	pthread_join(p->Thread, NULL);

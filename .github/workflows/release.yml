@@ -105,27 +105,25 @@ jobs:
 
       - uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Build airupnp
-        run: |
-          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Release /p:Platform=Win32 /v:minimal
-          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Static  /p:Platform=Win32 /v:minimal
-
-      - name: Build aircast
-        run: |
-          msbuild aircast/AirCast.vcxproj /p:Configuration=Release /p:Platform=Win32 /v:minimal
-          msbuild aircast/AirCast.vcxproj /p:Configuration=Static  /p:Platform=Win32 /v:minimal
-
-      - name: Collect Windows binaries
+      - name: Build and collect binaries
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path bin
-          $configs = @('Release', 'Static')
-          foreach ($cfg in $configs) {
-            $suffix = if ($cfg -eq 'Static') { '-static' } else { '' }
-            Copy-Item "airupnp/Win32/$cfg/airupnp.exe" "bin/airupnp-win32$suffix.exe" -ErrorAction SilentlyContinue
-            Copy-Item "aircast/Win32/$cfg/aircast.exe" "bin/aircast-win32$suffix.exe" -ErrorAction SilentlyContinue
-          }
-          Get-ChildItem bin/
+          $bindir = "$env:GITHUB_WORKSPACE\bin"
+          New-Item -Force -ItemType Directory $bindir | Out-Null
+
+          # Build all four variants, directing output to $bindir
+          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Static  /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild aircast/AirCast.vcxproj  /p:Configuration=Release /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild aircast/AirCast.vcxproj  /p:Configuration=Static  /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+
+          # Rename to release naming convention (msbuild uses project name casing)
+          Move-Item "$bindir\AirUPnP.exe"        "$bindir\airupnp-win32.exe"
+          Move-Item "$bindir\AirUPnP-static.exe" "$bindir\airupnp-win32-static.exe"
+          Move-Item "$bindir\AirCast.exe"         "$bindir\aircast-win32.exe"
+          Move-Item "$bindir\AirCast-static.exe"  "$bindir\aircast-win32-static.exe"
+
+          Get-ChildItem "$bindir\*.exe"
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4

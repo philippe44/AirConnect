@@ -1,6 +1,6 @@
 services:
   airconnect:
-    image: ghcr.io/jlaska/airconnect:latest
+    image: ghcr.io/philippe44/airconnect:latest
     network_mode: host
     restart: unless-stopped
     environment:

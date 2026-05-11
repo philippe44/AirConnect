@@ -27,6 +27,29 @@ jobs:
           - platform: armv6
             compiler: arm-linux-gnueabi-gcc
             packages: gcc-arm-linux-gnueabi
+          - platform: armv5
+            compiler: arm-linux-gnueabi-gcc
+            packages: gcc-arm-linux-gnueabi
+            cflags: '-march=armv5t -mfloat-abi=soft'
+          - platform: x86
+            compiler: i686-linux-gnu-gcc
+            packages: gcc-i686-linux-gnu
+          - platform: mips
+            compiler: mips-linux-gnu-gcc
+            packages: gcc-mips-linux-gnu
+            cflags: '-march=mips32'
+          - platform: mipsel
+            compiler: mipsel-linux-gnu-gcc
+            packages: gcc-mipsel-linux-gnu
+            cflags: '-march=mips32'
+          - platform: sparc64
+            compiler: sparc64-linux-gnu-gcc
+            packages: gcc-sparc64-linux-gnu
+            cflags: '-mcpu=v7'
+          - platform: powerpc
+            compiler: powerpc-linux-gnu-gcc
+            packages: gcc-powerpc-linux-gnu
+            cflags: '-m32'
 
     steps:
       - uses: actions/checkout@v4
@@ -39,11 +62,11 @@ jobs:
 
       - name: Build airupnp
         working-directory: airupnp
-        run: make CC=${{ matrix.compiler }} HOST=linux PLATFORM=${{ matrix.platform }} -j$(nproc)
+        run: make CC=${{ matrix.compiler }} HOST=linux PLATFORM=${{ matrix.platform }} CFLAGS="${{ matrix.cflags }}" -j$(nproc)
 
       - name: Build aircast
         working-directory: aircast
-        run: make CC=${{ matrix.compiler }} HOST=linux PLATFORM=${{ matrix.platform }} -j$(nproc)
+        run: make CC=${{ matrix.compiler }} HOST=linux PLATFORM=${{ matrix.platform }} CFLAGS="${{ matrix.cflags }}" -j$(nproc)
 
   macos:
     name: macOS

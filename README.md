@@ -11,24 +11,6 @@ AirConnect can run on any machine that has access to your local network (Windows
 
 The audio, after being decoded from alac, can be sent in plain, or re-encoded using mp3, aac or flac. Most players will not display metadata (artist, title, album, artwork ...) except when mp3 or aac re-encoding are used and for UPnP/DLNA devices that support icy protocol. Chromecast players support this after version 1.1.x
 
-## Docker (recommended)
-
-The easiest way to run AirConnect is with Docker. Images are published to the GitHub Container Registry for `linux/amd64` and `linux/arm64`.
-
-```sh
-docker run -d --network host --restart unless-stopped \
-  -e AIRCONNECT_MODE=both \
-  ghcr.io/philippe44/airconnect:latest
-```
-
-Or with Docker Compose (copy `docker-compose.yml` from this repo):
-
-```sh
-docker compose up -d
-```
-
-**Note:** Host networking (`--network host`) is required for mDNS/SSDP device discovery. Set `AIRCONNECT_MODE=aircast` or `AIRCONNECT_MODE=airupnp` to run only one bridge.
-
 ## Installing (standalone binary)
 
 Pre-built binaries for each release are available on the [Releases page](https://github.com/philippe44/AirConnect/releases). Download the binary for your OS and CPU:
@@ -62,7 +44,25 @@ A `-static` variant of each binary is also provided. Prefer the regular version;
 
 6. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update.
 
-7. In Docker, you must use 'host' mode to enable audio webserver. Note that you can't have a NAT between your devices and the machine where AirConnect runs.
+## Docker
+
+Official multi-arch images (`linux/amd64` and `linux/arm64`) are published to the GitHub Container Registry. Host networking is required for mDNS/SSDP device discovery — you cannot have a NAT between your devices and the machine running AirConnect.
+
+```sh
+docker run -d --network host --restart unless-stopped \
+  -e AIRCONNECT_MODE=both \
+  ghcr.io/philippe44/airconnect:latest
+```
+
+Or with Docker Compose (copy `docker-compose.yml` from this repo):
+
+```sh
+docker compose up -d
+```
+
+Set `AIRCONNECT_MODE=aircast` or `AIRCONNECT_MODE=airupnp` to run only one bridge.
+
+> **Note:** FreeBSD and Solaris binaries are not included in automated releases. Use `build.sh` with the appropriate cross-compilers to build for those platforms manually.
 
 ## Running
 

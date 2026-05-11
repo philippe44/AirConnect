@@ -8,7 +8,7 @@ FROM debian:bookworm-slim AS builder
 ARG TARGETARCH
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        gcc make \
+        build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src

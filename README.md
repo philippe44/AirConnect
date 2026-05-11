@@ -1,39 +1,63 @@
 # AirConnect: Send audio to UPnP/Sonos/Chromecast players using AirPlay
+
+[![CI](https://github.com/jlaska/AirConnect/actions/workflows/ci.yml/badge.svg)](https://github.com/jlaska/AirConnect/actions/workflows/ci.yml)
+
 Use these applications to add AirPlay capabilities to Chromecast and UPnP (like Sonos) players, to make them appear as AirPlay devices.
 
 AirConnect can run on any machine that has access to your local network (Windows, MacOS x86 and arm64, Linux x86, x86_64, arm, aarch64, sparc, mips, powerpc, Solaris and FreeBSD). It does not need to be on your main computer. (For example, a Raspberry Pi works well). It will detect UPnP/Sonos/Chromecast players, create as many virtual AirPlay devices as needed, and act as a bridge/proxy between AirPlay clients (iPhone, iPad, iTunes, MacOS, AirFoil ...) and the real UPnP/Sonos/Chromecast players.
 
 The audio, after being decoded from alac, can be sent in plain, or re-encoded using mp3, aac or flac. Most players will not display metadata (artist, title, album, artwork ...) except when mp3 or aac re-encoding are used and for UPnP/DLNA devices that support icy protocol. Chromecast players support this after version 1.1.x
 
-## Installing
+## Docker (recommended)
 
-1. Pre-built binaries are in `AirConnect-<X.Y.Z>.zip`. It can be downloaded manually in a terminal by typing `wget https://raw.githubusercontent.com/philippe44/AirConnect/master/AirConnect-<X.Y.Z>.zip`. Unzip the file an select the binary that works for your system.
+The easiest way to run AirConnect is with Docker. Images are published to the GitHub Container Registry for `linux/amd64` and `linux/arm64`.
 
-	* For **Chromecast**, the file is `aircast-<os>-<cpu>` (so `aircast-macos-x86_64` for Chromecast on MacOS + Intel CPU) 
-	* For **UPnP/Sonos**, the file is `airupnp-<os>-<cpu>` (so `airupnp-macos-arm64` for UPnP/Sonos on MacOS + arm CPU) 
+```sh
+docker run -d --network host --restart unless-stopped \
+  -e AIRCONNECT_MODE=both \
+  ghcr.io/jlaska/airconnect:latest
+```
 
-2. There is a "-static" version of each application that has all static libraries built-in. Use of these is (really) not recommended unless the regular version fails. For MacOS users, you need to install openSSL and do the following steps to use the dynamic load library version:
+Or with Docker Compose (copy `docker-compose.yml` from this repo):
+
+```sh
+docker compose up -d
+```
+
+**Note:** Host networking (`--network host`) is required for mDNS/SSDP device discovery. Set `AIRCONNECT_MODE=aircast` or `AIRCONNECT_MODE=airupnp` to run only one bridge.
+
+## Installing (standalone binary)
+
+Pre-built binaries for each release are available on the [Releases page](https://github.com/jlaska/AirConnect/releases). Download the binary for your OS and CPU:
+
+| Bridge | File pattern | Example |
+|---|---|---|
+| Chromecast | `aircast-<os>-<cpu>` | `aircast-macos-x86_64` |
+| UPnP / Sonos | `airupnp-<os>-<cpu>` | `airupnp-linux-aarch64` |
+
+A `-static` variant of each binary is also provided. Prefer the regular version; use `-static` only if the regular version fails to load (e.g. on very old systems).
+
+1. Download the binary for your platform from the [Releases page](https://github.com/jlaska/AirConnect/releases).
+
+2. For macOS, you need OpenSSL at runtime for the non-static binary:
 	- install openssl: `brew install openssl`. This creates libraries (or at least links) into `/usr/local/opt/openssl[/x.y.z]/lib` where optional 'x.y.z' is a version number
-	- create links to these libraries: 
+	- create links to these libraries:
 	```
-	ln -s /usr/local/opt/openssl[/x.y.z]/lib/libcrypto.dylib /usr/local/lib/libcrypto.dylib 
-	ln -s /usr/local/opt/openssl[/x.y.z]/lib/libssl.dylib /usr/local/lib/libssl.dylib 
+	ln -s /usr/local/opt/openssl[/x.y.z]/lib/libcrypto.dylib /usr/local/lib/libcrypto.dylib
+	ln -s /usr/local/opt/openssl[/x.y.z]/lib/libssl.dylib /usr/local/lib/libssl.dylib
 	```
 
-3. For Windows, install the Microsoft VC++ redistributable found [here](https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist?view=msvc-170)
-	You will also need to grab the 2 dlls files and put them in the same directory as the exe file
+3. For Windows, install the Microsoft VC++ redistributable found [here](https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist?view=msvc-170).
+	You will also need to grab the 2 dlls files and put them in the same directory as the exe file.
 
-4. Store the \<executable\> (e.g. `airupnp-linux-aarch64`) in any directory. 
+4. On non-Windows machines, make the binary executable: `chmod +x <binary>`
 
-4. On non-Windows machines, open a terminal and change directories to where the executable is stored and run `chmod +x <executable>` (Example: `chmod +x airupnp-macos`). File permissions might need to be set.
-
-5. Don't use firewall or set ports using options below and open them. 
+5. Don't use firewall or set ports using options below and open them.
 	- Port 5353 (UDP) is needed to listen to mDNS messages
 	- Each device uses 1 port permanently (RTSP) and when playing adds 1 port for HTTP and 3 ports for RTP (use `-g`or \<ports\> parameter, default is random)
 	- UPnP adds one extra port for discovery (use `-b` or \<upnp_socket\> parameter, default is 49152 and user value must be *above* this)
 
-6. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update 
-ter)
+6. [@faserF](https://github.com/FaserF) has made a [script](https://github.com/philippe44/AirConnect/blob/master/updater) for install/update.
 
 7. In Docker, you must use 'host' mode to enable audio webserver. Note that you can't have a NAT between your devices and the machine where AirConnect runs.
 

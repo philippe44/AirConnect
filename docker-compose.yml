@@ -1,0 +1,13 @@
+services:
+  airconnect:
+    image: ghcr.io/jlaska/airconnect:latest
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      # Run both Chromecast (aircast) and UPnP/Sonos (airupnp) bridges.
+      # Set to "aircast" or "airupnp" to run only one.
+      AIRCONNECT_MODE: both
+      # Default flags; override as needed.
+      # -Z: non-interactive mode  -l: port range required for Sonos/Heos
+      AIRUPNP_ARGS: "-Z -l 1000:2000"
+      AIRCAST_ARGS: "-Z"

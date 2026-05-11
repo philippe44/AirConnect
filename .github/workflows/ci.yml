@@ -71,12 +71,13 @@ jobs:
 
       - uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Build airupnp
+      - name: Build airupnp and aircast
+        shell: pwsh
         run: |
-          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Release /p:Platform=Win32 /v:minimal
-          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Static  /p:Platform=Win32 /v:minimal
-
-      - name: Build aircast
-        run: |
-          msbuild aircast/AirCast.vcxproj /p:Configuration=Release /p:Platform=Win32 /v:minimal
-          msbuild aircast/AirCast.vcxproj /p:Configuration=Static  /p:Platform=Win32 /v:minimal
+          $bindir = "$env:GITHUB_WORKSPACE\bin"
+          New-Item -Force -ItemType Directory $bindir | Out-Null
+          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Static  /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild aircast/AirCast.vcxproj  /p:Configuration=Release /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild aircast/AirCast.vcxproj  /p:Configuration=Static  /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          Get-ChildItem "$bindir\*.exe"

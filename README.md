@@ -1,9 +1,9 @@
-# AirConnect: Send audio to UPnP/Sonos/Chromecast players using AirPlay
-
-[![CI](https://github.com/jlaska/AirConnect/actions/workflows/ci.yml/badge.svg)](https://github.com/jlaska/AirConnect/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/jlaska/AirConnect)](https://github.com/jlaska/AirConnect/releases/latest)
+[![CI](https://github.com/philippe44/AirConnect/actions/workflows/ci.yml/badge.svg)](https://github.com/philippe44/AirConnect/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/philippe44/AirConnect)](https://github.com/philippe44/AirConnect/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docker](https://img.shields.io/badge/ghcr.io-jlaska%2Fairconnect-blue?logo=docker)](https://github.com/jlaska/AirConnect/pkgs/container/airconnect)
+[![Docker](https://img.shields.io/badge/ghcr.io-philippe44%2Fairconnect-blue?logo=docker)](https://github.com/philippe44/AirConnect/pkgs/container/airconnect)
+
+# AirConnect: Send audio to UPnP/Sonos/Chromecast players using AirPlay
 
 Use these applications to add AirPlay capabilities to Chromecast and UPnP (like Sonos) players, to make them appear as AirPlay devices.
 

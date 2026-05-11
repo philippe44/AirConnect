@@ -22,8 +22,8 @@ jobs:
             compiler: aarch64-linux-gnu-gcc
             packages: gcc-aarch64-linux-gnu
           - platform: arm
-            compiler: arm-linux-gnueabi-gcc
-            packages: gcc-arm-linux-gnueabi
+            compiler: arm-linux-gnueabihf-gcc
+            packages: gcc-arm-linux-gnueabihf
           - platform: armv6
             compiler: arm-linux-gnueabi-gcc
             packages: gcc-arm-linux-gnueabi

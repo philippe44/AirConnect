@@ -1,6 +1,6 @@
 # AirConnect: Send audio to UPnP/Sonos/Chromecast players using AirPlay
 
-[![CI](https://github.com/jlaska/AirConnect/actions/workflows/ci.yml/badge.svg)](https://github.com/jlaska/AirConnect/actions/workflows/ci.yml)
+[![CI](https://github.com/philippe44/AirConnect/actions/workflows/ci.yml/badge.svg)](https://github.com/philippe44/AirConnect/actions/workflows/ci.yml)
 
 Use these applications to add AirPlay capabilities to Chromecast and UPnP (like Sonos) players, to make them appear as AirPlay devices.
 
@@ -15,7 +15,7 @@ The easiest way to run AirConnect is with Docker. Images are published to the Gi
 ```sh
 docker run -d --network host --restart unless-stopped \
   -e AIRCONNECT_MODE=both \
-  ghcr.io/jlaska/airconnect:latest
+  ghcr.io/philippe44/airconnect:latest
 ```
 
 Or with Docker Compose (copy `docker-compose.yml` from this repo):
@@ -28,7 +28,7 @@ docker compose up -d
 
 ## Installing (standalone binary)
 
-Pre-built binaries for each release are available on the [Releases page](https://github.com/jlaska/AirConnect/releases). Download the binary for your OS and CPU:
+Pre-built binaries for each release are available on the [Releases page](https://github.com/philippe44/AirConnect/releases). Download the binary for your OS and CPU:
 
 | Bridge | File pattern | Example |
 |---|---|---|
@@ -37,7 +37,7 @@ Pre-built binaries for each release are available on the [Releases page](https:/
 
 A `-static` variant of each binary is also provided. Prefer the regular version; use `-static` only if the regular version fails to load (e.g. on very old systems).
 
-1. Download the binary for your platform from the [Releases page](https://github.com/jlaska/AirConnect/releases).
+1. Download the binary for your platform from the [Releases page](https://github.com/philippe44/AirConnect/releases).
 
 2. For macOS, you need OpenSSL at runtime for the non-static binary:
 	- install openssl: `brew install openssl`. This creates libraries (or at least links) into `/usr/local/opt/openssl[/x.y.z]/lib` where optional 'x.y.z' is a version number

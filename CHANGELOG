@@ -1,3 +1,6 @@
+1.11.1
+ - forgot to backport some other fixes in libs
+ 
 1.11.0
  - fix Sonos master selection (credit @iFlip721)
  - fix some memory leak

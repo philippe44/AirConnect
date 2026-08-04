@@ -70,36 +70,49 @@ struct sMR *GetMaster(struct sMR *Device, char **Name)
 	if (Response) {
 		char myUUID[RESOURCE_LENGTH] = "";
 		IXML_NodeList *GroupList = ixmlDocument_getElementsByTagName(Response, "ZoneGroup");
+		bool inGroup = false;
 		int i;
 
 		sscanf(Device->UDN, "uuid:%s", myUUID);
 
-		// list all ZoneGroups
-		for (i = 0; !done && GroupList && i < (int) ixmlNodeList_length(GroupList); i++) {
-			IXML_Node *Group = ixmlNodeList_item(GroupList, i);
-			const char *Coordinator = ixmlElement_getAttribute((IXML_Element*) Group, "Coordinator");
-			IXML_NodeList *MemberList = ixmlDocument_getElementsByTagName((IXML_Document*) Group, "ZoneGroupMember");
+		/* Only the coordinator of the group *we* belong to can be our master.
++		   Scanning every group's coordinator against every known device (as was
++		   done here) latches onto the first already-discovered coordinator of an
++		   unrelated group, which silently demotes this player to a slave and
++		   stops it being published at all - non-deterministically, since it
++		   depends on discovery order. */
+		for (i = 0; !inGroup && GroupList && i < (int)ixmlNodeList_length(GroupList); i++) {
+			IXML_Node* Group = ixmlNodeList_item(GroupList, i);
+			const char* Coordinator = ixmlElement_getAttribute((IXML_Element*)Group, "Coordinator");
+			IXML_NodeList* MemberList = ixmlDocument_getElementsByTagName((IXML_Document*)Group, "ZoneGroupMember");
 			int j;
 
-			// list all ZoneMembers
-			for (j = 0; !done && j < (int) ixmlNodeList_length(MemberList); j++) {
-				IXML_Node *Member = ixmlNodeList_item(MemberList, j);
-				const char *UUID = ixmlElement_getAttribute((IXML_Element*) Member, "UUID");
-				int k;
+			// are we a member of this group?
+			for (j = 0; !inGroup && j < (int)ixmlNodeList_length(MemberList); j++) {
+				IXML_Node* Member = ixmlNodeList_item(MemberList, j);
+				const char* UUID = ixmlElement_getAttribute((IXML_Element*)Member, "UUID");
+				const char* ZoneName;
 
-				// get ZoneName
-				if (!strcasecmp(myUUID, UUID)) {
+				if (!UUID || strcasecmp(myUUID, UUID)) continue;
+				inGroup = true;
+				ZoneName = ixmlElement_getAttribute((IXML_Element*)Member, "ZoneName");
+				if (ZoneName) {
 					NFREE(*Name);
-					*Name = strdup(ixmlElement_getAttribute((IXML_Element*) Member, "ZoneName"));
-					if (!strcasecmp(myUUID, Coordinator)) done = true;
+					*Name = strdup(ZoneName);
 				}
-
-				// look for our master (if we are not)
-				for (k = 0; !done && k < glMaxDevices; k++) {
-					if (glMRDevices[k].Running && strcasestr(glMRDevices[k].UDN, (char*) Coordinator)) {
-						Master = glMRDevices + k;
-						LOG_DEBUG("Found Master %s %s", myUUID, Master->UDN);
-						done = true;
+			}
+		
+			if (inGroup && Coordinator) {
+				if (!strcasecmp(myUUID, Coordinator)) {
+					// we are the coordinator, so we are our own master
+					done = true;
+				} else {
+					for (int k = 0; !done && k < glMaxDevices; k++) {
+						if (glMRDevices[k].Running && strcasestr(glMRDevices[k].UDN, Coordinator)) {
+							Master = glMRDevices + k;
+							LOG_DEBUG("Found Master %s %s", myUUID, Master->UDN);
+							done = true;
+						}
 					}
 				}
 			}
@@ -107,10 +120,19 @@ struct sMR *GetMaster(struct sMR *Device, char **Name)
 			ixmlNodeList_free(MemberList);
 		}
 
-		// our master is not yet discovered, refer to self then
 		if (!done) {
-			Master = Device;
 			LOG_INFO("[%p]: Master not discovered yet, assigning to self", Device);
+			if (inGroup) {
+				// we are a slave but the coordinator is not discovered yet
+				Master = Device;
+				LOG_INFO("[%p]: Master not discovered yet, assigning to self", Device);
+				
+			}
+			else {
+				/* Not listed in any group: it cannot be anyone's slave, so treat
+				   it as standalone rather than hiding it forever. */
+				LOG_INFO("[%p]: not in any zone group, treating as standalone", Device);
+			}
 		}
 
 		ixmlNodeList_free(GroupList);

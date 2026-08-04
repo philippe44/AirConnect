@@ -78,6 +78,7 @@ tMRConfig			glMRConfig = {
 							false,		 // drift
 							{0, 0, 0, 0, 0, 0 }, // MAC
 							"",			// artwork
+							"broadcast"
 					};
 
 /*----------------------------------------------------------------------------*/
@@ -142,6 +143,7 @@ static char usage[] =
 		   "  -a <port>[:<count>]    set inbound port and range for RTP and HTTP\n"
 		   "  -c <mp3[:<rate>]|aac[:<rate>]|flac[:0..9][/1152...16384]|wav|pcm>  audio format send to player\n"
 		   "  -g <-3|-1|0>           HTTP content-length mode (-3:chunked, -1:none, 0:fixed)\n"
+	       "  -S <broadcast|track|radio>  how a Sonos is told to present the stream (default broadcast)\n"
 		   "  -u <version>           set the maximum UPnP version for search (default 1)\n"
 		   "  -x <config file>       read config from file (default is ./config.xml)\n"
 		   "  -i <config file>       discover players, save <config file> and exit\n"
@@ -273,11 +275,12 @@ sleep:
 /*----------------------------------------------------------------------------*/
 void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 	struct sMR *Device = (struct sMR*) owner;
-	va_list args;
-	va_start(args, event);
 
 	// this is async, so need to check context validity
 	if (!CheckAndLock(owner)) return;
+
+	va_list args;
+	va_start(args, event);
 
 	switch (event) {
 		case RAOP_STREAM:
@@ -308,7 +311,7 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 				char* uri, * mp3radio = "";
 				static int count;
 
-				if ((strcasestr(Device->Config.Codec, "mp3") || strcasestr(Device->Config.Codec, "aac")) && *Device->Service[TOPOLOGY_IDX].ControlURL) {
+				if ((strcasestr(Device->Config.Codec, "mp3") || strcasestr(Device->Config.Codec, "aac") || !strcasecmp(Device->Config.StreamType, "radio")) && *Device->Service[TOPOLOGY_IDX].ControlURL) {
 					mp3radio = "x-rincon-mp3radio://";
 					LOG_INFO("[%p]: Sonos live stream", Device);
 				}
@@ -373,6 +376,7 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 			break;
 	}
 
+	va_end(args);
 	pthread_mutex_unlock(&Device->Mutex);
 }
 
@@ -385,7 +389,7 @@ void HandleHTTP(void *owner, struct key_data_s *headers, struct key_data_s *resp
 	if (kd_lookup(headers, "getcontentFeatures.dlna.org") && (p = strcasestr(Device->ProtocolInfo, "DLNA.ORG")) != NULL) {
 		kd_add(response, "contentFeatures.dlna.org", p);
 	}
-	kd_add(headers, "transferMode.dlna.org", "Streaming");
+	kd_add(response, "transferMode.dlna.org", "Streaming");
 }
 
 /*----------------------------------------------------------------------------*/
@@ -970,12 +974,21 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->Volume = CtrlGetVolume(Device);
 
 	// set remaining items now that we are sure
+
 	if (*Device->Service[TOPOLOGY_IDX].ControlURL) {
-		Device->MetaData.duration = 1;
-		Device->MetaData.title = "Streaming from AirConnect";
+		if (!strcasecmp(Device->Config.StreamType, "track")) {
+			Device->MetaData.duration = 1;
+			Device->MetaData.title = "Streaming from AirConnect";
+		} else {
+			Device->MetaData.remote_title = "Streaming from AirConnect";
+		}
+		char* version = XMLGetFirstDocumentItem(DescDoc, "displayVersion", true);
+		LOG_INFO("[%p]: Sonos stream presented as '%s' (firmware %s)", Device, Device->Config.StreamType, version && *version ? version : "unknown");
+		NFREE(version);
 	} else {
 		Device->MetaData.remote_title = "Streaming from AirConnect";
     }
+
 	if (*Device->Config.ArtWork) Device->MetaData.artwork = Device->Config.ArtWork;
 
 	Device->Running = true;
@@ -1233,7 +1246,7 @@ bool ParseArgs(int argc, char **argv) {
 
 	while (optind < argc && strlen(argv[optind]) >= 2 && argv[optind][0] == '-') {
 		char *opt = argv[optind] + 1;
-		if (strstr("abxdpifmnolcugN", opt) && optind < argc - 1) {
+		if (strstr("abxdpifmnolcugNS", opt) && optind < argc - 1) {
 			optarg = argv[optind + 1];
 			optind += 2;
 		} else if (strstr("tzZIkr", opt) || opt[0] == '-') {
@@ -1275,6 +1288,9 @@ bool ParseArgs(int argc, char **argv) {
 			break;
 		case 'N':
 			glNameFormat = optarg;
+			break;
+		case 'S':
+			strcpy(glMRConfig.StreamType, optarg);
 			break;
 		case 'k':
 			glGracefullShutdown = false;

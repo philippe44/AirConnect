@@ -21,7 +21,7 @@
 #include "cross_util.h"
 #include "metadata.h"
 
-#define VERSION "v1.10.1"" ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.11.0 ("__DATE__" @ "__TIME__")"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
@@ -63,6 +63,7 @@ typedef struct sMRConfig
 	bool		Drift;
 	uint8_t		mac[6];
 	char		ArtWork[4*STR_LEN];
+	char		StreamType[STR_LEN];
 } tMRConfig;
 
 struct sMR {

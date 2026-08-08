@@ -37,6 +37,7 @@
 
 #define DISCOVERY_TIME 		30
 #define PRESENCE_TIMEOUT	(DISCOVERY_TIME * 6)
+#define BYE_TIMEOUT			5
 
 #define MAX_DEVICES			32
 #define HTTP_FIXED_LENGTH	INT_MAX
@@ -360,7 +361,7 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 				// set volume for all devices
 				for (i = 0; i < glMaxDevices; i++) {
 					struct sMR *p = glMRDevices + i;
-					if (!p->Running || (p != Device && p->Master != Device)) continue;
+					if (!p->Running || (p != Device && p->Master != Device) || p->Volume < 0) continue;
 
 					// for standalone master, GroupVolume & Volume are identical
 					if (GroupVolume) p->Volume = min(p->Volume * Ratio, p->Config.MaxVolume);
@@ -697,7 +698,7 @@ static void *UpdateThread(void *args) {
 						(Device->State == STOPPED && now - Device->LastSeen > PRESENCE_TIMEOUT))) {
 						// if device does not answer, try to download its DescDoc
 						IXML_Document* DescDoc = NULL;
-						if (UpnpDownloadXmlDoc(Device->DescDocURL, &DescDoc) != UPNP_E_SUCCESS) {
+						if (Device->Leaving || UpnpDownloadXmlDoc(Device->DescDocURL, &DescDoc) != UPNP_E_SUCCESS) {
 							pthread_mutex_lock(&Device->Mutex);
 							LOG_INFO("[%p]: removing unresponsive player (%s)", Device, Device->Config.Name);
 							raopsr_delete(Device->Raop);
@@ -706,6 +707,7 @@ static void *UpdateThread(void *args) {
 						} else {
 							// device is in trouble, but let's renew grace period
 							Device->LastSeen = now;
+							Device->Leaving = false;
 							Device->ErrorCount = 0;
 							LOG_INFO("[%p]: %s mute to discovery, but answers UPnP, so keep it", Device, Device->Config.Name);
 						}
@@ -717,14 +719,17 @@ static void *UpdateThread(void *args) {
 			} else if (Update->Type == BYE_BYE) {
 
 				Device = UDN2Device(Update->Data);
-
-				// Multiple bye-bye might be sent
 				if (!CheckAndLock(Device)) continue;
 
-				LOG_INFO("[%p]: renderer bye-bye: %s", Device, Device->Config.Name);
-				raopsr_delete(Device->Raop);
-				// device's mutex returns unlocked
-				DelMRDevice(Device);
+				// some stack sends (many) bye-bye when their SSDP stack restarts, try to search again 
+				if (!Device->Leaving) {
+					LOG_INFO("[%p]: renderer <%s> bye-bye, doing a targeted search", Device, Device->Config.Name);
+					Device->LastSeen = now - PRESENCE_TIMEOUT + BYE_TIMEOUT - 1;
+					Device->Leaving = true;
+					UpnpSearchAsync(glControlPointHandle, BYE_TIMEOUT, Device->UDN, Device);
+				}
+
+				pthread_mutex_unlock(&Device->Mutex);
 
 			// device keepalive or search response
 			} else if (Update->Type == DISCOVERY) {
@@ -749,6 +754,7 @@ static void *UpdateThread(void *args) {
 						struct sMR *Master = GetMaster(Device, &friendlyName);
 
 						Device->LastSeen = now;
+						Device->Leaving = false;
 						LOG_DEBUG("[%p] UPnP keep alive: %s", Device, Device->Config.Name);
 
 						// check for name change
@@ -927,6 +933,7 @@ static bool AddMRDevice(struct sMR *Device, char *UDN, IXML_Document *DescDoc, c
 	Device->RaopState	= RAOP_STOP;
 	Device->State 		= STOPPED;
 	Device->LastSeen	= now / 1000;
+	Device->Leaving		= false;
 	Device->VolumeStampRx = Device->VolumeStampTx = now - 2000;
 	Device->ExpectStop 	= false;
 	Device->TimeOut 	= false;

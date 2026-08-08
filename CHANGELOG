@@ -1,3 +1,7 @@
+1.11.2
+ - airupnp: be less aggressive on bye-bye and do a targeted search
+ - airupnp: fix group volume calculation
+ 
 1.11.1
  - forgot to backport some other fixes in libs
  

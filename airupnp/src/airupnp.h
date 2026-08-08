@@ -21,7 +21,7 @@
 #include "cross_util.h"
 #include "metadata.h"
 
-#define VERSION "v1.11.1 ("__DATE__" @ "__TIME__")"
+#define VERSION "v1.11.2 ("__DATE__" @ "__TIME__")"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
@@ -80,6 +80,7 @@ struct sMR {
 	raopsr_event_t	RaopState;
 	uint32_t		Elapsed;
 	uint32_t		LastSeen;
+	bool			Leaving;
 	uint8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
 	cross_queue_t	ActionQueue;

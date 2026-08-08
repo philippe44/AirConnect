@@ -35,12 +35,16 @@ int CalcGroupVolume(struct sMR *Device) {
 		struct sMR *p = glMRDevices + i;
 		if (p->Running && (p == Device || p->Master == Device)) {
 			if (p->Volume == -1) p->Volume = CtrlGetVolume(p);
+
+			// cant't get volume, so ignore it
+			if (p->Volume < 0) continue;
+
 			GroupVolume += p->Volume;
 			n++;
 		}
 	}
 
-	return GroupVolume / n;
+	return n ? GroupVolume / n : -1;
 }
 
 /*----------------------------------------------------------------------------*/

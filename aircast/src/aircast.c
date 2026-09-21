@@ -159,7 +159,7 @@ static char license[] =
 /* prototypes */
 /*----------------------------------------------------------------------------*/
 static void *MRThread(void *args);
-static bool  AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool Group, struct in_addr ip, uint16_t port);
+static bool  AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool Group, uint32_t caps, struct in_addr ip, uint16_t port);
 static void  RemoveCastDevice(struct sMR *Device);
 static bool	 Start(bool cold);
 static bool	 Stop(bool exit);
@@ -449,6 +449,7 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 		char *UDN = NULL, *Name = NULL;
 		char *Model;
 		bool Group;
+		uint32_t Caps = 0;
 
 		// is the mDNS record usable or announce made on behalf
 		if ((UDN = GetmDNSAttribute(s->attr, s->attr_count, "id")) == NULL || (s->host.s_addr != s->addr.s_addr && isMember(s->host))) continue;
@@ -527,6 +528,13 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 			NFREE(UDN);
 			break;
 		}
+
+		// get capabilities (video = bit 0)
+		char *_Caps = GetmDNSAttribute(s->attr, s->attr_count, "ca");
+		if (_Caps) {
+			Caps = atoi(_Caps);
+			free(_Caps);
+		}
 		
 		// if model is a group
 		Model = GetmDNSAttribute(s->attr, s->attr_count, "md");
@@ -537,7 +545,7 @@ static bool mDNSsearchCallback(mdnssd_service_t *slist, void *cookie, bool *stop
 		Name = GetmDNSAttribute(s->attr, s->attr_count, "fn");
 		if (!Name) Name = strdup(s->hostname);
 		
-		if (AddCastDevice(Device, Name, UDN, Group, s->addr, s->port) && !glDiscovery) {
+		if (AddCastDevice(Device, Name, UDN, Group, Caps, s->addr, s->port) && !glDiscovery) {
 			Device->Raop = raopsr_create(glHost, glmDNSServer, Device->Config.Name,
 										"aircast", Device->Config.mac, Device->Config.Codec,
 										Device->Config.Metadata, Device->Config.Drift,
@@ -623,7 +631,7 @@ static void *MainThread(void *args) {
 }
 
 /*----------------------------------------------------------------------------*/
-static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group, struct in_addr ip, uint16_t port) {
+static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group, uint32_t Caps, struct in_addr ip, uint16_t port) {
 	// read parameters from default then config file
 	memcpy(&Device->Config, &glMRConfig, sizeof(tMRConfig));
 	LoadMRConfig(glConfigID, UDN, &Device->Config);
@@ -670,9 +678,9 @@ static bool AddCastDevice(struct sMR *Device, char *Name, char *UDN, bool group,
 		}
 	}
 
-	LOG_INFO("[%p]: adding renderer (%s - %s:%hu) with mac %hX%X", Device, Name, inet_ntoa(ip), port, *(uint16_t*) Device->Config.mac, *(uint32_t*) (Device->Config.mac + 2));
+	LOG_INFO("[%p]: adding renderer (%s - %s:%hu) mac:%hX%X caps:%x", Device, Name, inet_ntoa(ip), port, *(uint16_t*) Device->Config.mac, *(uint32_t*) (Device->Config.mac + 2), Caps);
 
-	Device->CastCtx = CreateCastDevice(Device, Device->Group, Device->Config.StopReceiver, ip, port, Device->Config.MediaVolume);
+	Device->CastCtx = CreateCastDevice(Device, Device->Group, Caps, Device->Config.StopReceiver, ip, port, Device->Config.MediaVolume);
 	pthread_create(&Device->Thread, NULL, &MRThread, Device);
 
 	return true;

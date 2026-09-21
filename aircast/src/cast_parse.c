@@ -26,7 +26,7 @@ extern log_level cast_loglevel;
 
 
 /*----------------------------------------------------------------------------*/
-const char *GetAppIdItem(json_t *root, char* appId, char *item)
+const char *GetAppIdItem(json_t *root, const char* appId, char *item)
 {
 	json_t *elm;
 

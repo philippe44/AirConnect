@@ -16,7 +16,7 @@
 struct sCastCtx;
 
 json_t*	GetTimedEvent(struct sCastCtx *Ctx, uint32_t msWait);
-void*	CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, uint16_t port, double MediaVolume);
+void*	CreateCastDevice(void *owner, bool group, uint32_t caps, bool stopReceiver, struct in_addr ip, uint16_t port, double MediaVolume);
 bool 	UpdateCastDevice(struct sCastCtx *Ctx, struct in_addr ip, uint16_t port);
 void 	DeleteCastDevice(struct sCastCtx *Ctx);
 bool	CastIsConnected(struct sCastCtx *Ctx);

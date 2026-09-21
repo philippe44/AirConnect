@@ -38,9 +38,6 @@ static void *CastPingThread(void *args);
 extern log_level cast_loglevel;
 static log_level *loglevel = &cast_loglevel;
 
-//#define DEFAULT_RECEIVER	"CC1AD845"
-#define DEFAULT_RECEIVER	"46C1A819"
-
 /*----------------------------------------------------------------------------*/
 static void CastExit(void) {
 	if (glSSLctx) SSL_CTX_free(glSSLctx);
@@ -184,7 +181,7 @@ bool LaunchReceiver(tCastCtx *Ctx) {
 			if (!Ctx->waitId) {
 				Ctx->Status = CAST_LAUNCHING;
 				Ctx->waitId = Ctx->reqId++;
-				SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"LAUNCH\",\"requestId\":%d,\"appId\":\"%s\"}", Ctx->waitId, DEFAULT_RECEIVER);
+				SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"LAUNCH\",\"requestId\":%d,\"appId\":\"%s\"}", Ctx->waitId, Ctx->receiver);
 				LOG_INFO("[%p]: Launching receiver %d", Ctx->owner, Ctx->waitId);
 			} else {
 				tReqItem *req = malloc(sizeof(tReqItem));
@@ -294,7 +291,7 @@ void SetMediaVolume(tCastCtx *Ctx, double Volume) {
 }
 
 /*----------------------------------------------------------------------------*/
-void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_addr ip, uint16_t port, double MediaVolume) {
+void *CreateCastDevice(void *owner, bool group, uint32_t caps, bool stopReceiver, struct in_addr ip, uint16_t port, double MediaVolume) {
 	tCastCtx *Ctx = malloc(sizeof(tCastCtx));
 	pthread_mutexattr_t mutexAttr;
 
@@ -316,6 +313,10 @@ void *CreateCastDevice(void *owner, bool group, bool stopReceiver, struct in_add
 	Ctx->group 		= group;
 	Ctx->stopReceiver = stopReceiver;
 	Ctx->ssl  		= SSL_new(glSSLctx);
+	Ctx->caps		= caps;
+	Ctx->receiver	= caps & 0x01 ? "46C1A819" : "CC1AD845";
+
+	LOG_INFO("[%p]: using receiver %s", Ctx->owner, Ctx->receiver);
 
 	queue_init(&Ctx->eventQueue, false, NULL);
 	queue_init(&Ctx->reqQueue, false, NULL);
@@ -404,7 +405,7 @@ static void ProcessQueue(tCastCtx *Ctx) {
 
 		LOG_INFO("[%p]: Launching receiver %d", Ctx->owner, Ctx->waitId);
 
-		SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"LAUNCH\",\"requestId\":%d,\"appId\":\"%s\"}", Ctx->waitId, DEFAULT_RECEIVER);
+		SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"LAUNCH\",\"requestId\":%d,\"appId\":\"%s\"}", Ctx->waitId, Ctx->receiver);
 	}
 
 #if 0
@@ -457,9 +458,11 @@ static void ProcessQueue(tCastCtx *Ctx) {
 			json_t* msg = json_pack("{ss,si,si}", "type", "PLAY", "requestId", Ctx->waitId,
 												  "mediaSessionId", Ctx->mediaSessionId);
 
-			json_t* customData = json_pack("{so}", "customData", item->data.customData);
-			json_object_update(msg, customData);
-			json_decref(customData);
+			if (item->data.customData) {
+				json_t* customData = json_pack("{so}", "customData", item->data.customData);
+				json_object_update(msg, customData);
+				json_decref(customData);
+			}
 
 			char* str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
 			json_decref(msg);
@@ -626,7 +629,7 @@ static void *CastSocketThread(void *args) {
 				if (Ctx->Status == CAST_AUTOLAUNCH) {
 					Ctx->Status = CAST_LAUNCHING;
 					Ctx->waitId = Ctx->reqId++;
-					SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"LAUNCH\",\"requestId\":%d,\"appId\":\"%s\"}", Ctx->waitId, DEFAULT_RECEIVER);
+					SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"LAUNCH\",\"requestId\":%d,\"appId\":\"%s\"}", Ctx->waitId, Ctx->receiver);
 					LOG_INFO("[%p]: Launching receiver %d", Ctx->owner, Ctx->waitId);
 				} else if (Ctx->Status == CAST_CONNECTING) Ctx->Status = CAST_CONNECTED;
 
@@ -647,10 +650,10 @@ static void *CastSocketThread(void *args) {
 					const char *str;
 
 					NFREE(Ctx->sessionId);
-					str = GetAppIdItem(root, DEFAULT_RECEIVER, "sessionId");
+					str = GetAppIdItem(root, Ctx->receiver, "sessionId");
 					if (str) Ctx->sessionId = strdup(str);
 					NFREE(Ctx->transportId);
-					str = GetAppIdItem(root, DEFAULT_RECEIVER, "transportId");
+					str = GetAppIdItem(root, Ctx->receiver, "transportId");
 					if (str) Ctx->transportId = strdup(str);
 
 					if (Ctx->sessionId && Ctx->transportId) {

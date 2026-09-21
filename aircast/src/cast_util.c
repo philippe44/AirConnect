@@ -120,10 +120,12 @@ bool CastLoad(struct sCastCtx *Ctx, char *URI, char *ContentType, const char *Na
 		json_decref(duration);
 	}
 
-	if (StartTime) customData = json_pack("{s{sssI}}", "customData", "deviceName", Name, "startTime", StartTime);
-	else customData = json_pack("{s{ss}}", "customData", "deviceName", Name);
-	json_object_update(msg, customData);
-	json_decref(customData);
+	if (Ctx->caps & 0x01) {
+		if (StartTime) customData = json_pack("{s{sssI}}", "customData", "deviceName", Name, "startTime", StartTime);
+		else customData = json_pack("{s{ss}}", "customData", "deviceName", Name);
+		json_object_update(msg, customData);
+		json_decref(customData);
+	}
 
 	json_t* jsonMetaData = BuildMetaData(MetaData);
 
@@ -218,15 +220,18 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 	// lock on wait for a Cast response
 	pthread_mutex_lock(&Ctx->Mutex);
 
-	json_t* customData;
-	if (MetaData && MetaData->live_duration != -1) customData = json_pack("{si}", "liveDuration", MetaData->live_duration);
-	else customData = json_object();
+	json_t* customData = NULL;
 
-	json_t* item = BuildMetaData(MetaData);
+	if (Ctx->caps & 0x01) {
+		if (MetaData && MetaData->live_duration != -1) customData = json_pack("{si}", "liveDuration", MetaData->live_duration);
+		else customData = json_object();
 
-	if (item) {
-		json_object_update(customData, item);
-		json_decref(item);
+		json_t* item = BuildMetaData(MetaData);
+
+		if (item) {
+			json_object_update(customData, item);
+			json_decref(item);
+		}
 	}
 
 	if (Ctx->Status == CAST_LAUNCHED && !Ctx->waitId) {
@@ -237,9 +242,11 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 			json_t* msg = json_pack("{ss,si,si}", "type", "PLAY", "requestId", Ctx->waitId,
 												  "mediaSessionId", Ctx->mediaSessionId);
 
-			item = json_pack("{so}", "customData", customData);
-			json_object_update(msg, item);
-			json_decref(item);
+			if (customData) {
+				json_t* item = json_pack("{so}", "customData", customData);
+				json_object_update(msg, item);
+				json_decref(item);
+			}
 
 			char* str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
 			json_decref(msg);
@@ -250,7 +257,7 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 			LOG_INFO("[%p]: Immediate PLAY (id:%u)", Ctx->owner, Ctx->waitId);
 
 		} else {
-			json_decref(customData);
+			if (customData) json_decref(customData);
 			LOG_WARN("[%p]: PLAY req w/o a session", Ctx->owner);
 		}
 

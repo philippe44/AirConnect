@@ -70,7 +70,7 @@ If it works, type `exit`, which terminates the executable, and then, on non-Wind
 - Use `-S <broadcast[radio|track>` to enable streaming mode for Sonos players
 - Use of `-z` disables interactive mode (no TTY) **and** self-daemonizes (use `-p <file>` to get the PID). Use of `-Z` only disables interactive mode 
 - <strong>Do not daemonize (using & or any other method) the executable w/o disabling interactive mode (`-Z`), otherwise it will consume all CPU. On Linux, FreeBSD and Solaris, best is to use `-z`. Note that -z option is not available on MacOS or Windows</strong>
-- A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustements (or use `<drift>` option in config file), but that might cause overrun or underrun on long playbacks
+- A 'click' noise can be heard when timings are adjusted by adding or skipping one 8ms frame. Use `-r` to disable such adjustments (or use `<drift>` option in config file), but that might cause overrun or underrun on long playbacks
 - <strong>This is an audio-only application. Do not expect to play a video on your device and have the audio from UPnP/Sonos or ChromeCast synchronized. It does not, cannot and will not work, regardless of any latency parameter. Please do not open tickets requesting this (see details below to understand why)</strong>
 
 ## Config file parameters 
@@ -79,7 +79,7 @@ The default configuration file is `config.xml`, stored in the same directory as 
 
 - `latency <[rtp][:http][:f]>` 	: (default: (0:0))buffering tweaking, needed when audio is shuttering or for bad networks (delay playback start)
 	* [rtp] 	: ms of buffering of RTP (AirPlay) audio. Below 500ms is not recommended. 0 = use value from AirPlay. A negative value force sending of silence frames when no AirPlay audio has been received after 'RTP' ms, to force a continuous stream. If not, the UPnP/CC player will be not receive audio and some might close the connection after a while, although most players will simply be silent until stream restarts. This shall not be necessary in most of the case.
-	* [http]	: ms of buffering silence for HTTP audio (not needed normaly, except for Sonos)
+	* [http]	: ms of buffering silence for HTTP audio (not needed normally, except for Sonos)
 	* [f]		: when network congestion happens, source frames will not be received at all. Set this parameter to force sending silence frame then. Otherwise, no HTTP data will be sent and player might close the connection
 - `drift <0|1>`	   : enable adding or dropping a frame when case source frames producion is too fast or too slow
 - `enabled <0|1>`  : in common section, enables new discovered players by default. In a dedicated section, enables the player
@@ -171,19 +171,19 @@ There are many tools that allow an application to be run as a service. You can t
 
 ## Synology installation
 
-[@eizedev](https://github.com/eizedev) is now maitaining a package for automatic installation & launch of airupnp on Syno's [here](https://github.com/eizedev/AirConnect-Synology)
+[@eizedev](https://github.com/eizedev) is now maintaining a package for automatic installation & launch of airupnp on Syno's [here](https://github.com/eizedev/AirConnect-Synology)
 
 ## Player specific hints and tips
 
 #### Sonos
 The upnp version is often used with Sonos players. When a Sonos group is created, only the master of that group will appear as an AirPlay player and others will be removed if they were already detected. If the group is later split, then individual players will re-appear. 
 
-When changing volume of a group, each player's volume is changed trying to respect the relative values. It's not perfect and stil under test now. To reset all volumes to the same value, simply move the cursor to 0 and then to the new value. All players will have the same volume then. You need to use the Sonos application to change individual volumes.
+When changing volume of a group, each player's volume is changed trying to respect the relative values. It's not perfect and still under test now. To reset all volumes to the same value, simply move the cursor to 0 and then to the new value. All players will have the same volume then. You need to use the Sonos application to change individual volumes.
 
 To identify your Sonos players, pick an identified IP address, and visit the Sonos status page in your browser, like `http://192.168.1.126:1400/support/review`. Click `Zone Players` and you will see the identifiers for your players in the `UUID` column.
 
 #### Bose SoundTouch
-[@chpusch](https://github.com/chpusch) has found that Bose SoundTouch work well including synchonisation (as for Sonos, you need to use Bose's native application for grouping / ungrouping). I don't have a SoundTouch system so I cannot do the level of slave/master detection I did for Sonos
+[@chpusch](https://github.com/chpusch) has found that Bose SoundTouch work well including synchronisation (as for Sonos, you need to use Bose's native application for grouping / ungrouping). I don't have a SoundTouch system so I cannot do the level of slave/master detection I did for Sonos
 
 #### Pioneer/Phorus/Play-Fi
 Some of these speakers only support mp3
@@ -203,7 +203,7 @@ Some of these speakers only support mp3
 ### HTTP content-length and transfer modes
 Lots of UPnP player have very poor quality HTTP and UPnP stacks, in addition of UPnP itself being a poorly defined/certified standard. One of the main difficulty comes from the fact that AirConnect cannot provide the length of the file being streamed as the source is an infinite real time RTP flow coming from the AirPlay source.
 
-The HTTP standard is clear that the "content-length" header is optional and can be omitted when server does not know the size of the source. If the client is HTTP 1.1 there is another possibility which is to use "chunked" mode where the body of the message is divided into chunks of variable length. This is *explicitely* made for case of unknown source length and an HTTP client that claims to support 1.1 **must** support chunked-encoding.
+The HTTP standard is clear that the "content-length" header is optional and can be omitted when server does not know the size of the source. If the client is HTTP 1.1 there is another possibility which is to use "chunked" mode where the body of the message is divided into chunks of variable length. This is *explicitly* made for case of unknown source length and an HTTP client that claims to support 1.1 **must** support chunked-encoding.
 
 The default mode of AirUPnP is "no content-length" (\<http_length\> = -1) but unfortunately, some players can't deal with that. You can then try "chunked-encoding" (\<http_length> = -3) but some players who claim to be HTTP 1.1 do not support it. There is a last resort option to add a large fake `content-length` (\<http_length\> = 0). It is set to 2^31-1, so around 5 hours of playback with flac re-encoding. Note that if player is HTTP 1.0 and http_header is set to -3, AirUPnP will fallback no content-length. The command line option `-g` has the same effect that \<http_length\> in the \<common\> section of a config file.
 

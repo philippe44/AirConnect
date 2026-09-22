@@ -1,3 +1,6 @@
+1.12.2
+ - fix some size of http parsing array + method/protocol
+ 
 1.12.1
  - fix a few overflow risks in crosstools & libraop
 

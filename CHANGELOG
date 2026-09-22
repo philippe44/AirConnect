@@ -1,3 +1,6 @@
+1.12.1
+ - fix a few overflow risks in crosstools & libraop
+
 1.12.0
  - aircast: use default receiver for audio-only devices
 

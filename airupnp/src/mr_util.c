@@ -26,12 +26,12 @@ int 				_voidHandler(Upnp_EventType EventType, const void *_Event, void *Cookie)
 
 /*----------------------------------------------------------------------------*/
 int CalcGroupVolume(struct sMR *Device) {
-	int i, n = 0;
+	int n = 0;
 	double GroupVolume = 0;
 
 	if (!*Device->Service[GRP_REND_SRV_IDX].ControlURL) return -1;
 
-	for (i = 0; i < glMaxDevices; i++) {
+	for (int i = 0; i < glMaxDevices; i++) {
 		struct sMR *p = glMRDevices + i;
 		if (p->Running && (p == Device || p->Master == Device)) {
 			if (p->Volume == -1) p->Volume = CtrlGetVolume(p);
@@ -365,6 +365,7 @@ bool XMLFindAction(const char* base, char* service, char* action) {
 	if (UpnpDownloadXmlDoc(url, &AVTDoc) == UPNP_E_SUCCESS) {
 		IXML_Element* actions = ixmlDocument_getElementById(AVTDoc, "actionList");
 		IXML_NodeList* actionList = ixmlDocument_getElementsByTagName((IXML_Document*)actions, "action");
+		int i;
 
 		for (int i = 0; actionList && i < (int)ixmlNodeList_length(actionList); i++) {
 			IXML_Node* node = ixmlNodeList_item(actionList, i);
@@ -395,7 +396,7 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 	IXML_Node* node = ixmlNode_getFirstChild((IXML_Node*) LastChange);
 	if (!node) return NULL;
 
-	char* buf = (char*) ixmlNode_getNodeValue(node);
+	char *buf = (char*) ixmlNode_getNodeValue(node);
 	if (!buf) return NULL;
 
 	IXML_Document* ItemDoc = ixmlParseBuffer(buf);
@@ -407,7 +408,7 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 		return NULL;
 	}
 
-	for (unsigned i = 0; i < ixmlNodeList_length(List); i++) {
+	for (uint32_t i = 0; i < ixmlNodeList_length(List); i++) {
 		IXML_Node *node = ixmlNodeList_item(List, i);
 		IXML_Node *attr = _getAttributeNode(node, SearchAttr);
 
@@ -433,7 +434,7 @@ char *XMLGetChangeItem(IXML_Document *doc, char *Tag, char *SearchAttr, char *Se
 static IXML_Node *_getAttributeNode(IXML_Node *node, char *SearchAttr) {
 	IXML_Node *ret = NULL;
 	IXML_NamedNodeMap *map = ixmlNode_getAttributes(node);
-	
+
 	/*
 	supposed to act like but case insensitive
 	ixmlElement_getAttributeNode((IXML_Element*) node, SearchAttr);

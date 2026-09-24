@@ -365,7 +365,6 @@ bool XMLFindAction(const char* base, char* service, char* action) {
 	if (UpnpDownloadXmlDoc(url, &AVTDoc) == UPNP_E_SUCCESS) {
 		IXML_Element* actions = ixmlDocument_getElementById(AVTDoc, "actionList");
 		IXML_NodeList* actionList = ixmlDocument_getElementsByTagName((IXML_Document*)actions, "action");
-		int i;
 
 		for (int i = 0; actionList && i < (int)ixmlNodeList_length(actionList); i++) {
 			IXML_Node* node = ixmlNodeList_item(actionList, i);

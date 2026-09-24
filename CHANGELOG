@@ -1,3 +1,6 @@
+1.12.3
+ - build cleanup
+ 
 1.12.2
  - fix some size of http parsing array + method/protocol
  

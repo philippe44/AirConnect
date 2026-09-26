@@ -1,3 +1,6 @@
+1.12.4
+ - fix crosstool regression
+ 
 1.12.3
  - build cleanup
  

@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+  pull_request:
+    branches: [master]
+
+jobs:
+  linux:
+    name: Linux (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x86_64
+            compiler: gcc
+            packages: ''
+          - platform: aarch64
+            compiler: aarch64-linux-gnu-gcc
+            packages: gcc-aarch64-linux-gnu
+          - platform: arm
+            compiler: arm-linux-gnueabihf-gcc
+            packages: gcc-arm-linux-gnueabihf
+          - platform: armv6
+            compiler: arm-linux-gnueabi-gcc
+            packages: gcc-arm-linux-gnueabi
+          - platform: armv5
+            compiler: arm-linux-gnueabi-gcc
+            packages: gcc-arm-linux-gnueabi
+            cflags: '-march=armv5t -mfloat-abi=soft'
+          - platform: x86
+            compiler: i686-linux-gnu-gcc
+            packages: gcc-i686-linux-gnu
+          - platform: mips
+            compiler: mips-linux-gnu-gcc
+            packages: gcc-mips-linux-gnu
+            cflags: '-march=mips32'
+          - platform: mipsel
+            compiler: mipsel-linux-gnu-gcc
+            packages: gcc-mipsel-linux-gnu
+            cflags: '-march=mips32'
+          - platform: sparc64
+            compiler: sparc64-linux-gnu-gcc
+            packages: gcc-sparc64-linux-gnu
+            cflags: '-mcpu=v7'
+          - platform: powerpc
+            compiler: powerpc-linux-gnu-gcc
+            packages: gcc-powerpc-linux-gnu
+            cflags: '-m32'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install cross-compiler
+        if: matrix.packages != ''
+        run: sudo apt-get install -y ${{ matrix.packages }}
+
+      - name: Build airupnp
+        working-directory: airupnp
+        run: make CC=${{ matrix.compiler }} HOST=linux PLATFORM=${{ matrix.platform }} CFLAGS="${{ matrix.cflags }}" -j$(nproc)
+
+      - name: Build aircast
+        working-directory: aircast
+        run: make CC=${{ matrix.compiler }} HOST=linux PLATFORM=${{ matrix.platform }} CFLAGS="${{ matrix.cflags }}" -j$(nproc)
+
+  macos:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build airupnp (arm64)
+        working-directory: airupnp
+        run: make CC=clang HOST=macos PLATFORM=arm64 -j$(sysctl -n hw.logicalcpu)
+
+      - name: Build aircast (arm64)
+        working-directory: aircast
+        run: make CC=clang HOST=macos PLATFORM=arm64 -j$(sysctl -n hw.logicalcpu)
+
+  windows:
+    name: Windows (Win32)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build airupnp and aircast
+        shell: pwsh
+        run: |
+          $bindir = "$env:GITHUB_WORKSPACE\bin"
+          New-Item -Force -ItemType Directory $bindir | Out-Null
+          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Static  /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild aircast/AirCast.vcxproj  /p:Configuration=Release /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild aircast/AirCast.vcxproj  /p:Configuration=Static  /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          Get-ChildItem "$bindir\*.exe"

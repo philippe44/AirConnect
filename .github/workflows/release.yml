@@ -1,0 +1,185 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Linux (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x86_64
+            compiler: gcc
+            packages: ''
+          - platform: aarch64
+            compiler: aarch64-linux-gnu-gcc
+            packages: gcc-aarch64-linux-gnu
+          - platform: arm
+            compiler: arm-linux-gnueabihf-gcc
+            packages: gcc-arm-linux-gnueabihf
+          - platform: armv6
+            compiler: arm-linux-gnueabi-gcc
+            packages: gcc-arm-linux-gnueabi
+          - platform: armv5
+            compiler: arm-linux-gnueabi-gcc
+            packages: gcc-arm-linux-gnueabi
+            cflags: '-march=armv5t -mfloat-abi=soft'
+          - platform: x86
+            compiler: i686-linux-gnu-gcc
+            packages: gcc-i686-linux-gnu
+          - platform: mips
+            compiler: mips-linux-gnu-gcc
+            packages: gcc-mips-linux-gnu
+            cflags: '-march=mips32'
+          - platform: mipsel
+            compiler: mipsel-linux-gnu-gcc
+            packages: gcc-mipsel-linux-gnu
+            cflags: '-march=mips32'
+          - platform: sparc64
+            compiler: sparc64-linux-gnu-gcc
+            packages: gcc-sparc64-linux-gnu
+            cflags: '-mcpu=v7'
+          - platform: powerpc
+            compiler: powerpc-linux-gnu-gcc
+            packages: gcc-powerpc-linux-gnu
+            cflags: '-m32'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install cross-compiler
+        if: matrix.packages != ''
+        run: sudo apt-get install -y ${{ matrix.packages }}
+
+      - name: Build airupnp
+        working-directory: airupnp
+        run: make CC=${{ matrix.compiler }} HOST=linux PLATFORM=${{ matrix.platform }} CFLAGS="${{ matrix.cflags }}" -j$(nproc)
+
+      - name: Build aircast
+        working-directory: aircast
+        run: make CC=${{ matrix.compiler }} HOST=linux PLATFORM=${{ matrix.platform }} CFLAGS="${{ matrix.cflags }}" -j$(nproc)
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.platform }}
+          path: |
+            bin/airupnp-linux-${{ matrix.platform }}
+            bin/airupnp-linux-${{ matrix.platform }}-static
+            bin/aircast-linux-${{ matrix.platform }}
+            bin/aircast-linux-${{ matrix.platform }}-static
+          if-no-files-found: error
+
+  build-macos:
+    name: macOS (universal)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build airupnp (arm64 + x86_64)
+        working-directory: airupnp
+        run: |
+          make CC=clang HOST=macos PLATFORM=arm64  -j$(sysctl -n hw.logicalcpu)
+          make CC="clang -target x86_64-apple-macos10.14" HOST=macos PLATFORM=x86_64 -j$(sysctl -n hw.logicalcpu)
+
+      - name: Build aircast (arm64 + x86_64)
+        working-directory: aircast
+        run: |
+          make CC=clang HOST=macos PLATFORM=arm64  -j$(sysctl -n hw.logicalcpu)
+          make CC="clang -target x86_64-apple-macos10.14" HOST=macos PLATFORM=x86_64 -j$(sysctl -n hw.logicalcpu)
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: |
+            bin/airupnp-macos
+            bin/airupnp-macos-static
+            bin/airupnp-macos-arm64
+            bin/airupnp-macos-arm64-static
+            bin/airupnp-macos-x86_64
+            bin/airupnp-macos-x86_64-static
+            bin/aircast-macos
+            bin/aircast-macos-static
+            bin/aircast-macos-arm64
+            bin/aircast-macos-arm64-static
+            bin/aircast-macos-x86_64
+            bin/aircast-macos-x86_64-static
+          if-no-files-found: error
+
+  build-windows:
+    name: Windows (Win32)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build and collect binaries
+        shell: pwsh
+        run: |
+          $bindir = "$env:GITHUB_WORKSPACE\bin"
+          New-Item -Force -ItemType Directory $bindir | Out-Null
+
+          # Build all four variants, directing output to $bindir
+          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Static  /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild aircast/AirCast.vcxproj  /p:Configuration=Release /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild aircast/AirCast.vcxproj  /p:Configuration=Static  /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+
+          # Rename to release naming convention (msbuild uses project name casing)
+          Move-Item "$bindir\AirUPnP.exe"        "$bindir\airupnp-win32.exe"
+          Move-Item "$bindir\AirUPnP-static.exe" "$bindir\airupnp-win32-static.exe"
+          Move-Item "$bindir\AirCast.exe"         "$bindir\aircast-win32.exe"
+          Move-Item "$bindir\AirCast-static.exe"  "$bindir\aircast-win32-static.exe"
+
+          Get-ChildItem "$bindir\*.exe"
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: bin/*.exe
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [build-linux, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          merge-multiple: true
+
+      - name: List collected binaries
+        run: find artifacts/ -type f | sort
+
+      - name: Create combined zip
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          zip -j "AirConnect-${VERSION}.zip" artifacts/*
+          echo "ZIP=AirConnect-${VERSION}.zip" >> "$GITHUB_ENV"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            ${{ env.ZIP }}
+            artifacts/*

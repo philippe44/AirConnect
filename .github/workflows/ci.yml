@@ -196,6 +196,30 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Flatten GNU thin archives vendored for Solaris
+        # The vendored common/*/targets/solaris/**/*.a libraries are GNU "thin"
+        # archives (a container that just lists the real .a files alongside it).
+        # That's fine for the maintainer's own GNU cross-ld, but Solaris's native
+        # ld rejects the format outright. Rewrite them in place (this ephemeral
+        # checkout only, nothing committed) into ordinary self-contained archives
+        # with identical object content, using GNU ar which is available here on
+        # the Ubuntu host.
+        run: |
+          find . -path '*/targets/solaris/*' -name '*.a' | while read -r f; do
+            file "$f" | grep -q 'thin archive' || continue
+            dir="$(dirname "$f")"
+            {
+              echo "create ${f}.flat"
+              for m in $(ar t "$f"); do
+                echo "addlib ${dir}/${m}"
+              done
+              echo save
+              echo end
+            } | ar -M
+            mv "${f}.flat" "$f"
+            echo "flattened $f"
+          done
+
       - name: Build, inspect and smoke-test inside a real Solaris 11.4 VM
         # Pinned to v1.4.1 (vmactions/solaris-vm). release 11.4-gcc gives a native
         # gcc toolchain matching the maintainer's documented Solaris 11.4 target.

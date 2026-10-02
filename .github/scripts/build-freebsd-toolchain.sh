@@ -19,8 +19,13 @@ BINUTILS_VER=2.40
 GMP_VER=6.2.1
 MPFR_VER=4.1.0
 MPC_VER=1.2.1
-LIBTOOL_VER=2.4.6
 GCC_VER=11.2.0
+
+# The GH-hosted runner's config.guess reports CPU-specific triplets (e.g.
+# "nehalem-pc-linux-gnu") that the config.sub bundled with some of these
+# (older) tarballs doesn't recognize. Pin an explicit, generic build triplet
+# everywhere to sidestep that rather than relying on autodetection.
+BUILD_TRIPLET=x86_64-pc-linux-gnu
 
 JOBS="$(nproc)"
 WORK="$(mktemp -d)"
@@ -56,43 +61,37 @@ echo "== binutils ${BINUTILS_VER} =="
 fetch "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz"
 tar xf "binutils-${BINUTILS_VER}.tar.xz"
 pushd "binutils-${BINUTILS_VER}"
-./configure --enable-libssp --enable-ld --target="$TARGET" --prefix="$PREFIX" --with-sysroot="$SYSROOT"
+./configure --build="$BUILD_TRIPLET" --enable-libssp --enable-ld --target="$TARGET" --prefix="$PREFIX" --with-sysroot="$SYSROOT"
 make -j"$JOBS"
 make install
 popd
 
-echo "== gmp ${GMP_VER} =="
+# gmp/mpfr/mpc are host-side dependencies: gcc links against them to run ON the
+# build machine (it generates FreeBSD code, but the compiler binary itself is a
+# Linux executable), so these are native builds, not cross-compiled to $TARGET.
+echo "== gmp ${GMP_VER} (native, used by the gcc build) =="
 fetch "https://ftp.gnu.org/gnu/gmp/gmp-${GMP_VER}.tar.xz"
 tar xf "gmp-${GMP_VER}.tar.xz"
 pushd "gmp-${GMP_VER}"
-./configure --prefix="$PREFIX" --enable-shared --enable-static --enable-fft --enable-cxx --host="$TARGET" --build="$(./config.guess)"
+./configure --build="$BUILD_TRIPLET" --prefix="$PREFIX" --enable-shared --enable-static --enable-fft --enable-cxx
 make -j"$JOBS"
 make install
 popd
 
-echo "== mpfr ${MPFR_VER} =="
+echo "== mpfr ${MPFR_VER} (native) =="
 fetch "https://ftp.gnu.org/gnu/mpfr/mpfr-${MPFR_VER}.tar.xz"
 tar xf "mpfr-${MPFR_VER}.tar.xz"
 pushd "mpfr-${MPFR_VER}"
-./configure --prefix="$PREFIX" --with-gnu-ld --enable-static --enable-shared --with-gmp="$PREFIX" --host="$TARGET" --build="$(../gmp-${GMP_VER}/config.guess 2>/dev/null || gcc -dumpmachine)"
+./configure --build="$BUILD_TRIPLET" --prefix="$PREFIX" --with-gnu-ld --enable-static --enable-shared --with-gmp="$PREFIX"
 make -j"$JOBS"
 make install
 popd
 
-echo "== mpc ${MPC_VER} =="
+echo "== mpc ${MPC_VER} (native) =="
 fetch "https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz"
 tar xf "mpc-${MPC_VER}.tar.gz"
 pushd "mpc-${MPC_VER}"
-./configure --prefix="$PREFIX" --with-gnu-ld --enable-static --enable-shared --with-gmp="$PREFIX" --with-mpfr="$PREFIX" --host="$TARGET" --build="$(gcc -dumpmachine)"
-make -j"$JOBS"
-make install
-popd
-
-echo "== libtool ${LIBTOOL_VER} =="
-fetch "https://ftpmirror.gnu.org/libtool/libtool-${LIBTOOL_VER}.tar.gz"
-tar xf "libtool-${LIBTOOL_VER}.tar.gz"
-pushd "libtool-${LIBTOOL_VER}"
-./configure --prefix="$PREFIX" --enable-static --enable-shared --host="$TARGET" --with-sysroot="$SYSROOT" --program-prefix="${TARGET}-" --build="$(gcc -dumpmachine)"
+./configure --build="$BUILD_TRIPLET" --prefix="$PREFIX" --with-gnu-ld --enable-static --enable-shared --with-gmp="$PREFIX" --with-mpfr="$PREFIX"
 make -j"$JOBS"
 make install
 popd
@@ -102,7 +101,7 @@ fetch "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz"
 tar xf "gcc-${GCC_VER}.tar.xz"
 pushd "gcc-${GCC_VER}"
 mkdir -p build && cd build
-../configure --without-headers --with-gnu-as --with-gnu-ld --disable-nls \
+../configure --build="$BUILD_TRIPLET" --without-headers --with-gnu-as --with-gnu-ld --disable-nls \
   --enable-languages=c,c++ --enable-libssp --enable-ld --disable-libitm \
   --disable-libquadmath --target="$TARGET" --prefix="$PREFIX" \
   --with-gmp="$PREFIX" --with-mpc="$PREFIX" --with-mpfr="$PREFIX" \

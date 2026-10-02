@@ -111,7 +111,7 @@ jobs:
           Get-ChildItem "$bindir\*.exe"
 
   freebsd:
-    name: FreeBSD (x86_64, cross freebsd${{ env.FREEBSD_RELEASE }})
+    name: FreeBSD (x86_64, cross freebsd12.3)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -160,7 +160,7 @@ jobs:
           if-no-files-found: error
 
   freebsd-smoketest:
-    name: FreeBSD smoke test (real guest, closest available to ${{ env.FREEBSD_RELEASE }})
+    name: FreeBSD smoke test (real guest, closest available to 12.3)
     needs: freebsd
     runs-on: ubuntu-latest
     steps:

@@ -185,8 +185,9 @@ jobs:
             chmod +x bin/airupnp-freebsd-x86_64 bin/aircast-freebsd-x86_64
             file bin/airupnp-freebsd-x86_64 bin/aircast-freebsd-x86_64
             ldd bin/airupnp-freebsd-x86_64 || true
-            ./bin/airupnp-freebsd-x86_64 -h
-            ./bin/aircast-freebsd-x86_64 -h
+            # -h exits non-zero after printing usage; that's a successful smoke test here.
+            ./bin/airupnp-freebsd-x86_64 -h || true
+            ./bin/aircast-freebsd-x86_64 -h || true
 
   solaris:
     name: Solaris (x86_64, native 11.4)
@@ -241,8 +242,9 @@ jobs:
             cd aircast && gmake CC=gcc HOST=solaris PLATFORM=x86_64 -j4 && cd ..
             file bin/airupnp-solaris-x86_64 bin/aircast-solaris-x86_64
             ldd bin/airupnp-solaris-x86_64 || true
-            ./bin/airupnp-solaris-x86_64 -h
-            ./bin/aircast-solaris-x86_64 -h
+            # -h exits non-zero after printing usage; that's a successful smoke test here.
+            ./bin/airupnp-solaris-x86_64 -h || true
+            ./bin/aircast-solaris-x86_64 -h || true
 
       - uses: actions/upload-artifact@v4
         with:

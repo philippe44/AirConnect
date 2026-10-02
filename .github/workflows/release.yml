@@ -3,9 +3,19 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: Publish as a draft release (safe for testing)
+        type: boolean
+        default: true
 
 permissions:
   contents: write
+
+env:
+  FREEBSD_RELEASE: '12.3'
+  FREEBSD_PREFIX: /opt/x86_64-freebsd12.3
 
 jobs:
   build-linux:
@@ -155,9 +165,130 @@ jobs:
           path: bin/*.exe
           if-no-files-found: error
 
+  build-freebsd:
+    name: FreeBSD (x86_64, cross freebsd12.3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache FreeBSD cross-toolchain
+        id: cache-toolchain
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FREEBSD_PREFIX }}
+          key: freebsd-toolchain-${{ env.FREEBSD_RELEASE }}-gcc11.2.0-v1
+
+      - name: Build FreeBSD cross-toolchain
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        run: |
+          sudo mkdir -p "${{ env.FREEBSD_PREFIX }}"
+          sudo chown -R "$USER" "${{ env.FREEBSD_PREFIX }}"
+          sudo apt-get update
+          sudo apt-get install -y build-essential texinfo bison flex
+          bash .github/scripts/build-freebsd-toolchain.sh "${{ env.FREEBSD_RELEASE }}" "${{ env.FREEBSD_PREFIX }}"
+
+      - name: Build airupnp
+        working-directory: airupnp
+        run: |
+          export PATH="${{ env.FREEBSD_PREFIX }}/bin:$PATH"
+          make CC=x86_64-cross-freebsd${{ env.FREEBSD_RELEASE }}-gcc HOST=freebsd PLATFORM=x86_64 -j$(nproc)
+
+      - name: Build aircast
+        working-directory: aircast
+        run: |
+          export PATH="${{ env.FREEBSD_PREFIX }}/bin:$PATH"
+          make CC=x86_64-cross-freebsd${{ env.FREEBSD_RELEASE }}-gcc HOST=freebsd PLATFORM=x86_64 -j$(nproc)
+
+      - name: Inspect binaries
+        run: file bin/airupnp-freebsd-x86_64* bin/aircast-freebsd-x86_64*
+
+      - name: Smoke test inside a real FreeBSD VM
+        # 12.3 isn't offered as a vmactions guest image; 12.4 is the closest real
+        # FreeBSD guest available and is used here only to execute (not build)
+        # the 12.3-targeted binaries as a loader/link smoke test.
+        uses: vmactions/freebsd-vm@a2f9a41fa97f6848b8c3b791087dfcdaa5b473ff
+        with:
+          release: '12.4'
+          usesh: true
+          sync: rsync
+          run: |
+            set -e
+            chmod +x bin/airupnp-freebsd-x86_64 bin/aircast-freebsd-x86_64
+            ldd bin/airupnp-freebsd-x86_64 || true
+            ./bin/airupnp-freebsd-x86_64 -h || true
+            ./bin/aircast-freebsd-x86_64 -h || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: freebsd-x86_64
+          path: |
+            bin/airupnp-freebsd-x86_64
+            bin/airupnp-freebsd-x86_64-static
+            bin/aircast-freebsd-x86_64
+            bin/aircast-freebsd-x86_64-static
+          if-no-files-found: error
+
+  build-solaris:
+    name: Solaris (x86_64, native 11.4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Flatten GNU thin archives vendored for Solaris
+        # See ci.yml for the full explanation: Solaris's native ld can't read
+        # the GNU "thin archive" format used by the vendored libraries, so
+        # rebuild them in place (this ephemeral checkout only) from their
+        # sibling .a files with identical object content.
+        run: |
+          find . -path '*/targets/solaris/*' -name '*.a' | while read -r f; do
+            file "$f" | grep -q 'thin archive' || continue
+            dir="$(dirname "$f")"
+            base="$(basename "$f")"
+            {
+              echo "create ${f}.flat"
+              for s in "$dir"/*.a; do
+                [ "$(basename "$s")" = "$base" ] && continue
+                echo "addlib $s"
+              done
+              echo save
+              echo end
+            } | ar -M
+            mv "${f}.flat" "$f"
+            echo "flattened $f"
+          done
+
+      - name: Build, inspect and smoke-test inside a real Solaris 11.4 VM
+        uses: vmactions/solaris-vm@87d3c436511cef802cd1637f86f73b1a97715c8c
+        with:
+          release: '11.4-gcc'
+          mem: 4096
+          sync: rsync
+          run: |
+            set -e
+            cd airupnp && gmake CC=gcc HOST=solaris PLATFORM=x86_64 -j4 && cd ..
+            cd aircast && gmake CC=gcc HOST=solaris PLATFORM=x86_64 -j4 && cd ..
+            file bin/airupnp-solaris-x86_64 bin/aircast-solaris-x86_64
+            ldd bin/airupnp-solaris-x86_64 || true
+            ./bin/airupnp-solaris-x86_64 -h || true
+            ./bin/aircast-solaris-x86_64 -h || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solaris-x86_64
+          path: |
+            bin/airupnp-solaris-x86_64
+            bin/airupnp-solaris-x86_64-static
+            bin/aircast-solaris-x86_64
+            bin/aircast-solaris-x86_64-static
+          if-no-files-found: error
+
   publish:
     name: Publish GitHub Release
-    needs: [build-linux, build-macos, build-windows]
+    needs: [build-linux, build-macos, build-windows, build-freebsd, build-solaris]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -169,16 +300,65 @@ jobs:
       - name: List collected binaries
         run: find artifacts/ -type f | sort
 
+      - name: Verify release completeness
+        # Fail the release outright if any supported platform/binary is
+        # missing, rather than silently publishing a partial release.
+        run: |
+          set -e
+          declare -a expected=(
+            airupnp-linux-x86_64 airupnp-linux-x86_64-static aircast-linux-x86_64 aircast-linux-x86_64-static
+            airupnp-linux-aarch64 airupnp-linux-aarch64-static aircast-linux-aarch64 aircast-linux-aarch64-static
+            airupnp-linux-arm airupnp-linux-arm-static aircast-linux-arm aircast-linux-arm-static
+            airupnp-linux-armv6 airupnp-linux-armv6-static aircast-linux-armv6 aircast-linux-armv6-static
+            airupnp-linux-armv5 airupnp-linux-armv5-static aircast-linux-armv5 aircast-linux-armv5-static
+            airupnp-linux-x86 airupnp-linux-x86-static aircast-linux-x86 aircast-linux-x86-static
+            airupnp-linux-mips airupnp-linux-mips-static aircast-linux-mips aircast-linux-mips-static
+            airupnp-linux-mipsel airupnp-linux-mipsel-static aircast-linux-mipsel aircast-linux-mipsel-static
+            airupnp-linux-sparc64 airupnp-linux-sparc64-static aircast-linux-sparc64 aircast-linux-sparc64-static
+            airupnp-linux-powerpc airupnp-linux-powerpc-static aircast-linux-powerpc aircast-linux-powerpc-static
+            airupnp-macos airupnp-macos-static airupnp-macos-arm64 airupnp-macos-arm64-static airupnp-macos-x86_64 airupnp-macos-x86_64-static
+            aircast-macos aircast-macos-static aircast-macos-arm64 aircast-macos-arm64-static aircast-macos-x86_64 aircast-macos-x86_64-static
+            airupnp-win32.exe airupnp-win32-static.exe aircast-win32.exe aircast-win32-static.exe
+            airupnp-freebsd-x86_64 airupnp-freebsd-x86_64-static aircast-freebsd-x86_64 aircast-freebsd-x86_64-static
+            airupnp-solaris-x86_64 airupnp-solaris-x86_64-static aircast-solaris-x86_64 aircast-solaris-x86_64-static
+          )
+          missing=0
+          for f in "${expected[@]}"; do
+            if [ ! -e "artifacts/$f" ]; then
+              echo "::error::missing expected release artifact: $f"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Release is incomplete; refusing to publish." >&2
+            exit 1
+          fi
+          echo "All ${#expected[@]} expected artifacts are present."
+
+      - name: Determine version and release mode
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+            echo "RELEASE_NAME=${{ github.ref_name }}" >> "$GITHUB_ENV"
+            echo "DRAFT=false" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=dev-${{ github.run_number }}" >> "$GITHUB_ENV"
+            echo "RELEASE_NAME=CI test build #${{ github.run_number }}" >> "$GITHUB_ENV"
+            echo "DRAFT=${{ inputs.draft }}" >> "$GITHUB_ENV"
+          fi
+
       - name: Create combined zip
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
           zip -j "AirConnect-${VERSION}.zip" artifacts/*
           echo "ZIP=AirConnect-${VERSION}.zip" >> "$GITHUB_ENV"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
+          name: ${{ env.RELEASE_NAME }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('ci-test-{0}', github.run_number) }}
+          draft: ${{ env.DRAFT == 'true' }}
+          prerelease: ${{ env.DRAFT == 'true' }}
           generate_release_notes: true
           files: |
             ${{ env.ZIP }}

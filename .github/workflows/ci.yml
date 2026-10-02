@@ -208,10 +208,17 @@ jobs:
           find . -path '*/targets/solaris/*' -name '*.a' | while read -r f; do
             file "$f" | grep -q 'thin archive' || continue
             dir="$(dirname "$f")"
+            base="$(basename "$f")"
+            # `ar t` on a thin archive recursively flattens through nested .a
+            # members down to loose .o names, which don't exist as standalone
+            # files on disk (they're embedded in the sibling .a files). These
+            # vendored "meta" archives are just a thin union of every other
+            # .a sitting next to them, so rebuild from those siblings instead.
             {
               echo "create ${f}.flat"
-              for m in $(ar t "$f"); do
-                echo "addlib ${dir}/${m}"
+              for s in "$dir"/*.a; do
+                [ "$(basename "$s")" = "$base" ] && continue
+                echo "addlib $s"
               done
               echo save
               echo end

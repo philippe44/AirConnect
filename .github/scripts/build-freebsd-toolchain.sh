@@ -103,7 +103,7 @@ pushd "gcc-${GCC_VER}"
 mkdir -p build && cd build
 ../configure --build="$BUILD_TRIPLET" --without-headers --with-gnu-as --with-gnu-ld --disable-nls \
   --enable-languages=c,c++ --enable-libssp --enable-ld --disable-libitm \
-  --disable-libquadmath --target="$TARGET" --prefix="$PREFIX" \
+  --disable-libquadmath --disable-multilib --target="$TARGET" --prefix="$PREFIX" \
   --with-gmp="$PREFIX" --with-mpc="$PREFIX" --with-mpfr="$PREFIX" \
   --disable-libgomp --with-sysroot="$SYSROOT" --with-build-sysroot="$SYSROOT"
 make -j"$JOBS"

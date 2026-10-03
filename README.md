@@ -62,7 +62,7 @@ docker compose up -d
 
 Set `AIRCONNECT_MODE=aircast` or `AIRCONNECT_MODE=airupnp` to run only one bridge.
 
-> **Note:** FreeBSD and Solaris binaries are not included in automated releases. Use `build.sh` with the appropriate cross-compilers to build for those platforms manually.
+> **Note:** every supported release target — including FreeBSD and Solaris — is built entirely by GitHub Actions; see [Release pipeline](#release-pipeline) below.
 
 ## Running
 
@@ -294,4 +294,18 @@ and build doing:
 cd ~/airconnect/airupnp
 make
 ```
+
+## Release pipeline
+
+A GitHub release is built entirely by GitHub Actions for all supported AirConnect release targets — no local or manual compilation step is required, including for FreeBSD and Solaris.
+
+| Platform | How it's built |
+| --- | --- |
+| Linux (x86_64, x86, aarch64, arm/armv7, armv6, armv5, mips, mipsel, sparc64, powerpc) | Native/cross-compiler packages on a GitHub-hosted Ubuntu runner |
+| macOS (arm64, x86_64) | Native Xcode toolchain on a GitHub-hosted macOS runner |
+| Windows (Win32) | MSVC on a GitHub-hosted Windows runner |
+| FreeBSD (x86_64) | Cross-compiled on a Linux runner, using a GCC 11.2.0 cross-toolchain built reproducibly from FreeBSD's official 12.3-RELEASE archive (preserving the same FreeBSD 12.3 ABI target the project has always used); smoke-tested on a real FreeBSD guest VM ([vmactions/freebsd-vm](https://github.com/vmactions/freebsd-vm)) |
+| Solaris (x86_64) | Built and smoke-tested natively inside a real Oracle Solaris 11.4 guest VM ([vmactions/solaris-vm](https://github.com/vmactions/solaris-vm)) |
+
+The release workflow (`.github/workflows/release.yml`) fails outright — rather than silently publishing a partial release — if any expected platform or static/dynamic variant is missing.
 

@@ -1,0 +1,11 @@
+.git
+*.zip
+bin/
+build/
+.vs/
+*.sln
+*.user
+*.suo
+*.log
+*.bak
+*.DS_Store

@@ -338,8 +338,8 @@ void HandleRAOP(void *owner, raopsr_event_t event, ...) {
 			int GroupVolume, i;
 			uint32_t now = gettime_ms();
 
-			// discard echo commands
-			if (now < Device->VolumeStampRx + 1000) break;
+			// discard echoes using elapsed time so gettime_ms() wrap is harmless
+			if (now - Device->VolumeStampRx < 1000) break;
 			Device->VolumeStampTx = now;
 
 			// Sonos group volume API is unreliable, need to create our own
@@ -443,7 +443,7 @@ static void ProcessEvent(Upnp_EventType EventType, const void *_Event, void *Coo
 		double Volume = atoi(r), GroupVolume;
 		uint32_t now = gettime_ms();
 
-		if (Volume != (int) Device->Volume && now > Master->VolumeStampTx + 1000) {
+		if (Volume != (int) Device->Volume && now - Master->VolumeStampTx > 1000) {
 			Device->Volume = Volume;
 			Master->VolumeStampRx = now;
 			GroupVolume = CalcGroupVolume(Master);

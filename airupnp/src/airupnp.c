@@ -511,6 +511,16 @@ int ActionHandler(Upnp_EventType EventType, const void *Event, void *Cookie) {
 					p->State = STOPPED;
 					p->ExpectStop = false;
 					LOG_INFO("[%p]: uPNP stopped", p);
+				} else if (!strcmp(r, "NO_MEDIA_PRESENT") && p->State != STOPPED) {
+					// the renderer lost its stream; do not leave an active session playing
+					if (p->ExpectStop) {
+						LOG_INFO("[%p]: uPNP no media present (stop expected)", p);
+					} else {
+						LOG_INFO("[%p]: uPNP no media present, renderer lost its stream", p);
+						if (p->RaopState == RAOP_PLAY) raopsr_notify(p->Raop, RAOP_STOP, NULL);
+					}
+					p->State = STOPPED;
+					p->ExpectStop = false;
 				} else if (!strcmp(r, "PLAYING") && (p->State != PLAYING)) {
 					p->State = PLAYING;
 					if (p->RaopState != RAOP_PLAY) raopsr_notify(p->Raop, RAOP_PLAY, NULL);

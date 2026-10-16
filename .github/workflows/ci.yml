@@ -1,0 +1,257 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch: {}
+
+env:
+  FREEBSD_RELEASE: '12.3'
+  FREEBSD_PREFIX: /opt/x86_64-freebsd12.3
+
+jobs:
+  linux:
+    name: Linux (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x86_64
+            compiler: gcc
+            packages: ''
+          - platform: aarch64
+            compiler: aarch64-linux-gnu-gcc
+            packages: gcc-aarch64-linux-gnu
+          - platform: arm
+            compiler: arm-linux-gnueabihf-gcc
+            packages: gcc-arm-linux-gnueabihf
+          - platform: armv6
+            compiler: arm-linux-gnueabi-gcc
+            packages: gcc-arm-linux-gnueabi
+          - platform: armv5
+            compiler: arm-linux-gnueabi-gcc
+            packages: gcc-arm-linux-gnueabi
+            cflags: '-march=armv5t -mfloat-abi=soft'
+          - platform: x86
+            compiler: i686-linux-gnu-gcc
+            packages: gcc-i686-linux-gnu
+          - platform: mips
+            compiler: mips-linux-gnu-gcc
+            packages: gcc-mips-linux-gnu
+            cflags: '-march=mips32'
+          - platform: mipsel
+            compiler: mipsel-linux-gnu-gcc
+            packages: gcc-mipsel-linux-gnu
+            cflags: '-march=mips32'
+          - platform: sparc64
+            compiler: sparc64-linux-gnu-gcc
+            packages: gcc-sparc64-linux-gnu
+            cflags: '-mcpu=v7'
+          - platform: powerpc
+            compiler: powerpc-linux-gnu-gcc
+            packages: gcc-powerpc-linux-gnu
+            cflags: '-m32'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install cross-compiler
+        if: matrix.packages != ''
+        run: sudo apt-get install -y ${{ matrix.packages }}
+
+      - name: Build airupnp
+        working-directory: airupnp
+        run: make CC=${{ matrix.compiler }} HOST=linux PLATFORM=${{ matrix.platform }} CFLAGS="${{ matrix.cflags }}" -j$(nproc)
+
+      - name: Build aircast
+        working-directory: aircast
+        run: make CC=${{ matrix.compiler }} HOST=linux PLATFORM=${{ matrix.platform }} CFLAGS="${{ matrix.cflags }}" -j$(nproc)
+
+  macos:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build airupnp (arm64)
+        working-directory: airupnp
+        run: make CC=clang HOST=macos PLATFORM=arm64 -j$(sysctl -n hw.logicalcpu)
+
+      - name: Build aircast (arm64)
+        working-directory: aircast
+        run: make CC=clang HOST=macos PLATFORM=arm64 -j$(sysctl -n hw.logicalcpu)
+
+  windows:
+    name: Windows (Win32)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build airupnp and aircast
+        shell: pwsh
+        run: |
+          $bindir = "$env:GITHUB_WORKSPACE\bin"
+          New-Item -Force -ItemType Directory $bindir | Out-Null
+          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild airupnp/AirUPnP.vcxproj /p:Configuration=Static  /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild aircast/AirCast.vcxproj  /p:Configuration=Release /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          msbuild aircast/AirCast.vcxproj  /p:Configuration=Static  /p:Platform=Win32 /p:OutDir="$bindir\" /v:minimal
+          Get-ChildItem "$bindir\*.exe"
+
+  freebsd:
+    name: FreeBSD (x86_64, cross freebsd12.3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache FreeBSD cross-toolchain
+        id: cache-toolchain
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FREEBSD_PREFIX }}
+          key: freebsd-toolchain-${{ env.FREEBSD_RELEASE }}-gcc11.2.0-v1
+
+      - name: Build FreeBSD cross-toolchain
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        run: |
+          sudo mkdir -p "${{ env.FREEBSD_PREFIX }}"
+          sudo chown -R "$USER" "${{ env.FREEBSD_PREFIX }}"
+          sudo apt-get update
+          sudo apt-get install -y build-essential texinfo bison flex
+          bash .github/scripts/build-freebsd-toolchain.sh "${{ env.FREEBSD_RELEASE }}" "${{ env.FREEBSD_PREFIX }}"
+
+      - name: Build airupnp
+        working-directory: airupnp
+        run: |
+          export PATH="${{ env.FREEBSD_PREFIX }}/bin:$PATH"
+          make CC=x86_64-cross-freebsd${{ env.FREEBSD_RELEASE }}-gcc HOST=freebsd PLATFORM=x86_64 -j$(nproc)
+
+      - name: Build aircast
+        working-directory: aircast
+        run: |
+          export PATH="${{ env.FREEBSD_PREFIX }}/bin:$PATH"
+          make CC=x86_64-cross-freebsd${{ env.FREEBSD_RELEASE }}-gcc HOST=freebsd PLATFORM=x86_64 -j$(nproc)
+
+      - name: Inspect binaries
+        run: file bin/airupnp-freebsd-x86_64* bin/aircast-freebsd-x86_64*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: freebsd-x86_64
+          path: |
+            bin/airupnp-freebsd-x86_64
+            bin/airupnp-freebsd-x86_64-static
+            bin/aircast-freebsd-x86_64
+            bin/aircast-freebsd-x86_64-static
+          if-no-files-found: error
+
+  freebsd-smoketest:
+    name: FreeBSD smoke test (real guest, closest available to 12.3)
+    needs: freebsd
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: freebsd-x86_64
+          path: bin
+
+      - name: Run smoke test inside a real FreeBSD VM
+        # Pinned to v1.5.8 (vmactions/freebsd-vm). 12.3 isn't offered as a guest image;
+        # 12.4 is the closest real FreeBSD guest available and is used here only to
+        # execute (not build) the 12.3-targeted binaries as a loader/link smoke test.
+        uses: vmactions/freebsd-vm@a2f9a41fa97f6848b8c3b791087dfcdaa5b473ff
+        with:
+          release: '12.4'
+          usesh: true
+          sync: rsync
+          run: |
+            set -e
+            chmod +x bin/airupnp-freebsd-x86_64 bin/aircast-freebsd-x86_64
+            file bin/airupnp-freebsd-x86_64 bin/aircast-freebsd-x86_64
+            ldd bin/airupnp-freebsd-x86_64 || true
+            # -h exits non-zero after printing usage; that's a successful smoke test here.
+            ./bin/airupnp-freebsd-x86_64 -h || true
+            ./bin/aircast-freebsd-x86_64 -h || true
+
+  solaris:
+    name: Solaris (x86_64, native 11.4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Flatten GNU thin archives vendored for Solaris
+        # The vendored common/*/targets/solaris/**/*.a libraries are GNU "thin"
+        # archives (a container that just lists the real .a files alongside it).
+        # That's fine for the maintainer's own GNU cross-ld, but Solaris's native
+        # ld rejects the format outright. Rewrite them in place (this ephemeral
+        # checkout only, nothing committed) into ordinary self-contained archives
+        # with identical object content, using GNU ar which is available here on
+        # the Ubuntu host.
+        run: |
+          find . -path '*/targets/solaris/*' -name '*.a' | while read -r f; do
+            file "$f" | grep -q 'thin archive' || continue
+            dir="$(dirname "$f")"
+            base="$(basename "$f")"
+            # `ar t` on a thin archive recursively flattens through nested .a
+            # members down to loose .o names, which don't exist as standalone
+            # files on disk (they're embedded in the sibling .a files). These
+            # vendored "meta" archives are just a thin union of every other
+            # .a sitting next to them, so rebuild from those siblings instead.
+            {
+              echo "create ${f}.flat"
+              for s in "$dir"/*.a; do
+                [ "$(basename "$s")" = "$base" ] && continue
+                echo "addlib $s"
+              done
+              echo save
+              echo end
+            } | ar -M
+            mv "${f}.flat" "$f"
+            echo "flattened $f"
+          done
+
+      - name: Build, inspect and smoke-test inside a real Solaris 11.4 VM
+        # Pinned to v1.4.1 (vmactions/solaris-vm). release 11.4-gcc gives a native
+        # gcc toolchain matching the maintainer's documented Solaris 11.4 target.
+        uses: vmactions/solaris-vm@87d3c436511cef802cd1637f86f73b1a97715c8c
+        with:
+          release: '11.4-gcc'
+          mem: 4096
+          sync: rsync
+          run: |
+            set -e
+            cd airupnp && gmake CC=gcc HOST=solaris PLATFORM=x86_64 -j4 && cd ..
+            cd aircast && gmake CC=gcc HOST=solaris PLATFORM=x86_64 -j4 && cd ..
+            file bin/airupnp-solaris-x86_64 bin/aircast-solaris-x86_64
+            ldd bin/airupnp-solaris-x86_64 || true
+            # -h exits non-zero after printing usage; that's a successful smoke test here.
+            ./bin/airupnp-solaris-x86_64 -h || true
+            ./bin/aircast-solaris-x86_64 -h || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solaris-x86_64
+          path: |
+            bin/airupnp-solaris-x86_64
+            bin/airupnp-solaris-x86_64-static
+            bin/aircast-solaris-x86_64
+            bin/aircast-solaris-x86_64-static
+          if-no-files-found: error

@@ -235,7 +235,7 @@ static void raop_cb(void *owner, raopsr_event_t event, ...) {
 		case RAOP_VOLUME: {
 			uint32_t now = gettime_ms();
 
-			if (now > Device->VolumeStampRx + 1000) {
+			if (now - Device->VolumeStampRx > 1000) {
 				Device->Volume = va_arg(args, double);
 				Device->VolumeStampTx = now;
 				CastSetDeviceVolume(Device->CastCtx, Device->Volume, false);
@@ -332,7 +332,7 @@ static void *MRThread(void *args) {
 			}
 
 			// now apply the volume change if any
-			if (Volume != -1 && fabs(Volume - p->Volume) >= 0.01 && now > p->VolumeStampTx + 1000) {
+			if (Volume != -1 && fabs(Volume - p->Volume) >= 0.01 && now - p->VolumeStampTx > 1000) {
 				p->VolumeStampRx = now;
 				p->VolumeStampRx = now;
 				LOG_INFO("[%p]: Volume local change %0.4lf", p, Volume);

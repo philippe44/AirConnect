@@ -38,6 +38,8 @@ static void *CastPingThread(void *args);
 extern log_level cast_loglevel;
 static log_level *loglevel = &cast_loglevel;
 
+#define WAIT_TIMEOUT	5000
+
 /*----------------------------------------------------------------------------*/
 static void CastExit(void) {
 	if (glSSLctx) SSL_CTX_free(glSSLctx);
@@ -523,6 +525,8 @@ static void ProcessQueue(tCastCtx *Ctx) {
 static void *CastPingThread(void *args) {
 	tCastCtx *Ctx = (tCastCtx*) args;
 	uint32_t last = gettime_ms();
+	uint32_t waitStamp = 0;
+	int lastWaitId = 0;
 
 	Ctx->running = true;
 
@@ -543,6 +547,20 @@ static void *CastPingThread(void *args) {
 
 			// then ping RECEIVER connection
 			if (Ctx->Status == CAST_LAUNCHED) SendCastMessage(Ctx, CAST_BEAT, Ctx->transportId, "{\"type\":\"PING\"}");
+
+			/* A request the device never answers keeps waitId set, so ProcessQueue()
+			   is never called again and every later request (PLAY, LOAD, VOLUME...)
+			   piles up in the queue until the session ends. Release it after a while. */
+			if (Ctx->Status == CAST_LAUNCHED && Ctx->waitId) {
+				if (Ctx->waitId != lastWaitId) {
+					lastWaitId = Ctx->waitId;
+					waitStamp = now;
+				} else if (now - waitStamp > WAIT_TIMEOUT) {
+					LOG_WARN("[%p]: no response to request %d after %u ms, releasing queue", Ctx->owner, Ctx->waitId, now - waitStamp);
+					Ctx->waitId = lastWaitId = 0;
+					ProcessQueue(Ctx);
+				}
+			} else lastWaitId = 0;
 
 			pthread_mutex_unlock(&Ctx->Mutex);
 			last = now;

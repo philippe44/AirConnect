@@ -400,127 +400,137 @@ void CastQueueFlush(cross_queue_t *Queue) {
 /*----------------------------------------------------------------------------*/
 static void ProcessQueue(tCastCtx *Ctx) {
 	tReqItem *item;
+	bool iterate = true;
 
-	if ((item = queue_extract(&Ctx->reqQueue)) == NULL) return;
+	while (iterate && (item = queue_extract(&Ctx->reqQueue)) != NULL) {
+		iterate = false;
 
-	if (!strcasecmp(item->Type, "LAUNCH")) {
-		Ctx->waitId = Ctx->reqId++;
-		Ctx->Status = CAST_LAUNCHING;
+		if (!strcasecmp(item->Type, "LAUNCH")) {
+			Ctx->waitId = Ctx->reqId++;
+			Ctx->Status = CAST_LAUNCHING;
 
-		LOG_INFO("[%p]: Launching receiver %d", Ctx->owner, Ctx->waitId);
+			LOG_INFO("[%p]: Launching receiver %d", Ctx->owner, Ctx->waitId);
 
-		SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"LAUNCH\",\"requestId\":%d,\"appId\":\"%s\"}", Ctx->waitId, Ctx->receiver);
-	}
+			SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"LAUNCH\",\"requestId\":%d,\"appId\":\"%s\"}", Ctx->waitId, Ctx->receiver);
+		}
 
 #if 0
-	if (!strcasecmp(item->Type, "GET_MEDIA_STATUS") && Ctx->mediaSessionId) {
-		Ctx->waitId = Ctx->reqId++;
+		if (!strcasecmp(item->Type, "GET_MEDIA_STATUS") && Ctx->mediaSessionId) {
+			Ctx->waitId = Ctx->reqId++;
 
-		LOG_INFO("[%p]: Processing GET_MEDIA_STATUS (id:%u)", Ctx->owner, Ctx->waitId);
+			LOG_INFO("[%p]: Processing GET_MEDIA_STATUS (id:%u)", Ctx->owner, Ctx->waitId);
 
-		SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId,
-			"{\"type\":\"GET_STATUS\",\"requestId\":%d,\"mediaSessionId\":%d}",
-			Ctx->waitId, Ctx->mediaSessionId);
-	}
+			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId,
+				"{\"type\":\"GET_STATUS\",\"requestId\":%d,\"mediaSessionId\":%d}",
+				Ctx->waitId, Ctx->mediaSessionId);
+		}
 
-	if (!strcasecmp(item->Type, "GET_STATUS")) {
-		Ctx->waitId = Ctx->reqId++;
+		if (!strcasecmp(item->Type, "GET_STATUS")) {
+			Ctx->waitId = Ctx->reqId++;
 
-		LOG_INFO("[%p]: Processing GET_STATUS (id:%u)", Ctx->owner, Ctx->waitId);
+			LOG_INFO("[%p]: Processing GET_STATUS (id:%u)", Ctx->owner, Ctx->waitId);
 
-		SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"GET_STATUS\",\"requestId\":%d}", Ctx->waitId);
-	}
+			SendCastMessage(Ctx, CAST_RECEIVER, NULL, "{\"type\":\"GET_STATUS\",\"requestId\":%d}", Ctx->waitId);
+		}
 #endif
 
-	if (!strcasecmp(item->Type, "SET_VOLUME")) {
+		if (!strcasecmp(item->Type, "SET_VOLUME")) {
 
-		if (item->data.volume) {
-			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-							"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"level\":%0.4lf}}",
-							Ctx->reqId++, item->data.volume);
+			if (item->data.volume) {
+				SendCastMessage(Ctx, CAST_RECEIVER, NULL,
+					"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"level\":%0.4lf}}",
+					Ctx->reqId++, item->data.volume);
 
-			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-							"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":false}}",
-							Ctx->reqId);
-		} else {
-			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-							"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":true}}",
-							Ctx->reqId);
-		}
-
-		Ctx->waitId = Ctx->reqId++;
-
-		LOG_INFO("[%p]: Processing VOLUME (id:%u)", Ctx->owner, Ctx->waitId);
-	}
-
-	if (!strcasecmp(item->Type, "PLAY") || !strcasecmp(item->Type, "PAUSE")) {
-		if (Ctx->mediaSessionId) {
-			int id = Ctx->reqId++;
-
-			LOG_INFO("[%p]: Processing %s (id:%u)", Ctx->owner, item->Type, id);
-
-			json_t* msg = json_pack("{ss,si,si}", "type", "PLAY", "requestId", id,
-												  "mediaSessionId", Ctx->mediaSessionId);
-
-			if (item->data.customData) {
-				json_t* customData = json_pack("{so}", "customData", item->data.customData);
-				json_object_update(msg, customData);
-				json_decref(customData);
+				SendCastMessage(Ctx, CAST_RECEIVER, NULL,
+					"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":false}}",
+					Ctx->reqId);
+			}
+			else {
+				SendCastMessage(Ctx, CAST_RECEIVER, NULL,
+					"{\"type\":\"SET_VOLUME\",\"requestId\":%d,\"volume\":{\"muted\":true}}",
+					Ctx->reqId);
 			}
 
-			char* str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
-			json_decref(msg);
+			Ctx->waitId = Ctx->reqId++;
 
-			if (SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str)) Ctx->waitId = id;
+			LOG_INFO("[%p]: Processing VOLUME (id:%u)", Ctx->owner, Ctx->waitId);
+		}
+
+		if (!strcasecmp(item->Type, "PLAY") || !strcasecmp(item->Type, "PAUSE")) {
+			bool pause = !strcasecmp(item->Type, "PAUSE");
+			
+			if (Ctx->mediaSessionId) {
+				int id = Ctx->reqId++;
+
+				LOG_INFO("[%p]: Processing %s (id:%u)", Ctx->owner, item->Type, id);
+
+				json_t* msg = json_pack("{ss,si,si}", "type", item->Type, "requestId", id,
+					"mediaSessionId", Ctx->mediaSessionId);
+
+				if (!pause && item->data.customData) {
+					json_t* customData = json_pack("{so}", "customData", item->data.customData);
+					json_object_update(msg, customData);
+					json_decref(customData);
+				}
+
+				char* str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
+				json_decref(msg);
+
+				if (SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str) && (pause || item->data.blocking)) Ctx->waitId = id;
+				else iterate = true;
+
+				NFREE(str);
+			}
+			else {
+				if (!pause && item->data.customData) json_decref(item->data.customData);
+				LOG_WARN("[%p]: PLAY un-queued but no media session", Ctx->owner);
+			}
+		}
+
+		if (!strcasecmp(item->Type, "LOAD")) {
+			json_t* msg = item->data.msg;
+			char* str;
+
+			Ctx->waitId = Ctx->reqId++;
+			Ctx->waitMedia = Ctx->waitId;
+			Ctx->mediaSessionId = 0;
+
+			LOG_INFO("[%p]: Processing LOAD (id:%u)", Ctx->owner, Ctx->waitId);
+
+			msg = json_pack("{ss,si,ss,sf,sb,so}", "type", "LOAD",
+				"requestId", Ctx->waitId, "sessionId", Ctx->sessionId,
+				"currentTime", 0.0, "autoplay", 0,
+				"media", msg);
+
+			str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
+			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str);
 			NFREE(str);
-		} else {
-			if (item->data.customData) json_decref(item->data.customData);
-			LOG_WARN("[%p]: PLAY un-queued but no media session", Ctx->owner);
-		}
-	}
 
-	if (!strcasecmp(item->Type, "LOAD")) {
-		json_t *msg = item->data.msg;
-		char *str;
-
-		Ctx->waitId = Ctx->reqId++;
-		Ctx->waitMedia = Ctx->waitId;
-		Ctx->mediaSessionId = 0;
-
-		LOG_INFO("[%p]: Processing LOAD (id:%u)", Ctx->owner, Ctx->waitId);
-
-		msg = json_pack("{ss,si,ss,sf,sb,so}", "type", "LOAD",
-						"requestId", Ctx->waitId, "sessionId", Ctx->sessionId,
-						"currentTime", 0.0, "autoplay", 0,
-						"media", msg);
-
-		str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
-		SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str);
-		NFREE(str);
-		
-		json_decref(msg);
-   }
-
-	if (!strcasecmp(item->Type, "STOP")) {
-
-		Ctx->waitId = Ctx->reqId++;
-
-		// version 1.24
-		if (Ctx->stopReceiver) {
-			SendCastMessage(Ctx, CAST_RECEIVER, NULL,
-						"{\"type\":\"STOP\",\"requestId\":%d}", Ctx->waitId);
-			Ctx->Status = CAST_CONNECTED;
-
-		} else if (Ctx->mediaSessionId) {
-			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId,
-							"{\"type\":\"STOP\",\"requestId\":%d,\"mediaSessionId\":%d}",
-							Ctx->waitId, Ctx->mediaSessionId);
+			json_decref(msg);
 		}
 
-		Ctx->mediaSessionId = 0;
-	}
+		if (!strcasecmp(item->Type, "STOP")) {
 
-   free(item);
+			Ctx->waitId = Ctx->reqId++;
+
+			// version 1.24
+			if (Ctx->stopReceiver) {
+				SendCastMessage(Ctx, CAST_RECEIVER, NULL,
+					"{\"type\":\"STOP\",\"requestId\":%d}", Ctx->waitId);
+				Ctx->Status = CAST_CONNECTED;
+
+			}
+			else if (Ctx->mediaSessionId) {
+				SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId,
+					"{\"type\":\"STOP\",\"requestId\":%d,\"mediaSessionId\":%d}",
+					Ctx->waitId, Ctx->mediaSessionId);
+			}
+
+			Ctx->mediaSessionId = 0;
+		}
+
+		free(item);
+	}
 }
 
 /*----------------------------------------------------------------------------*/

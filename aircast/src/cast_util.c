@@ -237,9 +237,9 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 	if (Ctx->Status == CAST_LAUNCHED && !Ctx->waitId) {
 		// no media session, nothing to do
 		if (Ctx->mediaSessionId) {
-			Ctx->waitId = Ctx->reqId++;
+			int id = Ctx->reqId++;
 
-			json_t* msg = json_pack("{ss,si,si}", "type", "PLAY", "requestId", Ctx->waitId,
+			json_t* msg = json_pack("{ss,si,si}", "type", "PLAY", "requestId", id,
 												  "mediaSessionId", Ctx->mediaSessionId);
 
 			if (customData) {
@@ -251,10 +251,8 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 			char* str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
 			json_decref(msg);
 
-			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str);
+			if (SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str)) Ctx->waitId = id;
 			NFREE(str);
-
-			LOG_INFO("[%p]: Immediate PLAY (id:%u)", Ctx->owner, Ctx->waitId);
 
 		} else {
 			if (customData) json_decref(customData);

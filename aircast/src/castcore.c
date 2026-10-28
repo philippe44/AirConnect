@@ -122,6 +122,10 @@ static bool write_bytes(pthread_mutex_t *Mutex, SSL *ssl, void *buffer, uint16_t
 		LOG_DEBUG("[%p]: Cast sending: %s", Ctx->ssl, message.payload_utf8);
 	}
 
+	if (!status) {
+		LOG_ERROR("[%p]: Error sending: %s", Ctx->ssl, message.payload_utf8);
+	}
+
 	return status;
 }
 
@@ -451,11 +455,11 @@ static void ProcessQueue(tCastCtx *Ctx) {
 
 	if (!strcasecmp(item->Type, "PLAY") || !strcasecmp(item->Type, "PAUSE")) {
 		if (Ctx->mediaSessionId) {
-			Ctx->waitId = Ctx->reqId++;
+			int id = Ctx->reqId++;
 
-			LOG_INFO("[%p]: Processing %s (id:%u)", Ctx->owner, item->Type, Ctx->waitId);
+			LOG_INFO("[%p]: Processing %s (id:%u)", Ctx->owner, item->Type, id);
 
-			json_t* msg = json_pack("{ss,si,si}", "type", "PLAY", "requestId", Ctx->waitId,
+			json_t* msg = json_pack("{ss,si,si}", "type", "PLAY", "requestId", id,
 												  "mediaSessionId", Ctx->mediaSessionId);
 
 			if (item->data.customData) {
@@ -467,7 +471,7 @@ static void ProcessQueue(tCastCtx *Ctx) {
 			char* str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
 			json_decref(msg);
 
-			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str);
+			if (SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str)) Ctx->waitId = id;
 			NFREE(str);
 		} else {
 			if (item->data.customData) json_decref(item->data.customData);

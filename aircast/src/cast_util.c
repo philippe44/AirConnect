@@ -221,6 +221,7 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 	pthread_mutex_lock(&Ctx->Mutex);
 
 	json_t* customData = NULL;
+	bool blocking = !MetaData;
 
 	if (MetaData && Ctx->caps & 0x01) {
 		if (MetaData->live_duration != -1) customData = json_pack("{si}", "liveDuration", MetaData->live_duration);
@@ -252,7 +253,7 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 			json_decref(msg);
 
 			// sending metadata means this is not the first PLAY, so make it non-blocking
-			if (SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str) && !MetaData) Ctx->waitId = id;
+			if (SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str) && blocking) Ctx->waitId = id;
 			NFREE(str);
 
 		} else {
@@ -263,7 +264,7 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 	} else {
 		tReqItem* req = malloc(sizeof(tReqItem));
 		req->data.customData = customData;
-		req->data.blocking = (MetaData == NULL);
+		req->data.blocking = blocking;
 		strcpy(req->Type, "PLAY");
 		queue_insert(&Ctx->reqQueue, req);
 		LOG_INFO("[%p]: Queuing %s", Ctx->owner, req->Type);

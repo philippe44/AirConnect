@@ -1,0 +1,73 @@
+name: Build and push container images
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - AirConnect-*.zip
+      - .github/workflows/docker.yml
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .github/workflows/docker.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [airupnp, aircast]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve release zip version and image name
+        id: vars
+        run: |
+          zip=$(ls AirConnect-*.zip | sort -V | tail -1)
+          version=${zip#AirConnect-}
+          version=${version%.zip}
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.app }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ steps.vars.outputs.image }}
+          tags: |
+            type=raw,value=${{ steps.vars.outputs.version }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=sha,format=short
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          build-args: |
+            APP=${{ matrix.app }}
+            VERSION=${{ steps.vars.outputs.version }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}

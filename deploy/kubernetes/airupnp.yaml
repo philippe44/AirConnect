@@ -1,0 +1,116 @@
+# AirConnect on Kubernetes
+#
+# IMPORTANT — why this looks unusual:
+#   AirConnect is an L2 appliance, not a normal cluster workload.
+#   * It advertises itself over mDNS (224.0.0.251:5353) and discovers UPnP
+#     players over SSDP (239.255.255.250:1900). Multicast does not traverse a
+#     CNI overlay, and kube-proxy/Services cannot proxy it.
+#   * AirPlay clients connect to whatever IP the bridge advertises, and the
+#     Sonos/Chromecast player then connects *back* to that IP to pull the audio
+#     stream. A pod IP is not reachable from the LAN and must not be NATed.
+#   Therefore: hostNetwork: true, no Service, and the pod must be pinned to a
+#   node that sits on the same L2 segment as your players.
+#
+#   If hostNetwork is not acceptable, the only other working option is giving
+#   the pod a real LAN interface via Multus + macvlan/ipvlan. A ClusterIP,
+#   NodePort or LoadBalancer Service will not work.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: airconnect
+  labels:
+    # hostNetwork is forbidden by the baseline/restricted Pod Security standards.
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: airupnp-config
+  namespace: airconnect
+data:
+  # Generate a starting point with:
+  #   docker run --rm --network host <image> -i /dev/stdout
+  # then paste it here. Omit this ConfigMap entirely to run with defaults.
+  config.xml: |
+    <?xml version="1.0"?>
+    <airupnp>
+      <common>
+        <enabled>1</enabled>
+        <codec>flac</codec>
+        <latency>1000:2000</latency>
+      </common>
+    </airupnp>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airupnp
+  namespace: airconnect
+spec:
+  replicas: 1
+  # Rolling updates would leave two pods fighting over host port 5353.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: airupnp
+  template:
+    metadata:
+      labels:
+        app: airupnp
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: airupnp
+          image: ghcr.io/jstudler/airupnp:1.12.4
+          args:
+            - "-Z"                      # non-interactive; never use -z in a container
+            - "-k"                      # exit immediately on SIGTERM
+            - "-b"
+            - "eth0"                    # host interface facing the players
+            - "-a"
+            - "49200:64"                # fixed RTP/HTTP port range instead of random
+            - "-l"
+            - "1000:2000"               # required for Sonos/Heos
+            - "-x"
+            - "/config/config.xml"
+            - "-d"
+            - "all=info"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # Host ports actually used (documentation only — hostNetwork bypasses
+          # any hostPort mapping):
+          #   5353/udp   mDNS responder (AirPlay advertisement + CC discovery)
+          #   1900/udp   SSDP discovery
+          #   49152/udp  libupnp callback socket
+          #   49200-49263 tcp/udp  RTSP, HTTP audio server and RTP streams
+          resources:
+            requests:
+              cpu: 200m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: airupnp-config
+            optional: true
+        - name: tmp
+          emptyDir: {}

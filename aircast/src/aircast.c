@@ -332,8 +332,9 @@ static void *MRThread(void *args) {
 			}
 
 			// now apply the volume change if any
-			if (Volume != -1 && fabs(Volume - p->Volume) >= 0.01 && now - p->VolumeStampTx > 1000) {
-				p->VolumeStampRx = now;
+      if (Volume != -1 && fabs(Volume - p->Volume) >= 0.01 && now - p->VolumeStampTx > 1000) {
+   			p->VolumeStampRx = now;
+   			p->Volume = Volume;
 				LOG_INFO("[%p]: Volume local change %0.4lf", p, Volume);
 				raopsr_notify(p->Raop, RAOP_VOLUME, &Volume);
 				Volume = -1;

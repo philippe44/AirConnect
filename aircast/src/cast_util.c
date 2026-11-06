@@ -221,9 +221,10 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 	pthread_mutex_lock(&Ctx->Mutex);
 
 	json_t* customData = NULL;
+	bool blocking = !MetaData;
 
-	if (Ctx->caps & 0x01) {
-		if (MetaData && MetaData->live_duration != -1) customData = json_pack("{si}", "liveDuration", MetaData->live_duration);
+	if (MetaData && Ctx->caps & 0x01) {
+		if (MetaData->live_duration != -1) customData = json_pack("{si}", "liveDuration", MetaData->live_duration);
 		else customData = json_object();
 
 		json_t* item = BuildMetaData(MetaData);
@@ -237,9 +238,9 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 	if (Ctx->Status == CAST_LAUNCHED && !Ctx->waitId) {
 		// no media session, nothing to do
 		if (Ctx->mediaSessionId) {
-			Ctx->waitId = Ctx->reqId++;
+			int id = Ctx->reqId++;
 
-			json_t* msg = json_pack("{ss,si,si}", "type", "PLAY", "requestId", Ctx->waitId,
+			json_t* msg = json_pack("{ss,si,si}", "type", "PLAY", "requestId", id,
 												  "mediaSessionId", Ctx->mediaSessionId);
 
 			if (customData) {
@@ -251,10 +252,9 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 			char* str = json_dumps(msg, JSON_ENCODE_ANY | JSON_INDENT(1));
 			json_decref(msg);
 
-			SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str);
+			// sending metadata means this is not the first PLAY, so make it non-blocking
+			if (SendCastMessage(Ctx, CAST_MEDIA, Ctx->transportId, "%s", str) && blocking) Ctx->waitId = id;
 			NFREE(str);
-
-			LOG_INFO("[%p]: Immediate PLAY (id:%u)", Ctx->owner, Ctx->waitId);
 
 		} else {
 			if (customData) json_decref(customData);
@@ -264,6 +264,7 @@ void CastPlay(struct sCastCtx* Ctx, struct metadata_s* MetaData) {
 	} else {
 		tReqItem* req = malloc(sizeof(tReqItem));
 		req->data.customData = customData;
+		req->data.blocking = blocking;
 		strcpy(req->Type, "PLAY");
 		queue_insert(&Ctx->reqQueue, req);
 		LOG_INFO("[%p]: Queuing %s", Ctx->owner, req->Type);

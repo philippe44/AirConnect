@@ -61,7 +61,10 @@ typedef struct {
 	char Type[32] ;
 	union {
 		json_t* msg;
-		json_t* customData;
+		struct {
+			json_t* customData;
+			bool blocking;
+		};
 		double volume;
 	} data;
 } tReqItem;

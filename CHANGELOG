@@ -1,3 +1,8 @@
+1.12.5 (NR)
+ - follow libraop 
+ - Fix a few cases where CustomData might be unsed uninitialized
+ - Make PLAY using MetaData non-blocking as there is no need to wait for an answer
+ 
 1.12.4
  - fix crosstool regression
  

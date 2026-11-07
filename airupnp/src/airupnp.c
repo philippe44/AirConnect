@@ -1459,14 +1459,24 @@ int main(int argc, char *argv[]) {
 
 	for (char resp[20] = ""; strcmp(resp, "exit");) {
 #if LINUX || FREEBSD || SUNOS
-		if (!glDaemonize && glInteractive)
-			(void)! scanf("%s", resp);
-		else
+		if (!glDaemonize && glInteractive) {
+			// stdin closed (e.g. /dev/null under launchd/systemd): stop polling it
+			if (scanf("%s", resp) == EOF) {
+				LOG_WARN("stdin closed, switching to non-interactive mode", NULL);
+				glInteractive = false;
+				*resp = '\0';
+			}
+		} else
 			pause();
 #else
-		if (glInteractive)
-			(void)! scanf("%s", resp);
-		else
+		if (glInteractive) {
+			// stdin closed (e.g. /dev/null under launchd/systemd): stop polling it
+			if (scanf("%s", resp) == EOF) {
+				LOG_WARN("stdin closed, switching to non-interactive mode", NULL);
+				glInteractive = false;
+				*resp = '\0';
+			}
+		} else
 #if OSX
 			pause();
 #else

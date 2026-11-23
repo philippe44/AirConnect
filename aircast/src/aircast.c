@@ -588,22 +588,24 @@ static void *MainThread(void *args) {
 		if (!glMainRunning) break;
 
 		if (glLogFile && glLogLimit != - 1) {
-			uint32_t size = ftell(stderr);
+			long size = ftell(stderr);
 
-			if (size > glLogLimit*1024*1024) {
+			if (size > (long) glLogLimit * 1024 * 1024) {
 				uint32_t Sum, BufSize = 16384;
 				uint8_t *buf = malloc(BufSize);
-
 				FILE *rlog = fopen(glLogFile, "rb");
 				FILE *wlog = fopen(glLogFile, "r+b");
-				LOG_DEBUG("Resizing log", NULL);
-				for (Sum = 0, fseek(rlog, size - (glLogLimit*1024*1024) / 2, SEEK_SET);
-					 (BufSize = fread(buf, 1, BufSize, rlog)) != 0;
-					 Sum += BufSize, fwrite(buf, 1, BufSize, wlog));
 
-				Sum = fresize(wlog, Sum);
-				fclose(wlog);
-				fclose(rlog);
+				if (buf && rlog && wlog) {
+					LOG_DEBUG("Resizing log", NULL);
+					for (Sum = 0, fseek(rlog, size - ((long) glLogLimit * 1024 * 1024) / 2, SEEK_SET);
+						 (BufSize = fread(buf, 1, BufSize, rlog)) != 0;
+						 Sum += BufSize, fwrite(buf, 1, BufSize, wlog));
+
+					Sum = fresize(wlog, Sum);
+				}
+				if (wlog) fclose(wlog);
+				if (rlog) fclose(rlog);
 				NFREE(buf);
 				if (!freopen(glLogFile, "a", stderr)) {
 					LOG_ERROR("re-open error while truncating log", NULL);
@@ -848,7 +850,8 @@ static bool ParseArgs(int argc, char **argv) {
 			sscanf(optarg, "%hu:%hu", &glPortBase, &glPortRange);
 			break;
 		case 'i':
-			strcpy(glConfigName, optarg);
+			strncpy(glConfigName, optarg, sizeof(glConfigName) - 1);
+			glConfigName[sizeof(glConfigName) - 1] = '\0';
 			glDiscovery = true;
 			break;
 		case 'I':
@@ -935,9 +938,10 @@ int main(int argc, char *argv[]) {
 	netsock_init();
 
 	// first try to find a config file on the command line
-	for (int i = 1; i < argc; i++) {
+	for (int i = 1; i < argc - 1; i++) {
 		if (!strcmp(argv[i], "-x")) {
-			strcpy(glConfigName, argv[i+1]);
+			strncpy(glConfigName, argv[i + 1], sizeof(glConfigName) - 1);
+			glConfigName[sizeof(glConfigName) - 1] = '\0';
 		}
 	}
 
